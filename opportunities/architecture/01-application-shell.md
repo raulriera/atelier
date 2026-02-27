@@ -32,7 +32,7 @@ Electron (Chromium wrapper) — high RAM usage (~500MB+), slow startup, non-nati
 
 ### Key Dependencies
 
-- Swift 5.9+, macOS 14 Sonoma minimum deployment target
+- Swift 6.2+, macOS 26 minimum deployment target (aligned with Containerization framework requirement)
 - SwiftUI for primary UI, AppKit for specialized views
 - Combine / async-await for reactive data flow
 

@@ -42,7 +42,7 @@ Trigger: 8:00 AM on weekdays
 
 ### Key Dependencies
 
-- App Intents framework (macOS 13+)
+- App Intents framework (macOS 26)
 - Scripting Definition (`.sdef`) for AppleScript
 - `NSUserActivity` for Handoff support
 

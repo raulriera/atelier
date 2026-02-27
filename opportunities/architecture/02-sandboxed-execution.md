@@ -11,36 +11,54 @@ Linux VM via Apple Virtualization Framework — boots full Ubuntu 22.04 with 4 v
 
 ## Native macOS Approach
 
-Use **Apple Virtualization.framework directly from Swift** — same VM isolation model, but eliminate the Electron IPC overhead layer entirely. For lighter tasks that don't need a full Linux toolchain, explore macOS native sandboxing via App Sandbox + XPC services.
+Use **Apple's [Containerization](https://github.com/apple/containerization) Swift package** — a first-party framework (open source, macOS 26+) that wraps Virtualization.framework and provides a VM-per-container model with sub-second startup, OCI image support, and integrated networking. Instead of managing raw VM lifecycle ourselves, we build on Apple's abstraction.
+
+For lighter tasks that don't need a full Linux toolchain, use macOS native sandboxing via App Sandbox + XPC services.
+
+### Why Containerization over raw Virtualization.framework
+
+| Concern | Raw Virtualization.framework | Apple Containerization |
+|---------|------------------------------|----------------------|
+| VM lifecycle | Manual boot/pause/resume | Managed by the framework |
+| Filesystem | Build ext4 rootfs yourself | ext4 implementation included, OCI image support |
+| Networking | Configure VZNetworkDevice manually | `container-network-vmnet` handles it |
+| Kernel | Source and build your own | Optimized Linux kernel included, sub-second boot |
+| Image management | Roll your own | OCI-compatible — pull from any container registry |
+| Maintenance | All on us | Apple maintains the hard parts |
 
 ### Implementation Strategy
 
-- **Primary path (VM):** Call `VZVirtualMachine`, `VZVirtualMachineConfiguration`, and `VZLinuxBootLoader` directly from Swift. No JavaScript bridge. Configure vCPU count, memory, and disk dynamically based on task complexity.
-- **Lightweight path (XPC):** For simple file operations (rename, organize, move), skip the VM entirely. Use an XPC service running in a sandboxed process with minimal entitlements. Faster startup, lower resource usage.
-- **Hybrid model:** The app decides at task-planning time whether to use the lightweight XPC path or the full VM path based on the tools the agent needs (e.g., Python/Node → VM; file rename → XPC).
-- **VM lifecycle:** Pre-warm a VM on app launch in the background. Suspend/resume via `VZVirtualMachine.pause()` and `resume()` instead of cold-booting per session.
+- **Primary path (Containers):** Import `Containerization` as a Swift package dependency. Define a container image with Claude Code CLI and required tooling pre-installed. Launch per-session containers with sub-second startup.
+- **Lightweight path (XPC):** For simple file operations (rename, organize, move), skip the container entirely. Use an XPC service running in a sandboxed process with minimal entitlements. Faster startup, lower resource usage.
+- **Hybrid model:** The app decides at task-planning time whether to use the lightweight XPC path or the full container path based on the tools the agent needs (e.g., Python/Node → container; file rename → XPC).
+- **Image management:** Build a custom OCI image with Claude Code CLI, common runtimes (Node, Python), and minimal OS. Push to a registry. Atelier pulls and caches on first launch.
 
 ### Architecture Diagram
 
 ```
 ┌─────────────────────────────────────┐
-│         Atelier            │
+│         Atelier (macOS 26)          │
 │  ┌──────────┐  ┌─────────────────┐  │
 │  │ SwiftUI  │  │ Task Planner    │  │
 │  │   UI     │  │ (decides path)  │  │
 │  └────┬─────┘  └───┬────────┬────┘  │
 │       │            │        │       │
-│  ┌────▼────┐ ┌─────▼──┐ ┌──▼────┐  │
-│  │ Session │ │  XPC   │ │  VM   │  │
-│  │ Manager │ │Service │ │Bridge │  │
-│  └─────────┘ │(light) │ │(heavy)│  │
-│              └────────┘ └───┬───┘  │
-│                             │       │
-│              ┌──────────────▼────┐  │
-│              │ Virtualization.fw │  │
-│              │  Ubuntu 22.04 VM │  │
-│              │  Claude Code CLI │  │
-│              └──────────────────┘  │
+│  ┌────▼────┐ ┌─────▼──┐ ┌──▼─────┐ │
+│  │ Session │ │  XPC   │ │Container│ │
+│  │ Manager │ │Service │ │Manager  │ │
+│  └─────────┘ │(light) │ └───┬────┘ │
+│              └────────┘     │      │
+│                      ┌──────▼────┐ │
+│                      │ Container-│ │
+│                      │ ization   │ │
+│                      │ (Swift)   │ │
+│                      └──────┬────┘ │
+│                      ┌──────▼────┐ │
+│                      │ Virtuliza-│ │
+│                      │ tion.fw   │ │
+│                      │ Linux VM  │ │
+│                      │ (OCI img) │ │
+│                      └───────────┘ │
 └─────────────────────────────────────┘
 ```
 
@@ -48,13 +66,15 @@ Use **Apple Virtualization.framework directly from Swift** — same VM isolation
 
 | Metric | Current (Electron + VM) | Native | Improvement |
 |--------|------------------------|--------|-------------|
-| VM boot time | 5–8s | 2–3s (pre-warmed: <1s) | ~70% faster |
+| Container startup | 5–8s | <1s (Containerization optimized kernel) | ~90% faster |
 | IPC latency | ~10–50ms per call | <1ms (direct Swift) | ~95% less |
 | Light task startup | 5–8s (always boots VM) | <0.5s (XPC path) | ~95% faster |
+| Image updates | Manual VM image rebuild | `container pull` from registry | Trivial |
 
 ### Key Dependencies
 
-- Virtualization.framework (macOS 12+, Apple Silicon required for Linux VMs)
+- [apple/containerization](https://github.com/apple/containerization) Swift package
+- macOS 26+, Apple Silicon required
 - XPC Services framework
 - Entitlements: `com.apple.security.virtualization`
 
@@ -62,9 +82,10 @@ Use **Apple Virtualization.framework directly from Swift** — same VM isolation
 
 | Risk | Mitigation |
 |------|-----------|
-| Intel Mac users can't run ARM64 Linux VMs | Provide XPC-only fallback with reduced capabilities; document Apple Silicon requirement |
-| VM pre-warming consumes resources at idle | Only pre-warm when app is in foreground; release after 5 min of inactivity |
-| XPC path has limited capabilities | Clear capability matrix; auto-escalate to VM when XPC can't handle the task |
+| macOS 26 minimum limits user base | macOS 26 is current; Containerization is Apple's direction — bet on the future |
+| Containerization package is pre-1.0 (breaking changes between minor versions) | Pin to `.upToNextMinorVersion`, test on each update, contribute upstream |
+| OCI image size and pull time on first launch | Ship a minimal base image; lazy-pull additional tooling on demand |
+| XPC path has limited capabilities | Clear capability matrix; auto-escalate to container when XPC can't handle the task |
 
 ---
 

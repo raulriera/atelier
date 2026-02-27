@@ -13,6 +13,12 @@ A native macOS application (Swift/AppKit) replacing Claude Cowork's Electron she
   - `hub/` — Code/Chat integration, plugins, MCP health, token usage
   - `macos/` — System services, Spotlight, drag-drop, menu bar, Shortcuts, FSEvents, clipboard, document generation
 
+## Platform
+
+- **macOS 26+** (Tahoe), Apple Silicon only
+- **Swift 6.2+**, Xcode 26
+- Containerization via [apple/containerization](https://github.com/apple/containerization) Swift package (VM-per-container, OCI images, sub-second startup)
+
 ## Current status
 
 Planning phase — milestones defined, opportunity audit complete. No code yet.

@@ -11,14 +11,15 @@ VirtioFS with path rewriting through Electron IPC — adds latency and translati
 
 ## Native macOS Approach
 
-VirtioFS called directly via **Virtualization.framework Swift APIs** — eliminates the Electron IPC hop, provides lower latency, and enables native path handling via `NSURL` and `FileManager`.
+Apple's **Containerization** framework handles the low-level VirtioFS plumbing between host and container. On the host side, we use native macOS APIs — **Security-Scoped Bookmarks** for persistent folder access and **NSFileCoordinator** for safe concurrent access — to manage what gets shared and how.
 
 ### Implementation Strategy
 
-- **Direct VirtioFS:** Configure `VZVirtioFileSystemDeviceConfiguration` with `VZSharedDirectory` directly in Swift. No JavaScript bridge means one fewer serialization/deserialization step per file operation.
-- **Path mapping:** Maintain a Swift dictionary of `[VMPath: HostURL]` mappings using Security-Scoped Bookmarks for persistent access across sessions. Use `NSURL.startAccessingSecurityScopedResource()` for sandboxed access.
-- **File coordination:** Wrap all host-side file access in `NSFileCoordinator` to safely handle concurrent access from Finder, other apps, and the VM simultaneously.
-- **Change notification:** Use `VZVirtioFileSystemDeviceConfiguration` share change notifications to reflect VM-side modifications in the native UI immediately.
+- **Container volume mounts:** Use the Containerization package's volume/mount APIs to expose host directories to the container. The framework handles VirtioFS configuration internally.
+- **Persistent access:** Store Security-Scoped Bookmarks (`NSURL.startAccessingSecurityScopedResource()`) for user-granted folders so access persists across launches without re-prompting.
+- **Path mapping:** Maintain a Swift dictionary of `[ContainerPath: HostURL]` mappings. The UI always shows host paths; the container sees its own mount points.
+- **File coordination:** Wrap all host-side file access in `NSFileCoordinator` to safely handle concurrent access from Finder, other apps, and the container simultaneously.
+- **Change notification:** Monitor host-side changes via FSEvents and propagate to the container. Container-side changes are visible to the host through the shared mount.
 
 ### Estimated Impact
 
@@ -30,7 +31,7 @@ VirtioFS called directly via **Virtualization.framework Swift APIs** — elimina
 
 ### Key Dependencies
 
-- Virtualization.framework `VZSharedDirectory` APIs
+- [apple/containerization](https://github.com/apple/containerization) volume mount APIs
 - Security-Scoped Bookmarks for persistent folder grants
 - NSFileCoordinator for safe concurrent access
 

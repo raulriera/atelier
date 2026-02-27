@@ -39,7 +39,7 @@ Trigger: Every Friday at 9am (via Shortcuts automation)
 
 ### Key Dependencies
 
-- App Intents framework (macOS 13+)
+- App Intents framework (macOS 26)
 - Shortcuts.app integration
 - FSEvents for file-based triggers
 - JSON workflow definition schema
