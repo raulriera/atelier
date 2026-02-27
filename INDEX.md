@@ -31,13 +31,13 @@ Build order. Each milestone produces something usable and testable. Earlier mile
 
 ## M0 — Skeleton
 
-Prove the architecture works. A native window that can launch a VM and share files with it.
+Prove the architecture works. De-risk first: get the VM running, then file sharing, then wrap it in the real app shell.
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 1.1 | Application Shell | Improvement | 🔲 Not started | [→](opportunities/architecture/01-application-shell.md) |
-| 1.2 | Sandboxed Execution | Improvement | 🔲 Not started | [→](opportunities/architecture/02-sandboxed-execution.md) |
-| 1.3 | File Sharing (Host ↔ VM) | Improvement | 🔲 Not started | [→](opportunities/architecture/03-file-sharing.md) |
+| 1.1 | Sandboxed Execution | Improvement | 🔨 In progress | [→](opportunities/architecture/02-sandboxed-execution.md) |
+| 1.2 | File Sharing (Host ↔ VM) | Improvement | 🔲 Not started | [→](opportunities/architecture/03-file-sharing.md) |
+| 1.3 | Application Shell | Improvement | 🔲 Not started | [→](opportunities/architecture/01-application-shell.md) |
 
 ---
 
