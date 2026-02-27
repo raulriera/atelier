@@ -30,7 +30,8 @@ Planning phase — milestones defined, opportunity audit complete. No code yet.
 
 ### Commits
 
-All commits MUST use [Conventional Commits](https://www.conventionalcommits.org/):
+- NEVER add `Co-Authored-By` or any AI attribution to commits
+- All commits MUST use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 <type>(<scope>): <description>
