@@ -28,7 +28,37 @@ Planning phase — milestones defined, opportunity audit complete. No code yet.
 
 ## Conventions
 
-- Opportunity files use markdown with consistent structure (Problem, Solution, Implementation, Dependencies, Priority)
-- Status tracking uses: 🔲 Not started, 🔨 In progress, ✅ Done, ⏸️ Paused
-- When editing opportunity files, preserve the existing markdown structure
+### Commits
+
+All commits MUST use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`
+
+**Scopes** (match the opportunity categories): `architecture`, `security`, `experience`, `context`, `hub`, `macos`
+
+Examples:
+- `docs(experience): add hub navigation opportunity`
+- `feat(architecture): scaffold SwiftUI app shell`
+- `fix(security): correct network isolation allowlist parsing`
+- `chore: update milestone status in INDEX`
+
+### Opportunity files
+
+- Use markdown with consistent structure (Problem, Solution, Implementation, Dependencies, Priority)
+- Preserve the existing markdown structure when editing
 - Categories are organized by domain; milestones define build order
+
+### Status tracking
+
+- 🔲 Not started
+- 🔨 In progress
+- ✅ Done
+- ⏸️ Paused
