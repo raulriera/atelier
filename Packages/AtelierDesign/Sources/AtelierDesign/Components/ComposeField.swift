@@ -3,8 +3,8 @@ import SwiftUI
 /// The message input field. TextEditor with placeholder, submit button,
 /// and auto-grow behavior.
 ///
-/// Features a subtle AI glow border that slowly rotates — the rainbow
-/// shimmer signals "this is where you talk to AI."
+/// Glass material background. Rainbow border on focus with a soft outer glow.
+/// Pill shape when single-line, rounded rectangle when multi-line.
 ///
 /// Usage:
 /// ```swift
@@ -19,6 +19,7 @@ public struct ComposeField: View {
 
     @FocusState private var isFocused: Bool
     @State private var glowPhase: CGFloat = 0
+    @State private var fieldHeight: CGFloat = 48
 
     public init(
         text: Binding<String>,
@@ -34,13 +35,33 @@ public struct ComposeField: View {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Pill when single-line, rounded rect when grown.
+    private var cornerRadius: CGFloat {
+        fieldHeight <= 48 ? fieldHeight / 2 : Radii.lg
+    }
+
+    /// Concentric inner radius: outer radius minus the smallest padding.
+    private var innerCornerRadius: CGFloat {
+        max(cornerRadius - Spacing.xs, 0)
+    }
+
+    private var rainbowGradient: AngularGradient {
+        AngularGradient(
+            colors: AIGlow.colors,
+            center: .center,
+            angle: .degrees(glowPhase)
+        )
+    }
+
     public var body: some View {
         HStack(alignment: .bottom, spacing: Spacing.sm) {
-            ZStack(alignment: .topLeading) {
+            ZStack(alignment: .leading) {
                 if text.isEmpty {
                     Text(placeholder)
+                        .font(.conversationBody)
                         .foregroundStyle(.contentTertiary)
-                        .padding(.leading, 5) // matches NSTextView lineFragmentPadding
+                        .padding(.leading, 5)
+                        .padding(.top, -4)
                         .allowsHitTesting(false)
                 }
 
@@ -52,8 +73,16 @@ public struct ComposeField: View {
                     .scrollContentBackground(.hidden)
                     .contentMargins(.all, 0, for: .scrollContent)
                     .scrollIndicators(.hidden)
-                    .frame(minHeight: 24, maxHeight: 200)
+                    .frame(minHeight: 20, maxHeight: 200)
                     .fixedSize(horizontal: false, vertical: true)
+                    .onKeyPress(keys: [.return], phases: .down) { keyPress in
+                        if keyPress.modifiers.contains(.shift) {
+                            return .ignored
+                        }
+                        guard hasText else { return .handled }
+                        onSubmit()
+                        return .handled
+                    }
             }
 
             Button {
@@ -61,29 +90,44 @@ public struct ComposeField: View {
                 onSubmit()
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.largeTitle)
-                    .foregroundStyle(.contentAccent)
+                    .font(.title)
                     .symbolRenderingMode(.hierarchical)
             }
             .buttonStyle(.plain)
+            .foregroundStyle(.contentAccent)
             .opacity(hasText ? 1 : 0.3)
             .animation(Motion.morph, value: hasText)
         }
-        .padding(Spacing.sm)
-        .background(.surfaceElevated, in: .rect(cornerRadius: Radii.lg, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radii.lg, style: .continuous)
-                .strokeBorder(
-                    AngularGradient(
-                        colors: AIGlow.colors,
-                        center: .center,
-                        angle: .degrees(glowPhase)
-                    )
-                    .opacity(isFocused ? 0.6 : 0.25),
-                    lineWidth: 1.5
-                )
+        .clipShape(.rect(cornerRadius: innerCornerRadius, style: .continuous))
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.xs)
+        // Glass background
+        .background(
+            .ultraThinMaterial,
+            in: .rect(cornerRadius: cornerRadius, style: .continuous)
         )
+        // Rainbow border
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(rainbowGradient, lineWidth: 1.5)
+                .opacity(isFocused ? 0.6 : 0)
+                .animation(Motion.morph, value: isFocused)
+        )
+        // Outer glow on focus
+        .background {
+            RoundedRectangle(cornerRadius: cornerRadius + 4, style: .continuous)
+                .fill(rainbowGradient)
+                .blur(radius: 12)
+                .opacity(isFocused ? 0.2 : 0)
+                .padding(-4)
+                .animation(Motion.morph, value: isFocused)
+        }
+        .animation(Motion.morph, value: cornerRadius)
+        .onGeometryChange(for: CGFloat.self, of: \.size.height) { height in
+            fieldHeight = height
+        }
         .onAppear {
+            isFocused = true
             withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
                 glowPhase = 360
             }
