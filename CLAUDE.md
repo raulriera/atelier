@@ -12,7 +12,7 @@ A native macOS application replacing Claude Cowork's Electron shell. A single ad
 
 - `INDEX.md` — Master index organized by milestones (M0–M5), with status tracking
 - `opportunities/` — Detailed write-ups for each opportunity, grouped by domain:
-  - `architecture/` — App shell, VM execution, file sharing, sessions, memory
+  - `architecture/` — App shell, VM execution, file sharing, sessions, memory, conversation model
   - `security/` — Network isolation, file permissions, prompt injection, credentials, audit, deletion safety
   - `experience/` — Window & conversation, project workspace, conversational flow, onboarding
   - `context/` — Project context files, templates, multi-agent visibility, approvals
@@ -42,6 +42,8 @@ Atelier/
 - Business logic lives in library targets (`AtelierKit`, `ContainerService`, `SecurityService`), not in the app target
 - The app target (`Atelier`) is thin — just SwiftUI views wiring up the libraries
 - Each library target has a matching test target
+- Use package boundaries (`public` vs default `internal`) for access control — not `private` within a single package
+- One type per file. Multiple types in a file only if they are strictly related and private to each other
 - This structure enables sharing logic with a potential visionOS/iPadOS port
 
 ## Platform

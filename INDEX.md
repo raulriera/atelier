@@ -8,7 +8,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 34 |
+| **Total opportunities** | 35 |
 | **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -64,6 +64,7 @@ This is where Atelier stops being a tech demo and becomes a product. The window,
 | 3.2 | Project Workspace | New | 🔲 Not started | [→](opportunities/experience/02-project-workspace.md) |
 | 3.3 | Project Context Files (COWORK.md) | New | 🔲 Not started | [→](opportunities/context/01-project-context-files.md) |
 | 3.4 | Session Persistence | New | 🔲 Not started | [→](opportunities/architecture/04-session-persistence.md) |
+| 3.5 | Conversation & Data Model | New | 🔲 Not started | [→](opportunities/architecture/06-conversation-model.md) |
 
 ---
 
@@ -131,6 +132,7 @@ The foundation — native app shell, VM execution, file sharing, sessions, memor
 | [03-file-sharing.md](opportunities/architecture/03-file-sharing.md) | M0 |
 | [04-session-persistence.md](opportunities/architecture/04-session-persistence.md) | M2 |
 | [05-memory-management.md](opportunities/architecture/05-memory-management.md) | M4 |
+| [06-conversation-model.md](opportunities/architecture/06-conversation-model.md) | M2 |
 
 ### Security (`opportunities/security/`)
 Network isolation, file permissions, prompt injection, credentials, audit, deletion safety.
@@ -207,7 +209,8 @@ atelier/
     │   ├── 02-sandboxed-execution.md
     │   ├── 03-file-sharing.md
     │   ├── 04-session-persistence.md
-    │   └── 05-memory-management.md
+    │   ├── 05-memory-management.md
+    │   └── 06-conversation-model.md
     ├── security/
     │   ├── 01-network-isolation.md
     │   ├── 02-file-access-permissions.md
