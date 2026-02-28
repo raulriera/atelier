@@ -41,8 +41,10 @@ struct ConversationWindow: View {
         guard !text.isEmpty else { return }
         draft = ""
 
-        session.appendUserMessage(text)
-        session.beginAssistantMessage()
+        withAnimation(Motion.appear) {
+            session.appendUserMessage(text)
+            session.beginAssistantMessage()
+        }
 
         streamingTask = Task {
             let stream = engine.send(message: text, model: selectedModel, sessionId: session.sessionId)

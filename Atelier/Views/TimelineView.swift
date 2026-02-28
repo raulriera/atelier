@@ -5,26 +5,32 @@ import AtelierKit
 struct TimelineView: View {
     let session: Session
 
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: Spacing.md) {
-                    WelcomeMessage()
+    @State private var scrollPosition = ScrollPosition(edge: .bottom)
 
-                    ForEach(session.items) { item in
-                        itemView(for: item)
-                            .id(item.id)
-                            .transition(Motion.timelineInsert)
-                    }
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                WelcomeMessage()
+
+                ForEach(session.items) { item in
+                    itemView(for: item)
+                        .id(item.id)
+                        .transition(.opacity)
                 }
-                .padding(.horizontal, Spacing.md)
-                .padding(.bottom, Spacing.md)
             }
-            .onChange(of: session.items.count) { _, _ in
-                scrollToBottom(proxy: proxy)
+            .padding(.horizontal, Spacing.md)
+            .padding(.bottom, Spacing.md)
+        }
+        .scrollPosition($scrollPosition)
+        .defaultScrollAnchor(.bottom)
+        .onChange(of: session.items.count) { _, _ in
+            withAnimation(Motion.settle) {
+                scrollPosition.scrollTo(edge: .bottom)
             }
-            .onChange(of: session.activeAssistantText) { _, _ in
-                scrollToBottom(proxy: proxy)
+        }
+        .onChange(of: session.activeAssistantText) { _, _ in
+            withAnimation(Motion.settle) {
+                scrollPosition.scrollTo(edge: .bottom)
             }
         }
     }
@@ -41,13 +47,6 @@ struct TimelineView: View {
             )
         case .system(let event):
             SystemEventCell(event: event)
-        }
-    }
-
-    private func scrollToBottom(proxy: ScrollViewProxy) {
-        guard let lastID = session.items.last?.id else { return }
-        withAnimation(Motion.settle) {
-            proxy.scrollTo(lastID, anchor: .bottom)
         }
     }
 }

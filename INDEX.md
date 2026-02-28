@@ -35,9 +35,9 @@ Ship the core experience first: open the app, talk to Claude, get a response. Co
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 1.1 | Application Shell | New | 🔲 Not started | [→](opportunities/architecture/01-application-shell.md) |
-| 1.2 | Conversation & Data Model | New | 🔲 Not started | [→](opportunities/architecture/06-conversation-model.md) |
-| 1.3 | Window & Conversation | New | 🔲 Not started | [→](opportunities/experience/01-window-conversation.md) |
+| 1.1 | Application Shell | New | ✅ Done | [→](opportunities/architecture/01-application-shell.md) |
+| 1.2 | Conversation & Data Model | New | ✅ Done | [→](opportunities/architecture/06-conversation-model.md) |
+| 1.3 | Window & Conversation | New | ✅ Done | [→](opportunities/experience/01-window-conversation.md) |
 
 ---
 
