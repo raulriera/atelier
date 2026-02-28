@@ -1,0 +1,6 @@
+[submodule ".claude/skills/swiftui-agent-skill"]
+	path = .claude/skills/swiftui-agent-skill
+	url = https://github.com/AvdLee/SwiftUI-Agent-Skill.git
+[submodule ".claude/skills/marketingskills"]
+	path = .claude/skills/marketingskills
+	url = https://github.com/coreyhaines31/marketingskills.git
