@@ -13,6 +13,31 @@ A native macOS application (Swift/AppKit) replacing Claude Cowork's Electron she
   - `hub/` — Code/Chat integration, plugins, MCP health, token usage
   - `macos/` — System services, Spotlight, drag-drop, menu bar, Shortcuts, FSEvents, clipboard, document generation
 
+## Code structure
+
+When implementation begins, the codebase follows Swift Package conventions:
+
+```
+Atelier/
+├── Package.swift
+├── Sources/
+│   ├── Atelier/                  ← Main app target (SwiftUI app entry point)
+│   ├── AtelierKit/               ← Core logic: project model, session management, container lifecycle
+│   ├── ContainerService/         ← Containerization wrapper: image management, container lifecycle
+│   └── SecurityService/          ← Keychain, file permissions, network isolation
+├── Tests/
+│   ├── AtelierKitTests/
+│   ├── ContainerServiceTests/
+│   └── SecurityServiceTests/
+└── Resources/
+```
+
+**Principles:**
+- Business logic lives in library targets (`AtelierKit`, `ContainerService`, `SecurityService`), not in the app target
+- The app target (`Atelier`) is thin — just SwiftUI views wiring up the libraries
+- Each library target has a matching test target
+- This structure enables sharing logic with a potential visionOS/iPadOS port
+
 ## Platform
 
 - **macOS 26+** (Tahoe), Apple Silicon only
@@ -56,6 +81,16 @@ Examples:
 - `feat(architecture): scaffold SwiftUI app shell`
 - `fix(security): correct network isolation allowlist parsing`
 - `chore: update milestone status in INDEX`
+
+### Testing
+
+- Every new feature or module MUST include tests
+- Tests live in matching `Tests/` targets (e.g., `AtelierKitTests` for `AtelierKit`)
+- Use Swift Testing (`@Test`, `#expect`) over XCTest for new tests — it's the modern framework for Swift 6.2+
+- Test public API surface; don't test private implementation details
+- Async code should be tested with `async` test functions
+- Use protocols and dependency injection to make code testable without real containers or network calls
+- Run tests with `swift test` or `xcodebuild test`
 
 ### Opportunity files
 
