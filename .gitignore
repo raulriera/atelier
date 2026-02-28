@@ -1,4 +1,25 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+xcuserdata/
+DerivedData/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor artifacts
 *.swp
 *.swo
 *~

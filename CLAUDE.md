@@ -21,29 +21,39 @@ A native macOS application replacing Claude Cowork's Electron shell. A single ad
 
 ## Code structure
 
-When implementation begins, the codebase follows Swift Package conventions:
+A Swift Package for library targets, Xcode project for the app:
 
 ```
 Atelier/
-├── Package.swift
+├── DESIGN.md                     ← Visual contract: principles, tokens, styles, motion
+├── Package.swift                 ← Library targets only (no app target)
 ├── Sources/
-│   ├── Atelier/                  ← Main app target (SwiftUI app entry point)
+│   ├── AtelierDesign/            ← Design system: tokens, styles, containers, components
+│   │   ├── Tokens/               ← Spacing, Radii, Motion, ShapeStyles
+│   │   ├── Typography/           ← Font extensions
+│   │   ├── Styles/               ← ButtonStyle, LabelStyle conformances
+│   │   ├── Containers/           ← ViewModifier containers (tinted, plain, card, system)
+│   │   ├── Components/           ← ComposeField, SectionDivider
+│   │   └── Resources/            ← AtelierColors.xcassets
 │   ├── AtelierKit/               ← Core logic: project model, session management, container lifecycle
-│   ├── ContainerService/         ← Containerization wrapper: image management, container lifecycle
-│   └── SecurityService/          ← Keychain, file permissions, network isolation
+│   ├── ContainerService/         ← Containerization wrapper (M1+)
+│   └── SecurityService/          ← Keychain, file permissions, network isolation (M1+)
 ├── Tests/
+│   ├── AtelierDesignTests/
 │   ├── AtelierKitTests/
 │   ├── ContainerServiceTests/
 │   └── SecurityServiceTests/
-└── Resources/
+└── Atelier.xcodeproj/            ← App target (SwiftUI app, imports libraries)
 ```
 
 **Principles:**
 - Business logic lives in library targets (`AtelierKit`, `ContainerService`, `SecurityService`), not in the app target
-- The app target (`Atelier`) is thin — just SwiftUI views wiring up the libraries
+- The app target lives in an Xcode project — it needs Info.plist, entitlements, signing, app sandbox
+- The design system (`AtelierDesign`) is a library target — testable via `swift test`, reusable across targets
 - Each library target has a matching test target
 - Use package boundaries (`public` vs default `internal`) for access control — not `private` within a single package
 - One type per file. Multiple types in a file only if they are strictly related and private to each other
+- Consult `DESIGN.md` before creating any new view — every token, style, and motion pattern is documented there
 - This structure enables sharing logic with a potential visionOS/iPadOS port
 
 ## Platform
@@ -54,7 +64,7 @@ Atelier/
 
 ## Current status
 
-Planning phase — milestones defined, opportunity audit complete. No code yet.
+Design system (`AtelierDesign`) implemented. Package builds and tests pass. Next: Xcode project + M0 app shell.
 
 ## Milestones (build order)
 
