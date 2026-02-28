@@ -8,7 +8,7 @@
 
 A window opens. Clean, native, quiet. A text field and a greeting. It feels like opening Notes — not a dashboard, not a control panel.
 
-You sign in with your Anthropic account. That's it. You can start talking immediately — no project, no folder, no setup required.
+You paste your Anthropic API key. That's it. You can start talking immediately — no project, no folder, no setup required.
 
 ---
 
@@ -117,7 +117,7 @@ These things surface gradually. You'll discover them as you use the app, not dur
 We're not building all of this at once. The first milestone delivers one thing: a conversation that works.
 
 1. A native window with a text field
-2. An API key and a connection to Claude
+2. Paste your Anthropic API key
 3. A basic conversation — send a message, get a response
 
 No container, no sandbox, no file system yet. Just the core experience: open the app and talk. Everything above is where we're going. The milestones in [INDEX.md](INDEX.md) define how we get there.

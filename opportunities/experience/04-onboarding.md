@@ -7,7 +7,7 @@
 
 ## Problem
 
-Getting started with Claude's tools today requires multiple disconnected setup steps: create an account, get an API key, install Cowork, install Claude Code separately, configure MCP servers via JSON files, grant folder permissions one at a time. Each tool has its own auth flow. Power users tolerate this; everyone else bounces.
+Getting started with Claude's tools today requires multiple disconnected setup steps: create an account, install Cowork, install Claude Code separately, configure MCP servers via JSON files, grant folder permissions one at a time. Each tool has its own auth flow. Power users tolerate this; everyone else bounces.
 
 ## Solution
 
@@ -15,7 +15,7 @@ The fastest onboarding possible: sign in and start talking.
 
 ### First Launch
 
-1. **Sign in** — Anthropic account or API key. One step.
+1. **Enter your API key** — paste it, done. One step.
 2. **Done.** A window opens with a greeting and a text field. Start talking.
 
 That's it. No folder picker, no security wizard, no feature tour. You're in a conversation.
@@ -40,7 +40,7 @@ Migration is offered once, on first launch, and never mentioned again.
 
 ### Phase 1 — Auth
 
-- `ASWebAuthenticationSession` for OAuth, or manual API key entry with validation
+- API key entry with inline validation and a link to console.anthropic.com
 - Keychain storage for credentials from the start
 - On success: open a blank conversation window. No further setup.
 

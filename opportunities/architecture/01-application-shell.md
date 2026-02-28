@@ -19,7 +19,7 @@ A native Swift app built on SwiftUI that boots fast, feels native, and is nothin
 The smallest thing that's useful: open the app and talk to Claude.
 
 1. **A native window with a text field.** SwiftUI app, single window, conversation timeline above, text input below. That's the UI.
-2. **An API key and a connection to Claude.** First launch asks for an Anthropic API key. Key stored in Keychain. Direct API calls via `URLSession` — no SDK dependency yet.
+2. **Paste your key and go.** First launch asks for an Anthropic API key (with a link to console.anthropic.com). Key validated and stored in Keychain. One step, then never again.
 3. **A basic conversation.** Send a message, see Claude's response stream in. Messages persist to disk (JSONL). Reopen the app, your conversation is still there.
 
 No container. No sandbox. No file system access. No projects. Just chat.
@@ -66,12 +66,12 @@ M0 uses `WindowGroup` for simplicity — one window type, one conversation. M2 e
 ### First launch flow
 
 1. App opens → window appears with a welcome message and a text field
-2. If no API key exists → an inline prompt appears: "Enter your Anthropic API key to get started"
+2. If no API key exists → an inline prompt appears: "Enter your Anthropic API key to get started" with a link to console.anthropic.com
 3. User pastes key → validated with a lightweight API call → stored in Keychain
 4. Text field activates → user can start typing immediately
-5. No onboarding wizard, no feature tour, no settings. Type and go.
+5. No onboarding wizard, no feature tour, no settings. Paste and go.
 
-The API key prompt is inline in the conversation — not a modal, not a settings screen. It's the first "message" in the timeline.
+The API key prompt is inline in the conversation — not a modal, not a settings screen. It's the first "message" in the timeline. Anthropic's terms prohibit third-party apps from using subscription OAuth, so API key authentication (usage-based billing) is the only supported path.
 
 ### Technology choices
 
@@ -80,7 +80,7 @@ The API key prompt is inline in the conversation — not a modal, not a settings
 | UI framework | SwiftUI (AppKit bridging where needed) | Native rendering, `@Observable` reactivity, state restoration for free |
 | Minimum OS | macOS 26 (Tahoe) | Required for Containerization framework in later milestones |
 | API communication | `URLSession` + streaming JSON | No SDK dependency. Protocol abstraction (`ConversationEngine`) allows pivoting later |
-| Credential storage | Keychain via Security framework | The macOS-native place for secrets. Never stored in UserDefaults or files |
+| Credential storage | Keychain via Security framework | API key stored natively. Never in UserDefaults or files |
 | Data persistence | JSONL files, `@Observable` in-memory model | See architecture/06-conversation-model.md |
 | Text rendering | SwiftUI `Text` + `AttributedString` | System fonts, Dynamic Type, accessibility for free |
 | Concurrency | Swift structured concurrency (`async/await`, `AsyncStream`) | No Combine unless required by system APIs |
@@ -115,7 +115,7 @@ The Containerization framework (apple/containerization) requires macOS 26. We do
 
 - `AnthropicEngine` conforming to `ConversationEngine` protocol
 - Streaming response via `URLSession` + server-sent events parsing
-- API key entry inline in conversation timeline
+- API key entry inline in conversation timeline (with link to console.anthropic.com)
 - Key validation and Keychain storage via Security framework
 - Error handling: network failures, rate limits, invalid key — all shown as inline messages
 
@@ -157,7 +157,7 @@ That's it. Everything else — projects, file access, containers, context files 
 
 This is the foundation. If M0 feels fast and simple, everything we add in later milestones inherits that quality. If M0 is slow or cluttered, no amount of features fixes it.
 
-The `ConversationEngine` protocol is the key abstraction. M0 implements `AnthropicEngine` (direct API calls). M3 can introduce `ClaudeCodeEngine` (running through the container). The UI never knows or cares which engine is active.
+The `ConversationEngine` protocol is the key abstraction. M0 implements `AnthropicEngine` (direct API calls via URLSession). M3 can introduce `ClaudeCodeEngine` (running through the container). The UI never knows or cares which engine is active.
 
 Keep the dependency list minimal. M0 should build with zero third-party packages — just Apple frameworks and our own code. Every external dependency is a maintenance burden and a startup time cost.
 
