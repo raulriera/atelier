@@ -2,90 +2,95 @@
 
 > **Category:** Architecture & Performance
 > **Type:** Improvement · **Priority:** 🔴 Critical
+> **Milestone:** M1
 
 ---
 
-## Current State (Electron / Cowork)
+## Problem
 
-Linux VM via Apple Virtualization Framework — boots full Ubuntu 22.04 with 4 vCPUs, 3.8GB RAM, ~10GB sparse virtual disk per session. The Electron app wraps the Virtualization.framework calls through layers of JavaScript-to-native bridging, adding complexity and potential failure points. Each Cowork session spins up a complete Linux environment with the Claude Code CLI running inside it.
+Claude's desktop app runs agent work inside a full Ubuntu VM — 4 vCPUs, 3.8GB RAM, ~10GB disk per session, 5–8 seconds to boot. Every task, no matter how small, pays this startup cost. The Electron app wraps Virtualization.framework calls through JavaScript-to-native bridging, adding latency and fragility.
 
-## Native macOS Approach
+## Solution
 
-Use **Apple's [Containerization](https://github.com/apple/containerization) Swift package** — a first-party framework (open source, macOS 26+) that wraps Virtualization.framework and provides a VM-per-container model with sub-second startup, OCI image support, and integrated networking. Instead of managing raw VM lifecycle ourselves, we build on Apple's abstraction.
+Use **Apple's [Containerization](https://github.com/apple/containerization) Swift package** — a first-party framework (open source, macOS 26+) that provides VM-per-container with sub-second startup, OCI image support, and integrated networking. For lightweight work that doesn't need Linux tooling, use macOS-native sandboxing via XPC services.
 
-For lighter tasks that don't need a full Linux toolchain, use macOS native sandboxing via App Sandbox + XPC services.
+### Two execution paths
+
+The conversation engine decides which path to use based on what Claude needs to do:
+
+**XPC path (lightweight)** — For operations that don't need a Linux environment: file operations (read, write, rename, organize), document analysis, text generation, web search. An XPC service in a sandboxed process with minimal entitlements. Startup is near-instant.
+
+**Container path (full)** — For operations that need Linux tooling: running code (Python, Node, etc.), complex build steps, system commands. A Containerization-managed Linux VM with Claude Code and required runtimes pre-installed. Sub-second startup via optimized kernel.
+
+The user never sees this decision. Claude says "Let me analyze those files" and the engine picks the right path. The conversation timeline shows the work happening — not which execution environment it's happening in.
 
 ### Why Containerization over raw Virtualization.framework
 
 | Concern | Raw Virtualization.framework | Apple Containerization |
 |---------|------------------------------|----------------------|
 | VM lifecycle | Manual boot/pause/resume | Managed by the framework |
-| Filesystem | Build ext4 rootfs yourself | ext4 implementation included, OCI image support |
+| Filesystem | Build ext4 rootfs yourself | ext4 included, OCI image support |
 | Networking | Configure VZNetworkDevice manually | `container-network-vmnet` handles it |
 | Kernel | Source and build your own | Optimized Linux kernel included, sub-second boot |
 | Image management | Roll your own | OCI-compatible — pull from any container registry |
 | Maintenance | All on us | Apple maintains the hard parts |
 
-### Implementation Strategy
+### Performance targets
 
-- **Primary path (Containers):** Import `Containerization` as a Swift package dependency. Define a container image with Claude Code CLI and required tooling pre-installed. Launch per-session containers with sub-second startup.
-- **Lightweight path (XPC):** For simple file operations (rename, organize, move), skip the container entirely. Use an XPC service running in a sandboxed process with minimal entitlements. Faster startup, lower resource usage.
-- **Hybrid model:** The app decides at task-planning time whether to use the lightweight XPC path or the full container path based on the tools the agent needs (e.g., Python/Node → container; file rename → XPC).
-- **Image management:** Build a custom OCI image with Claude Code CLI, common runtimes (Node, Python), and minimal OS. Push to a registry. Atelier pulls and caches on first launch.
-
-### Architecture Diagram
-
-```
-┌─────────────────────────────────────┐
-│         Atelier (macOS 26)          │
-│  ┌──────────┐  ┌─────────────────┐  │
-│  │ SwiftUI  │  │ Task Planner    │  │
-│  │   UI     │  │ (decides path)  │  │
-│  └────┬─────┘  └───┬────────┬────┘  │
-│       │            │        │       │
-│  ┌────▼────┐ ┌─────▼──┐ ┌──▼─────┐ │
-│  │ Session │ │  XPC   │ │Container│ │
-│  │ Manager │ │Service │ │Manager  │ │
-│  └─────────┘ │(light) │ └───┬────┘ │
-│              └────────┘     │      │
-│                      ┌──────▼────┐ │
-│                      │ Container-│ │
-│                      │ ization   │ │
-│                      │ (Swift)   │ │
-│                      └──────┬────┘ │
-│                      ┌──────▼────┐ │
-│                      │ Virtualiz-│ │
-│                      │ tion.fw   │ │
-│                      │ Linux VM  │ │
-│                      │ (OCI img) │ │
-│                      └───────────┘ │
-└─────────────────────────────────────┘
-```
-
-### Estimated Impact
-
-| Metric | Current (Electron + VM) | Native | Improvement |
-|--------|------------------------|--------|-------------|
-| Container startup | 5–8s | <1s (Containerization optimized kernel) | ~90% faster |
+| Metric | Current (Electron + VM) | Atelier | Improvement |
+|--------|------------------------|---------|-------------|
+| Container startup | 5–8s | <1s | ~90% faster |
+| XPC task startup | 5–8s (always boots VM) | <0.1s | ~99% faster |
 | IPC latency | ~10–50ms per call | <1ms (direct Swift) | ~95% less |
-| Light task startup | 5–8s (always boots VM) | <0.5s (XPC path) | ~95% faster |
-| Image updates | Manual VM image rebuild | `container pull` from registry | Trivial |
+| Image updates | Manual VM image rebuild | `container pull` | Trivial |
 
-### Key Dependencies
+## Implementation
 
-- [apple/containerization](https://github.com/apple/containerization) Swift package
-- macOS 26+, Apple Silicon required
-- XPC Services framework
-- Entitlements: `com.apple.security.virtualization`
+### Phase 1 — XPC Service
 
-### Risks & Mitigations
+- Sandboxed XPC service for file operations and document analysis
+- Minimal entitlements: read/write access only to user-approved folders
+- Communication via `NSXPCConnection` with Codable message types
+- This is the first execution path — available as soon as M1 ships
+
+### Phase 2 — Container Integration
+
+- Import `Containerization` Swift package
+- Build a minimal OCI image: Claude Code CLI + Node + Python + essential tools
+- Container lifecycle management: start, pause, resume, destroy
+- File sharing between host and container (see architecture/03-file-sharing.md)
+
+### Phase 3 — Smart Routing
+
+- The `ConversationEngine` decides which path to use based on tool requirements
+- If Claude needs to run code → container. If it needs to read/write files → XPC.
+- Transparent to the user — the conversation shows results, not infrastructure
+- Automatic fallback: if XPC can't handle a request, escalate to container
+
+### Phase 4 — Image Management
+
+- OCI image pulled and cached on first use (not first launch — only when a container is actually needed)
+- Background image updates — new versions pulled silently, applied on next container start
+- Image size budget: <500MB base image, lazy-pull additional tooling on demand
+
+## Dependencies
+
+- architecture/01-application-shell.md (the app must exist before execution paths are added)
+- architecture/03-file-sharing.md (containers need host filesystem access)
+- security/01-network-isolation.md (containers need network policy)
+
+## Risks & Mitigations
 
 | Risk | Mitigation |
 |------|-----------|
-| macOS 26 minimum limits user base | macOS 26 is current; Containerization is Apple's direction — bet on the future |
-| Containerization package is pre-1.0 (breaking changes between minor versions) | Pin to `.upToNextMinorVersion`, test on each update, contribute upstream |
-| OCI image size and pull time on first launch | Ship a minimal base image; lazy-pull additional tooling on demand |
-| XPC path has limited capabilities | Clear capability matrix; auto-escalate to container when XPC can't handle the task |
+| macOS 26 minimum limits user base | macOS 26 is current; Containerization is Apple's direction |
+| Containerization package is pre-1.0 | Pin version, test on updates, contribute upstream |
+| OCI image size on first pull | Lazy-pull, background download, only when container is first needed |
+| XPC path can't handle all tasks | Clear capability matrix, auto-escalate to container |
+
+## Notes
+
+M0 ships with no execution sandbox — just direct API calls. M1 adds both XPC and container paths. The key insight is that most user interactions (chat, file reading, document analysis, text generation) never need a container at all. The container is for power-user scenarios: running code, complex builds, system commands. Progressive disclosure applies to infrastructure too.
 
 ---
 

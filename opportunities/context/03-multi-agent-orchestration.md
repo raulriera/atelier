@@ -1,31 +1,78 @@
-# Multi-Agent Orchestration Visibility
+# Multi-Agent Orchestration
 
 > **Category:** Context Control & Agent Intelligence
 > **Type:** Improvement · **Priority:** 🟡 Medium
+> **Milestone:** M5
 
 ---
 
-## Current State (Electron / Cowork)
+## Problem
 
-A lead agent (Opus-class model) decomposes complex tasks into subtasks, delegating to multiple Sonnet-class sub-agents that execute simultaneously. However, orchestration is completely opaque — users see a single progress stream with no visibility into which sub-agents are running, what they're doing, or how much they're consuming.
+Complex tasks are decomposed into subtasks handled by multiple models working simultaneously. But orchestration is completely opaque — users see a single progress stream with no visibility into what's happening underneath.
 
-## Native macOS Approach
+## Solution
 
-**Activity Monitor-style agent dashboard**: see each sub-agent's task, status, token usage, and output in real-time. Native `NSProgress` integration for system-level progress indicators.
+Orchestration is invisible by default. When Claude needs to do multiple things at once, the conversation shows progress naturally — not through a dashboard, but through the same inline cards used for everything else.
 
-### Implementation Strategy
+### What users see
 
-- **Agent dashboard:** A SwiftUI sidebar or sheet showing each active sub-agent as a card: task description, model being used (Opus/Sonnet), status (planning/executing/waiting), token count, and elapsed time.
-- **NSProgress integration:** Each sub-agent reports progress via `NSProgress`, which flows into the system's native progress UI — visible in the Dock icon badge, Touch Bar (older Macs), and Atelier's title bar.
-- **Token attribution:** Track and display per-sub-agent token usage so users can see which parts of a complex task are most expensive.
-- **Pause/cancel individual agents:** Users can pause or cancel specific sub-agents without killing the entire orchestration.
-- **Timeline view:** A Gantt-style timeline showing when each sub-agent started, what it depended on, and how long it took — useful for optimizing workflow templates.
+**Simple tasks** — nothing special. Claude responds. One message, one response.
 
-### Key Dependencies
+**Complex tasks** — Claude's response includes nested progress cards:
 
-- `NSProgress` and progress reporting protocol
-- SwiftUI `TimelineView` for real-time updates
-- Anthropic API multi-agent response parsing
+```
+Claude is working on your request...
+
+  ├─ Reading 47 PDF files          ✅ Done
+  ├─ Analyzing contract terms      ⏳ In progress
+  └─ Generating summary report     ○ Waiting
+
+This will take about 2 minutes.
+```
+
+These are children of the `AssistantMessage` — drillable. Tap any line to see details. But by default, you just see progress and results.
+
+### What users don't see
+
+No "Activity Monitor-style dashboard." No sidebar with agent cards. No Gantt-style timeline of sub-agents. That level of detail conflicts with our simplicity moat and isn't useful to most people.
+
+### Power users
+
+The inspector panel (`⌘I`) can show:
+- Per-step token usage for the current response
+- Which model handled each step (Opus vs Sonnet)
+- Timing breakdown
+
+This is progressive disclosure — hidden by default, available for those who care.
+
+## Implementation
+
+### Phase 1 — Nested Progress Cards
+
+- `ProgressCard` items nested inside `AssistantMessage.children` (already in data model)
+- Each shows: description, status (waiting/running/done/failed), optional progress percentage
+- Animated status transitions in the conversation timeline
+
+### Phase 2 — Drillable Details
+
+- Tap a progress card to expand: see what that step produced, how many tokens it used
+- Collapse back to the compact view
+- All in the conversation timeline — no separate panel
+
+### Phase 3 — Inspector Integration
+
+- Per-step model attribution and token accounting in the inspector panel
+- Only visible when inspector is open (`⌘I`)
+- Useful for debugging and cost optimization, not for everyday use
+
+## Dependencies
+
+- architecture/06-conversation-model.md (nested children in AssistantMessage)
+- hub/05-token-usage-visibility.md (per-step token attribution)
+
+## Notes
+
+The key insight: orchestration visibility is a feature of the conversation timeline, not a separate UI. Progress cards, nested children, and drillable details are the same patterns used everywhere else in the app. We don't need a dashboard because the conversation already shows what's happening.
 
 ---
 
