@@ -21,36 +21,38 @@ A native macOS application replacing Claude Cowork's Electron shell. A single ad
 
 ## Code structure
 
-A Swift Package for library targets, Xcode project for the app:
+Xcode project for the app, independent SPM packages for libraries:
 
 ```
 Atelier/
+├── Atelier.xcodeproj/            ← App target (SwiftUI app, imports libraries)
+├── Atelier/                      ← App sources (AtelierApp.swift, ContentView.swift, Assets)
+├── AtelierTests/                 ← App unit tests
+├── AtelierUITests/               ← App UI tests
+├── Packages/
+│   ├── AtelierDesign/            ← Design system package
+│   │   ├── Package.swift
+│   │   ├── Sources/AtelierDesign/
+│   │   │   ├── Tokens/           ← Spacing, Radii, Motion, ShapeStyles
+│   │   │   ├── Typography/       ← Font extensions
+│   │   │   ├── Styles/           ← ButtonStyle, LabelStyle conformances
+│   │   │   ├── Containers/       ← ViewModifier containers (tinted, plain, card, system)
+│   │   │   ├── Components/       ← ComposeField, SectionDivider
+│   │   │   └── Resources/        ← AtelierColors.xcassets
+│   │   └── Tests/AtelierDesignTests/
+│   └── AtelierKit/               ← Core logic package
+│       ├── Package.swift
+│       ├── Sources/AtelierKit/
+│       └── Tests/AtelierKitTests/
 ├── DESIGN.md                     ← Visual contract: principles, tokens, styles, motion
-├── Package.swift                 ← Library targets only (no app target)
-├── Sources/
-│   ├── AtelierDesign/            ← Design system: tokens, styles, containers, components
-│   │   ├── Tokens/               ← Spacing, Radii, Motion, ShapeStyles
-│   │   ├── Typography/           ← Font extensions
-│   │   ├── Styles/               ← ButtonStyle, LabelStyle conformances
-│   │   ├── Containers/           ← ViewModifier containers (tinted, plain, card, system)
-│   │   ├── Components/           ← ComposeField, SectionDivider
-│   │   └── Resources/            ← AtelierColors.xcassets
-│   ├── AtelierKit/               ← Core logic: project model, session management, container lifecycle
-│   ├── ContainerService/         ← Containerization wrapper (M1+)
-│   └── SecurityService/          ← Keychain, file permissions, network isolation (M1+)
-├── Tests/
-│   ├── AtelierDesignTests/
-│   ├── AtelierKitTests/
-│   ├── ContainerServiceTests/
-│   └── SecurityServiceTests/
-└── Atelier.xcodeproj/            ← App target (SwiftUI app, imports libraries)
+└── opportunities/                ← Planning docs
 ```
 
 **Principles:**
-- Business logic lives in library targets (`AtelierKit`, `ContainerService`, `SecurityService`), not in the app target
+- Business logic lives in library packages (`Packages/AtelierKit/`, `Packages/AtelierDesign/`), not in the app target
+- Each library is an independent SPM package with its own Package.swift — added to Xcode as local package dependencies
 - The app target lives in an Xcode project — it needs Info.plist, entitlements, signing, app sandbox
-- The design system (`AtelierDesign`) is a library target — testable via `swift test`, reusable across targets
-- Each library target has a matching test target
+- Each library package includes its own test target — run via `swift test` from the package directory
 - Use package boundaries (`public` vs default `internal`) for access control — not `private` within a single package
 - One type per file. Multiple types in a file only if they are strictly related and private to each other
 - Consult `DESIGN.md` before creating any new view — every token, style, and motion pattern is documented there
