@@ -11,21 +11,20 @@ Chat and Cowork are separate tabs in the same Electron app — no shared context
 
 ## Native macOS Approach
 
-**Unified conversation model**: start chatting, then "promote" a conversation to a Cowork task with full conversation context preserved. Shared memory and project context across modes.
+There is no separate "chat" — the conversation *is* the interface. Talking, asking questions, handing off tasks, reviewing results — it all happens in the same timeline. Claude's chat capabilities are the foundation of every interaction.
 
 ### Implementation Strategy
 
-- **Conversation promotion:** A "Run as Task" button in any chat message converts the conversation into a Cowork session. All prior messages become task context — no re-explaining.
-- **Task results in chat:** When a Cowork task completes, results can be "demoted" back to chat for discussion: "Here's the report I generated — what do you think about the Q3 projections?"
-- **Shared memory:** User preferences, project context, and conversation memory persist across Chat, Cowork, and Code modes. Claude remembers what was discussed in chat when executing a Cowork task.
-- **Inline task execution:** For simple tasks that don't need full Cowork orchestration, execute them inline within the chat: "Organize my Downloads folder" → runs in the background, result appears as a chat message.
-- **Context panel:** A collapsible side panel in chat showing active Cowork sessions, recent outputs, and Code session status — always aware of what's happening across modes.
+- **Conversation is everything.** There is no "chat mode" vs "task mode." You type a message and Claude responds. If the response involves work (reading files, making changes, running commands), that work appears inline. If it's a simple answer, it's just text.
+- **Inline task execution.** When Claude needs to do something — organize files, generate a report, refactor code — it starts working and shows progress in the conversation. No "promotion" step needed.
+- **Shared context.** The entire conversation history is context for every interaction. Claude remembers what was discussed earlier when executing work later. One continuous thread.
+- **Background work.** Long-running tasks show their start in the conversation, then the user can keep talking or switch to another window. Results appear in the timeline when ready.
 
 ### Key Dependencies
 
-- Unified conversation data model (CoreData or SwiftData)
-- Session context serialization for cross-mode handoff
-- Background task execution for inline chat tasks
+- Unified conversation data model (SwiftData)
+- Streaming message rendering with rich inline content types
+- Background task execution with inline progress
 
 ---
 

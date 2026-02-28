@@ -1,6 +1,6 @@
 # Atelier — Opportunity Index
 
-> A native Swift/AppKit macOS application replacing Claude Cowork's Electron shell. Deep macOS integration, proper security, and a unified hub for Chat, Cowork, and Code.
+> A native macOS application replacing Claude Cowork's Electron shell. A single adaptive conversation in a window — no modes, no tabs, no sidebars. Speed and simplicity are the moats.
 
 ---
 
@@ -22,7 +22,7 @@ Build order. Each milestone produces something usable and testable. Earlier mile
 |-----------|-------|----------|
 | **M0** | Skeleton | Native window, basic VM, files move between host and VM |
 | **M1** | Safe foundation | Network locked down, file permissions, deletion safety, credentials in Keychain |
-| **M2** | The product | Hub navigation, project model, context files, sessions survive reboot |
+| **M2** | The product | Window & conversation, project model, context files, sessions survive reboot |
 | **M3** | Intelligence | Embedded Code terminal, approval flow, token visibility, prompt injection defense |
 | **M4** | Native power | System services, menu bar, notifications, Shortcuts |
 | **M5** | Growth & polish | Chat integration, onboarding, workflows, Spotlight, drag-drop, everything else |
@@ -56,11 +56,11 @@ Harden the sandbox before exposing it to user workloads. No one should use Ateli
 
 ## M2 — The Product
 
-This is where Atelier stops being a tech demo and becomes a product. The hub, the project model, context files, and persistent sessions.
+This is where Atelier stops being a tech demo and becomes a product. The window, the conversation, the project model, context files, and persistent sessions.
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 3.1 | Hub & Navigation | New | 🔲 Not started | [→](opportunities/experience/01-hub-navigation.md) |
+| 3.1 | Window & Conversation | New | 🔲 Not started | [→](opportunities/experience/01-window-conversation.md) |
 | 3.2 | Project Workspace | New | 🔲 Not started | [→](opportunities/experience/02-project-workspace.md) |
 | 3.3 | Project Context Files (COWORK.md) | New | 🔲 Not started | [→](opportunities/context/01-project-context-files.md) |
 | 3.4 | Session Persistence | New | 🔲 Not started | [→](opportunities/architecture/04-session-persistence.md) |
@@ -145,11 +145,11 @@ Network isolation, file permissions, prompt injection, credentials, audit, delet
 | [06-file-deletion-safety.md](opportunities/security/06-file-deletion-safety.md) | M1 |
 
 ### Experience (`opportunities/experience/`)
-The product UX — hub navigation, project model, conversational flow, onboarding.
+The product UX — window & conversation, project model, conversational flow, onboarding.
 
 | File | Milestone |
 |------|-----------|
-| [01-hub-navigation.md](opportunities/experience/01-hub-navigation.md) | M2 |
+| [01-window-conversation.md](opportunities/experience/01-window-conversation.md) | M2 |
 | [02-project-workspace.md](opportunities/experience/02-project-workspace.md) | M2 |
 | [03-conversational-flow.md](opportunities/experience/03-conversational-flow.md) | M5 |
 | [04-onboarding.md](opportunities/experience/04-onboarding.md) | M5 |
@@ -216,7 +216,7 @@ atelier/
     │   ├── 05-audit-compliance.md
     │   └── 06-file-deletion-safety.md
     ├── experience/
-    │   ├── 01-hub-navigation.md
+    │   ├── 01-window-conversation.md
     │   ├── 02-project-workspace.md
     │   ├── 03-conversational-flow.md
     │   └── 04-onboarding.md

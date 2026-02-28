@@ -11,58 +11,51 @@ Claude Code is a completely separate CLI tool with no connection to Cowork. User
 
 ## Native macOS Approach
 
-**Embedded terminal view** (via SwiftTerm or custom PTY) running Claude Code directly within the Atelier. Shared session context: start a task in the Cowork GUI, drop to Code CLI for precision work, results flow back seamlessly.
+Claude Code runs inside the same container that powers the conversation. When terminal interaction is needed, it surfaces inline in the conversation timeline — not as a separate mode or tab, but as another content type in the flow.
 
-### Implementation Strategy
+### How it works
 
-- **Embedded terminal:** Integrate SwiftTerm (open-source Swift terminal emulator) or build a custom PTY-based terminal view. Claude Code runs directly in this view — same CLI, same capabilities, same commands.
-- **Unified session context:** When a user starts a Cowork GUI task and needs more precision, they can "drop to terminal" within the same session. The Claude Code instance inherits:
-  - All granted folder access
-  - The active conversation history
-  - Any `COWORK.md` context files
-  - Current task state
-- **Bidirectional handoff:** Results from Claude Code (files created, code executed) automatically appear in the Cowork GUI output panel. Conversely, clicking "refine in Code" on any Cowork output opens a Code session with that output as context.
-- **Split view:** Support a split-pane view: Cowork GUI on the left, Claude Code terminal on the right. Both operating in the same session, sharing the same VM.
-- **Hub navigation:** A sidebar or tab bar provides one-click switching between Chat, Cowork, and Code — all within the same native window, all sharing context.
+- **Claude Code is the engine.** Behind the scenes, the conversation timeline is powered by Claude Code running in the container. When Claude reads files, writes code, or runs commands — that's Claude Code doing the work.
+- **Terminal surfaces when needed.** If the user or Claude needs interactive terminal access, a terminal view can appear inline in the conversation or as a split pane. It's the same Claude Code session — same context, same file access.
+- **No mode switching.** The user doesn't "switch to Code mode." They might say "let me see the terminal" or Claude might surface terminal output when it's relevant. It's progressive disclosure — the terminal is there when you need it, invisible when you don't.
+- **Shared context.** The terminal session inherits everything from the conversation: granted folder access, conversation history, context files, current task state.
 
 ### Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│  Atelier                          │
-│                                             │
-│  ┌─────┐ ┌────────┐ ┌──────┐               │
-│  │Chat │ │Cowork  │ │Code  │  ← Tab bar    │
-│  └──┬──┘ └───┬────┘ └──┬───┘               │
-│     │        │         │                    │
-│     ▼        ▼         ▼                    │
-│  ┌─────────────────────────────────────┐    │
-│  │  Shared Session Context             │    │
-│  │  - Conversation history             │    │
-│  │  - Granted folder access            │    │
-│  │  - COWORK.md files                  │    │
-│  │  - Task state                       │    │
-│  └──────────────┬──────────────────────┘    │
-│                 │                            │
-│  ┌──────────────▼──────────────────────┐    │
-│  │  Shared Container (OCI + Claude Code)│    │
-│  └─────────────────────────────────────┘    │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│  Atelier Window                          │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │  Conversation Timeline             │  │
+│  │                                    │  │
+│  │  💬 User message                   │  │
+│  │  📄 File card (Claude read a file) │  │
+│  │  📝 Diff (Claude made changes)     │  │
+│  │  ▶ Terminal output (inline)        │  │
+│  │  ✅ Result card                    │  │
+│  │                                    │  │
+│  └────────────────────────────────────┘  │
+│                 │                         │
+│  ┌──────────────▼─────────────────────┐  │
+│  │  Container (OCI + Claude Code)     │  │
+│  └────────────────────────────────────┘  │
+└──────────────────────────────────────────┘
 ```
 
 ### Estimated Impact
 
-| Scenario | Current | Hub |
-|----------|---------|-----|
-| Switch from GUI to CLI for precision | Quit Cowork, open terminal, re-auth, re-explain context | Click "Code" tab, full context preserved |
-| Share results between modes | Manually copy files | Automatic — same session |
-| Learn Code from Cowork | Completely separate tool, intimidating | Gradual exposure within familiar app |
+| Scenario | Current | Atelier |
+|----------|---------|---------|
+| CLI precision work during a task | Quit Cowork, open terminal, re-auth, re-explain context | Terminal surfaces inline, full context preserved |
+| Share results between conversation and CLI | Manually copy files | Automatic — same session, same container |
+| Learn CLI from GUI | Completely separate tool, intimidating | Gradual exposure as terminal output appears in the conversation |
 
 ### Key Dependencies
 
 - SwiftTerm or custom PTY terminal emulator
-- Shared session state management
-- VM context bridging between GUI and CLI modes
+- Shared session state management between conversation UI and Claude Code process
+- Container context bridging
 
 ---
 
