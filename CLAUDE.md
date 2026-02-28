@@ -16,7 +16,7 @@ A native macOS application replacing Claude Cowork's Electron shell. A single ad
   - `security/` — Network isolation, file permissions, prompt injection, credentials, audit, deletion safety
   - `experience/` — Window & conversation, project workspace, conversational flow, onboarding
   - `context/` — Project context files, templates, multi-agent visibility, approvals
-  - `hub/` — Code/Chat integration, plugins, MCP health, token usage
+  - `hub/` — Code/Chat integration, capabilities, capability health, token usage
   - `macos/` — System services, Spotlight, drag-drop, menu bar, Shortcuts, FSEvents, clipboard, document generation
 
 ## Code structure
@@ -58,9 +58,9 @@ Planning phase — milestones defined, opportunity audit complete. No code yet.
 
 ## Milestones (build order)
 
-- **M0 — Skeleton:** Native window + basic VM + file sharing
-- **M1 — Safe foundation:** Network isolation + file permissions + deletion safety + credentials
-- **M2 — The product:** Window & conversation + project model + context files + session persistence
+- **M0 — Conversation:** Native window + API connection + basic conversation
+- **M1 — Safe foundation:** Sandboxed execution + file sharing + network isolation + permissions + credentials
+- **M2 — The product:** Project model + context files + session persistence + conversational flow
 - **M3 — Intelligence:** Code integration + approval flow + token visibility + prompt injection defense
 - **M4 — Native power:** System services + menu bar + notifications + Shortcuts + memory management
 - **M5 — Growth & polish:** Chat integration, onboarding, workflows, Spotlight, drag-drop, and remaining items

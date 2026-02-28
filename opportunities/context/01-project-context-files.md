@@ -7,64 +7,128 @@
 
 ## Current State (Electron / Cowork)
 
-No equivalent to Claude Code's `CLAUDE.md`, Rules, or Skills system. Prompts in Cowork are one-off and ephemeral. Users cannot define persistent instructions, project-specific rules, or reusable context that the agent automatically loads when accessing a directory. This is the single biggest gap identified by professional users — as one agency put it: "The power of Claude Code isn't that it runs in a terminal. The power is Context Control."
+No equivalent to Claude Code's `CLAUDE.md`. Prompts in Cowork are one-off and ephemeral. Users cannot define persistent instructions, project-specific rules, or reusable context that the agent automatically loads. This is the single biggest gap identified by professional users — as one agency put it: "The power of Claude Code isn't that it runs in a terminal. The power is Context Control."
 
 ## Native macOS Approach
 
-Implement a native **`.coworkrc` / `COWORK.md`** system: per-folder instruction files that Claude auto-loads when accessing a directory. Stored as native Spotlight-indexable files with rich macOS integration.
+**The folder is the persona.** A context file in a project folder defines who Claude is in that context — its role, its knowledge, its rules. No "persona builder" UI, no configuration screens. Just a text file.
 
-### Implementation Strategy
+### How it works
 
-- **File format:** Markdown-based `COWORK.md` files (matching Claude Code's `CLAUDE.md` convention) placed in any folder. Supports frontmatter YAML for structured config:
-  ```markdown
-  ---
-  model: opus
-  approval_required: destructive_only
-  output_format: xlsx
-  ---
-  # Project: Q1 Financial Reports
-  
-  ## Context
-  This folder contains monthly P&L statements in CSV format.
-  Always use USD formatting with two decimal places.
-  
-  ## Rules
-  - Never delete source CSV files
-  - Output summaries to the /reports subfolder
-  - Use the company template in /templates/report.xlsx
-  ```
-- **Auto-discovery:** When a user grants folder access, Atelier walks up the directory tree looking for `COWORK.md` files (similar to `.gitignore` resolution). Merges instructions from parent → child (child overrides parent).
-- **Spotlight indexing:** Register a Spotlight importer (`mdimporter`) so users can search all their Cowork context files system-wide: "Show me all my COWORK.md files" via Spotlight or `mdfind`.
-- **GUI editor:** Built-in SwiftUI editor for creating/editing `COWORK.md` files with syntax highlighting, validation, and live preview of how the instructions will be interpreted.
-- **Template library:** Ship starter templates for common use cases (financial analysis, file organization, report generation, etc.).
+A context file is a markdown file placed in any folder. When a user opens that folder as a project, Atelier auto-loads the context file and Claude adapts accordingly.
 
-### User Flow
+**For a travel planner:**
+```markdown
+# Trip: Japan 2026
 
-```
-1. User creates ~/Projects/Q1-Reports/COWORK.md
-2. User asks Cowork: "Process the January data"
-3. App grants access to ~/Projects/Q1-Reports/
-4. App auto-discovers COWORK.md
-5. Agent loads context: "This folder contains monthly P&L statements..."
-6. Agent follows rules: outputs to /reports, uses template, preserves CSVs
-7. Result is consistent every time, no re-explaining needed
+I'm planning a 2-week trip to Japan in October.
+Budget: moderate (not backpacker, not luxury).
+I love ramen, onsen, and architecture.
+Avoid tourist traps. Prefer local recommendations.
 ```
 
-### Estimated Impact
+**For a small business CRM:**
+```markdown
+# Martinez Plumbing — Client Management
 
-| Scenario | Current | With Context Files |
-|----------|---------|-------------------|
-| Repeated task on same folder | Re-explain every time | Automatic, consistent |
-| Team sharing workflows | Copy-paste prompts in Slack | Share COWORK.md in git |
-| Complex multi-step tasks | Unpredictable results | Guided by rules |
-| Onboarding new team member | Teach them the "right prompt" | Just point them at the folder |
+Help me track clients, follow-ups, and invoices.
+Client folders are organized by name.
+Always be professional and concise in drafts.
+When I ask about follow-ups, check file dates to find stale clients.
+```
 
-### Key Dependencies
+**For a developer:**
+```markdown
+---
+capabilities: [web-search]
+---
+# Atelier
 
-- `COWORK.md` file format specification
-- Spotlight importer plugin (`mdimporter`)
-- SwiftUI text editor with syntax highlighting
-- Directory tree walking with `FileManager.enumerator`
+A native macOS app. Swift 6.2+, macOS 26.
+See CLAUDE.md for conventions.
+```
+
+### The context builds itself
+
+Most users won't create a context file on day one. That's fine. Over time, patterns emerge:
+
+1. **Day one:** User opens a folder and chats. No context file. Claude is generic.
+2. **After a few sessions:** Claude notices patterns — "You always ask me to format dates as DD/MM/YYYY" or "You prefer bullet points over paragraphs."
+3. **Claude offers:** *"I've noticed some patterns in how you like things done. Want me to save them so I remember next time?"*
+4. **User agrees:** Claude writes a context file to the project folder. Next session, it's loaded automatically.
+5. **Over time:** The context file grows as preferences accumulate. The user can edit it directly if they want, but they never have to.
+
+### File format
+
+Markdown-based, with optional YAML frontmatter for structured config:
+
+```markdown
+---
+capabilities: [web-search, google-calendar]
+approval: destructive_only
+---
+# Project instructions
+
+Free-form instructions in natural language.
+Claude reads this as context for every session in this project.
+```
+
+Frontmatter is optional. A context file can be as simple as a single sentence.
+
+### Discovery and inheritance
+
+- When a user opens a folder, Atelier looks for context files: `CLAUDE.md`, `COWORK.md`, or `.atelier/context.md`
+- Walks up the directory tree (like `.gitignore`) — parent context is inherited, child context overrides
+- Multiple context files merge: parent provides defaults, child provides specifics
+
+### Who writes context files?
+
+| User level | How they get context |
+|-----------|---------------------|
+| Everyone | Claude offers to save patterns after a few sessions |
+| Regular users | Edit the context file Claude created, or write their own |
+| Teams | Share context files via git or file sharing |
+| Power users | Write detailed context with YAML frontmatter, capability declarations, and rules |
+
+## Implementation
+
+### Phase 1 — Auto-Discovery & Loading
+
+- Scan project folder for context files (CLAUDE.md, COWORK.md, .atelier/context.md)
+- Walk up directory tree, merge parent → child (child overrides)
+- Load context into the `ProjectContext` that the `ConversationEngine` receives
+- Spotlight-indexable via `mdimporter` so users can find context files system-wide
+
+### Phase 2 — Self-Building Context
+
+- Track user patterns across sessions (formatting preferences, recurring instructions, common corrections)
+- After N sessions with consistent patterns, offer to save them
+- Generate a context file draft and show it to the user for approval before writing
+- Never write to the user's folder without explicit consent
+
+### Phase 3 — Context Editor
+
+- Built-in editor for viewing/editing context files (simple markdown with syntax highlighting)
+- Accessible from the inspector panel or project settings
+- Live preview: "Here's how Claude will interpret this"
+
+### Phase 4 — Template Library
+
+- Starter templates for common use cases: travel planning, client management, writing projects, financial analysis, software development
+- Offered contextually when a project is opened and no context file exists
+- Templates are starting points, not rigid structures
+
+## Dependencies
+
+- experience/02-project-workspace.md (project model — context files are per-project)
+- architecture/06-conversation-model.md (context feeds into the ConversationEngine)
+- hub/03-plugin-management.md (capability declarations in frontmatter)
+
+## Notes
+
+The context file is the simplest, most powerful feature in Atelier. It's what makes Claude remember you, adapt to your project, and get better over time. It's also just a text file — inspectable, editable, shareable, versionable. No magic, no lock-in.
+
+The self-building behavior is the key to making this work for non-technical users. Your wife doesn't need to write a context file — Claude will offer to create one after she's planned a few trips.
 
 ---
 

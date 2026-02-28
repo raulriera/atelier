@@ -20,51 +20,52 @@ Build order. Each milestone produces something usable and testable. Earlier mile
 
 | Milestone | Theme | Delivers |
 |-----------|-------|----------|
-| **M0** | Skeleton | Native window, basic VM, files move between host and VM |
-| **M1** | Safe foundation | Network locked down, file permissions, deletion safety, credentials in Keychain |
-| **M2** | The product | Window & conversation, project model, context files, sessions survive reboot |
+| **M0** | Conversation | Native window, API connection, basic conversation working |
+| **M1** | Safe foundation | Sandboxed execution, file sharing, network isolation, permissions, credentials |
+| **M2** | The product | Project model, context files, session persistence, conversational flow |
 | **M3** | Intelligence | Embedded Code terminal, approval flow, token visibility, prompt injection defense |
 | **M4** | Native power | System services, menu bar, notifications, Shortcuts |
 | **M5** | Growth & polish | Chat integration, onboarding, workflows, Spotlight, drag-drop, everything else |
 
 ---
 
-## M0 — Skeleton
+## M0 — Conversation
 
-Prove the architecture works. De-risk first: get the VM running, then file sharing, then wrap it in the real app shell.
+Ship the core experience first: open the app, talk to Claude, get a response. Conversation-first means validating the product before the infrastructure. Container and sandbox come later.
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 1.1 | Sandboxed Execution | Improvement | 🔨 In progress | [→](opportunities/architecture/02-sandboxed-execution.md) |
-| 1.2 | File Sharing (Host ↔ VM) | Improvement | 🔲 Not started | [→](opportunities/architecture/03-file-sharing.md) |
-| 1.3 | Application Shell | Improvement | 🔲 Not started | [→](opportunities/architecture/01-application-shell.md) |
+| 1.1 | Application Shell | New | 🔲 Not started | [→](opportunities/architecture/01-application-shell.md) |
+| 1.2 | Conversation & Data Model | New | 🔲 Not started | [→](opportunities/architecture/06-conversation-model.md) |
+| 1.3 | Window & Conversation | New | 🔲 Not started | [→](opportunities/experience/01-window-conversation.md) |
 
 ---
 
 ## M1 — Safe Foundation
 
-Harden the sandbox before exposing it to user workloads. No one should use Atelier and lose data or leak secrets.
+Stand up the sandbox and lock it down. Get the container running, file sharing working, and security hardened — so M2 can open real projects safely.
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 2.1 | Network Isolation | Improvement | 🔲 Not started | [→](opportunities/security/01-network-isolation.md) |
-| 2.2 | File Access Permissions | Improvement | 🔲 Not started | [→](opportunities/security/02-file-access-permissions.md) |
-| 2.3 | File Deletion Safety | New | 🔲 Not started | [→](opportunities/security/06-file-deletion-safety.md) |
-| 2.4 | Credential Storage | Improvement | 🔲 Not started | [→](opportunities/security/04-credential-storage.md) |
+| 2.1 | Sandboxed Execution | Improvement | 🔨 In progress | [→](opportunities/architecture/02-sandboxed-execution.md) |
+| 2.2 | File Sharing (Host ↔ VM) | Improvement | 🔲 Not started | [→](opportunities/architecture/03-file-sharing.md) |
+| 2.3 | Network Isolation | Improvement | 🔲 Not started | [→](opportunities/security/01-network-isolation.md) |
+| 2.4 | File Access Permissions | Improvement | 🔲 Not started | [→](opportunities/security/02-file-access-permissions.md) |
+| 2.5 | File Deletion Safety | New | 🔲 Not started | [→](opportunities/security/06-file-deletion-safety.md) |
+| 2.6 | Credential Storage | Improvement | 🔲 Not started | [→](opportunities/security/04-credential-storage.md) |
 
 ---
 
 ## M2 — The Product
 
-This is where Atelier stops being a tech demo and becomes a product. The window, the conversation, the project model, context files, and persistent sessions.
+With a working conversation (M0) and a safe sandbox (M1), this is where Atelier becomes a real product. Open projects, context files, persistent sessions, and rich inline content.
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 3.1 | Window & Conversation | New | 🔲 Not started | [→](opportunities/experience/01-window-conversation.md) |
-| 3.2 | Project Workspace | New | 🔲 Not started | [→](opportunities/experience/02-project-workspace.md) |
-| 3.3 | Project Context Files (COWORK.md) | New | 🔲 Not started | [→](opportunities/context/01-project-context-files.md) |
-| 3.4 | Session Persistence | New | 🔲 Not started | [→](opportunities/architecture/04-session-persistence.md) |
-| 3.5 | Conversation & Data Model | New | 🔲 Not started | [→](opportunities/architecture/06-conversation-model.md) |
+| 3.1 | Project Workspace | New | 🔲 Not started | [→](opportunities/experience/02-project-workspace.md) |
+| 3.2 | Project Context Files | New | 🔲 Not started | [→](opportunities/context/01-project-context-files.md) |
+| 3.3 | Session Persistence | New | 🔲 Not started | [→](opportunities/architecture/04-session-persistence.md) |
+| 3.4 | Conversational Flow | New | 🔲 Not started | [→](opportunities/experience/03-conversational-flow.md) |
 
 ---
 
@@ -102,19 +103,18 @@ Expand the product surface. Chat integration, onboarding, workflows, and all the
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
 | 6.1 | Claude Chat Integration | New | 🔲 Not started | [→](opportunities/hub/02-claude-chat-integration.md) |
-| 6.2 | Conversational Flow | New | 🔲 Not started | [→](opportunities/experience/03-conversational-flow.md) |
-| 6.3 | Onboarding & Setup | New | 🔲 Not started | [→](opportunities/experience/04-onboarding.md) |
-| 6.4 | Task Templates & Workflows | New | 🔲 Not started | [→](opportunities/context/02-task-templates-workflows.md) |
-| 6.5 | File System Events | New | 🔲 Not started | [→](opportunities/macos/08-file-system-events.md) |
-| 6.6 | Plugin Management | Improvement | 🔲 Not started | [→](opportunities/hub/03-plugin-management.md) |
-| 6.7 | MCP Connector Health | Improvement | 🔲 Not started | [→](opportunities/hub/04-mcp-connector-health.md) |
-| 6.8 | Multi-Agent Orchestration | Improvement | 🔲 Not started | [→](opportunities/context/03-multi-agent-orchestration.md) |
-| 6.9 | Spotlight & System Search | New | 🔲 Not started | [→](opportunities/macos/02-spotlight-search.md) |
-| 6.10 | Drag & Drop | New | 🔲 Not started | [→](opportunities/macos/03-drag-and-drop.md) |
-| 6.11 | Clipboard Integration | New | 🔲 Not started | [→](opportunities/macos/09-clipboard-integration.md) |
-| 6.12 | Document Generation | Improvement | 🔲 Not started | [→](opportunities/macos/10-document-generation.md) |
-| 6.13 | Quick Look Previews | New | 🔲 Not started | [→](opportunities/macos/04-quick-look-previews.md) |
-| 6.14 | Audit & Compliance | New | 🔲 Not started | [→](opportunities/security/05-audit-compliance.md) |
+| 6.2 | Onboarding & Setup | New | 🔲 Not started | [→](opportunities/experience/04-onboarding.md) |
+| 6.3 | Task Templates & Workflows | New | 🔲 Not started | [→](opportunities/context/02-task-templates-workflows.md) |
+| 6.4 | File System Events | New | 🔲 Not started | [→](opportunities/macos/08-file-system-events.md) |
+| 6.5 | Capabilities | Improvement | 🔲 Not started | [→](opportunities/hub/03-plugin-management.md) |
+| 6.6 | Capability Health | Improvement | 🔲 Not started | [→](opportunities/hub/04-mcp-connector-health.md) |
+| 6.7 | Multi-Agent Orchestration | Improvement | 🔲 Not started | [→](opportunities/context/03-multi-agent-orchestration.md) |
+| 6.8 | Spotlight & System Search | New | 🔲 Not started | [→](opportunities/macos/02-spotlight-search.md) |
+| 6.9 | Drag & Drop | New | 🔲 Not started | [→](opportunities/macos/03-drag-and-drop.md) |
+| 6.10 | Clipboard Integration | New | 🔲 Not started | [→](opportunities/macos/09-clipboard-integration.md) |
+| 6.11 | Document Generation | Improvement | 🔲 Not started | [→](opportunities/macos/10-document-generation.md) |
+| 6.12 | Quick Look Previews | New | 🔲 Not started | [→](opportunities/macos/04-quick-look-previews.md) |
+| 6.13 | Audit & Compliance | New | 🔲 Not started | [→](opportunities/security/05-audit-compliance.md) |
 
 ---
 
@@ -128,11 +128,11 @@ The foundation — native app shell, VM execution, file sharing, sessions, memor
 | File | Milestone |
 |------|-----------|
 | [01-application-shell.md](opportunities/architecture/01-application-shell.md) | M0 |
-| [02-sandboxed-execution.md](opportunities/architecture/02-sandboxed-execution.md) | M0 |
-| [03-file-sharing.md](opportunities/architecture/03-file-sharing.md) | M0 |
+| [02-sandboxed-execution.md](opportunities/architecture/02-sandboxed-execution.md) | M1 |
+| [03-file-sharing.md](opportunities/architecture/03-file-sharing.md) | M1 |
 | [04-session-persistence.md](opportunities/architecture/04-session-persistence.md) | M2 |
 | [05-memory-management.md](opportunities/architecture/05-memory-management.md) | M4 |
-| [06-conversation-model.md](opportunities/architecture/06-conversation-model.md) | M2 |
+| [06-conversation-model.md](opportunities/architecture/06-conversation-model.md) | M0 |
 
 ### Security (`opportunities/security/`)
 Network isolation, file permissions, prompt injection, credentials, audit, deletion safety.
@@ -151,9 +151,9 @@ The product UX — window & conversation, project model, conversational flow, on
 
 | File | Milestone |
 |------|-----------|
-| [01-window-conversation.md](opportunities/experience/01-window-conversation.md) | M2 |
+| [01-window-conversation.md](opportunities/experience/01-window-conversation.md) | M0 |
 | [02-project-workspace.md](opportunities/experience/02-project-workspace.md) | M2 |
-| [03-conversational-flow.md](opportunities/experience/03-conversational-flow.md) | M5 |
+| [03-conversational-flow.md](opportunities/experience/03-conversational-flow.md) | M2 |
 | [04-onboarding.md](opportunities/experience/04-onboarding.md) | M5 |
 
 ### Context (`opportunities/context/`)
@@ -167,7 +167,7 @@ Project context files, templates, multi-agent visibility, approval flow.
 | [04-approval-review-flow.md](opportunities/context/04-approval-review-flow.md) | M3 |
 
 ### Hub (`opportunities/hub/`)
-Code/Chat integration, plugins, MCP health, token usage.
+Code/Chat integration, capabilities, capability health, token usage.
 
 | File | Milestone |
 |------|-----------|

@@ -62,11 +62,31 @@ No project picker. No sidebar. Just windows.
 
 ---
 
-## It learns your project over time.
+## Your folder becomes your assistant.
 
-The first time you open a project, Claude scans it and gets oriented. The second time, it already knows. The tenth time, it knows where the tricky parts are, what you've worked on before, and what patterns you prefer.
+The first time you open a project, Claude scans it and gets oriented. By the third or fourth session, Claude starts to notice things: you always format dates a certain way, you prefer bullet points, you like follow-up reminders.
 
-Context builds up naturally — through your conversations, through context files in the project folder, through the choices you've made. You never have to re-explain.
+*"I've noticed some patterns in how you like things done. Want me to save them so I remember next time?"*
+
+You say yes. Claude saves a small context file in your folder. Next time you open the project, it already knows. The tenth time, it knows where the tricky parts are, what you've worked on, and what patterns you prefer.
+
+This is how a travel folder becomes a travel assistant. A client folder becomes a CRM. A codebase becomes a pair programmer. The folder defines the persona — not through configuration screens, but through use.
+
+---
+
+## It can do more than talk.
+
+Sometimes you need Claude to look something up, check a calendar, or search the web. When it would help, Claude asks:
+
+> *"I can look up flight prices if you enable web search. Allow?"*
+> → One tap. Done.
+
+> *"I can check your calendar if you connect Google Calendar."*
+> → One tap → sign in → done.
+
+You never see technical jargon — no "plugins," no "connectors," no setup screens. You see a capability name ("web search," "Google Calendar") and a simple prompt. If something stops working, the app handles it quietly — retries, reconnects, restarts. You only hear about it if something needs your attention.
+
+> *"Google Calendar needs you to sign in again."* → One tap → fixed.
 
 ---
 
@@ -94,10 +114,10 @@ These things surface gradually. You'll discover them as you use the app, not dur
 
 ## The first milestone is small.
 
-We're not building all of this at once. The first milestone is three things:
+We're not building all of this at once. The first milestone delivers one thing: a conversation that works.
 
-1. A native window that exists
-2. A container that boots
-3. Files moving between the host and the container
+1. A native window with a text field
+2. An API key and a connection to Claude
+3. A basic conversation — send a message, get a response
 
-Everything above is where we're going. The milestones in [INDEX.md](INDEX.md) define how we get there.
+No container, no sandbox, no file system yet. Just the core experience: open the app and talk. Everything above is where we're going. The milestones in [INDEX.md](INDEX.md) define how we get there.
