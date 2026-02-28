@@ -11,6 +11,10 @@
 		4C0BECD22F52A29000A608CC /* AtelierKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4C0BECD12F52A29000A608CC /* AtelierKit */; };
 		4C0BECD52F52A4B600A608CC /* AtelierDesign in Frameworks */ = {isa = PBXBuildFile; productRef = 4C0BECD42F52A4B600A608CC /* AtelierDesign */; };
 		4C0BECD82F52A4C200A608CC /* AtelierKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4C0BECD72F52A4C200A608CC /* AtelierKit */; };
+		4C0BECDB2F52B00100A608CC /* AtelierSecurity in Frameworks */ = {isa = PBXBuildFile; productRef = 4C0BECDA2F52B00100A608CC /* AtelierSecurity */; };
+		4C0BECDE2F52B00200A608CC /* AtelierSandbox in Frameworks */ = {isa = PBXBuildFile; productRef = 4C0BECDD2F52B00200A608CC /* AtelierSandbox */; };
+		4C0BECE52F52B10000A608CC /* AtelierSandbox in Frameworks */ = {isa = PBXBuildFile; productRef = 4C0BECE62F52B10000A608CC /* AtelierSandbox */; };
+		4C0BECEB2F52B10000A608CC /* AtelierSandboxService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 4C0BECDF2F52B10000A608CC /* AtelierSandboxService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,12 +32,34 @@
 			remoteGlobalIDString = 4C0BEC972F52A19B00A608CC;
 			remoteInfo = Atelier;
 		};
+		4C0BECED2F52B10000A608CC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4C0BEC902F52A19B00A608CC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4C0BECE02F52B10000A608CC;
+			remoteInfo = AtelierSandboxService;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4C0BECEA2F52B10000A608CC /* Embed XPC Services */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/XPCServices";
+			dstSubfolderSpec = 16;
+			files = (
+				4C0BECEB2F52B10000A608CC /* AtelierSandboxService.xpc in Embed XPC Services */,
+			);
+			name = "Embed XPC Services";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		4C0BEC982F52A19B00A608CC /* Atelier.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Atelier.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C0BECA52F52A19B00A608CC /* AtelierTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AtelierTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C0BECAF2F52A19B00A608CC /* AtelierUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AtelierUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4C0BECDF2F52B10000A608CC /* AtelierSandboxService.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = AtelierSandboxService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +78,11 @@
 			path = AtelierUITests;
 			sourceTree = "<group>";
 		};
+		4C0BECE12F52B10000A608CC /* AtelierSandboxService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AtelierSandboxService;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +94,8 @@
 				4C0BECD22F52A29000A608CC /* AtelierKit in Frameworks */,
 				4C0BECD52F52A4B600A608CC /* AtelierDesign in Frameworks */,
 				4C0BECD02F52A29000A608CC /* AtelierDesign in Frameworks */,
+				4C0BECDB2F52B00100A608CC /* AtelierSecurity in Frameworks */,
+				4C0BECDE2F52B00200A608CC /* AtelierSandbox in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,6 +113,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4C0BECE32F52B10000A608CC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4C0BECE52F52B10000A608CC /* AtelierSandbox in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -87,6 +128,7 @@
 			isa = PBXGroup;
 			children = (
 				4C0BEC9A2F52A19B00A608CC /* Atelier */,
+				4C0BECE12F52B10000A608CC /* AtelierSandboxService */,
 				4C0BECA82F52A19B00A608CC /* AtelierTests */,
 				4C0BECB22F52A19B00A608CC /* AtelierUITests */,
 				4C0BEC992F52A19B00A608CC /* Products */,
@@ -97,6 +139,7 @@
 			isa = PBXGroup;
 			children = (
 				4C0BEC982F52A19B00A608CC /* Atelier.app */,
+				4C0BECDF2F52B10000A608CC /* AtelierSandboxService.xpc */,
 				4C0BECA52F52A19B00A608CC /* AtelierTests.xctest */,
 				4C0BECAF2F52A19B00A608CC /* AtelierUITests.xctest */,
 			);
@@ -113,10 +156,12 @@
 				4C0BEC942F52A19B00A608CC /* Sources */,
 				4C0BEC952F52A19B00A608CC /* Frameworks */,
 				4C0BEC962F52A19B00A608CC /* Resources */,
+				4C0BECEA2F52B10000A608CC /* Embed XPC Services */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				4C0BECEC2F52B10000A608CC /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				4C0BEC9A2F52A19B00A608CC /* Atelier */,
@@ -127,6 +172,8 @@
 				4C0BECD12F52A29000A608CC /* AtelierKit */,
 				4C0BECD42F52A4B600A608CC /* AtelierDesign */,
 				4C0BECD72F52A4C200A608CC /* AtelierKit */,
+				4C0BECDA2F52B00100A608CC /* AtelierSecurity */,
+				4C0BECDD2F52B00200A608CC /* AtelierSandbox */,
 			);
 			productName = Atelier;
 			productReference = 4C0BEC982F52A19B00A608CC /* Atelier.app */;
@@ -178,6 +225,29 @@
 			productReference = 4C0BECAF2F52A19B00A608CC /* AtelierUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		4C0BECE02F52B10000A608CC /* AtelierSandboxService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4C0BECE92F52B10000A608CC /* Build configuration list for PBXNativeTarget "AtelierSandboxService" */;
+			buildPhases = (
+				4C0BECE22F52B10000A608CC /* Sources */,
+				4C0BECE32F52B10000A608CC /* Frameworks */,
+				4C0BECE42F52B10000A608CC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4C0BECE12F52B10000A608CC /* AtelierSandboxService */,
+			);
+			name = AtelierSandboxService;
+			packageProductDependencies = (
+				4C0BECE62F52B10000A608CC /* AtelierSandbox */,
+			);
+			productName = AtelierSandboxService;
+			productReference = 4C0BECDF2F52B10000A608CC /* AtelierSandboxService.xpc */;
+			productType = "com.apple.product-type.xpc-service";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -199,6 +269,9 @@
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = 4C0BEC972F52A19B00A608CC;
 					};
+					4C0BECE02F52B10000A608CC = {
+						CreatedOnToolsVersion = 26.3;
+					};
 				};
 			};
 			buildConfigurationList = 4C0BEC932F52A19B00A608CC /* Build configuration list for PBXProject "Atelier" */;
@@ -213,6 +286,8 @@
 			packageReferences = (
 				4C0BECD32F52A4B600A608CC /* XCLocalSwiftPackageReference "Packages/AtelierDesign" */,
 				4C0BECD62F52A4C100A608CC /* XCLocalSwiftPackageReference "Packages/AtelierKit" */,
+				4C0BECD92F52B00100A608CC /* XCLocalSwiftPackageReference "Packages/AtelierSecurity" */,
+				4C0BECDC2F52B00200A608CC /* XCLocalSwiftPackageReference "Packages/AtelierSandbox" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4C0BEC992F52A19B00A608CC /* Products */;
@@ -220,6 +295,7 @@
 			projectRoot = "";
 			targets = (
 				4C0BEC972F52A19B00A608CC /* Atelier */,
+				4C0BECE02F52B10000A608CC /* AtelierSandboxService */,
 				4C0BECA42F52A19B00A608CC /* AtelierTests */,
 				4C0BECAE2F52A19B00A608CC /* AtelierUITests */,
 			);
@@ -242,6 +318,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		4C0BECAD2F52A19B00A608CC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4C0BECE42F52B10000A608CC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -272,6 +355,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4C0BECE22F52B10000A608CC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -284,6 +374,11 @@
 			isa = PBXTargetDependency;
 			target = 4C0BEC972F52A19B00A608CC /* Atelier */;
 			targetProxy = 4C0BECB02F52A19B00A608CC /* PBXContainerItemProxy */;
+		};
+		4C0BECEC2F52B10000A608CC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4C0BECE02F52B10000A608CC /* AtelierSandboxService */;
+			targetProxy = 4C0BECED2F52B10000A608CC /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -550,6 +645,48 @@
 			};
 			name = Release;
 		};
+		4C0BECE72F52B10000A608CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AtelierSandboxService/AtelierSandboxService.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R64MTWS872;
+				ENABLE_APP_SANDBOX = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raulriera.Atelier.SandboxService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4C0BECE82F52B10000A608CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AtelierSandboxService/AtelierSandboxService.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = R64MTWS872;
+				ENABLE_APP_SANDBOX = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.raulriera.Atelier.SandboxService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -589,6 +726,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		4C0BECE92F52B10000A608CC /* Build configuration list for PBXNativeTarget "AtelierSandboxService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C0BECE72F52B10000A608CC /* Debug */,
+				4C0BECE82F52B10000A608CC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -599,6 +745,14 @@
 		4C0BECD62F52A4C100A608CC /* XCLocalSwiftPackageReference "Packages/AtelierKit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/AtelierKit;
+		};
+		4C0BECD92F52B00100A608CC /* XCLocalSwiftPackageReference "Packages/AtelierSecurity" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/AtelierSecurity;
+		};
+		4C0BECDC2F52B00200A608CC /* XCLocalSwiftPackageReference "Packages/AtelierSandbox" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/AtelierSandbox;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -618,6 +772,18 @@
 		4C0BECD72F52A4C200A608CC /* AtelierKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AtelierKit;
+		};
+		4C0BECDA2F52B00100A608CC /* AtelierSecurity */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AtelierSecurity;
+		};
+		4C0BECDD2F52B00200A608CC /* AtelierSandbox */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AtelierSandbox;
+		};
+		4C0BECE62F52B10000A608CC /* AtelierSandbox */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AtelierSandbox;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
