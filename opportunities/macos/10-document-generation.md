@@ -1,6 +1,6 @@
 # Document Generation
 
-> **Category:** Document & File Handling
+> **Category:** macOS Integration
 > **Type:** Improvement · **Priority:** 🟡 Medium
 
 ---

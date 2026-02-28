@@ -54,7 +54,7 @@ For lighter tasks that don't need a full Linux toolchain, use macOS native sandb
 │                      │ (Swift)   │ │
 │                      └──────┬────┘ │
 │                      ┌──────▼────┐ │
-│                      │ Virtuliza-│ │
+│                      │ Virtualiz-│ │
 │                      │ tion.fw   │ │
 │                      │ Linux VM  │ │
 │                      │ (OCI img) │ │

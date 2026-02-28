@@ -1,6 +1,6 @@
 # File Deletion Safety
 
-> **Category:** Document & File Handling
+> **Category:** Security & Privacy
 > **Type:** 🆕 New Capability · **Priority:** 🔴 Critical
 
 ---

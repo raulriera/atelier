@@ -1,10 +1,7 @@
 # Project Workspace
 
-## Type
-🆕 New
-
-## Priority
-🔴 Critical
+> **Category:** Experience
+> **Type:** 🆕 New Capability · **Priority:** 🔴 Critical
 
 ---
 
@@ -35,15 +32,15 @@ A project is the fundamental unit of organization in Atelier:
 ## Implementation
 
 ### Phase 1 — Project Model
-- `Project` struct: root path, display name, icon, creation date, last opened
+- `Project` struct (or `@Observable class` if it needs to be reactive): root path, display name, icon, creation date, last opened
 - Security-Scoped Bookmarks for persistent folder access across launches
 - Project metadata stored in `~/.atelier/projects/` (or in `.atelier/` within the project folder)
 - Auto-detection: scan for CLAUDE.md, COWORK.md, .git, language files
 
 ### Phase 2 — Sidebar & Switching
-- `NSOutlineView` sidebar with pinned / recent / all sections
+- SwiftUI `List` with `.listStyle(.sidebar)` inside `NavigationSplitView` — the native macOS sidebar pattern. Sections for pinned / recent / all projects.
 - Quick Open (`⌘⇧O`) with fuzzy matching on project name and path
-- Drag folder onto Atelier icon to open as project
+- Drag folder onto Atelier icon to open as project (via `onDrop` or AppKit `NSApplication` delegate)
 
 ### Phase 3 — Per-Project Settings
 - Settings pane scoped to project: approval levels, network rules, allowed tools
@@ -59,3 +56,7 @@ A project is the fundamental unit of organization in Atelier:
 ## Notes
 
 This is what makes Atelier feel like an IDE for Claude rather than a chat window with extra steps. The project model is the connective tissue between every other feature.
+
+---
+
+*Back to [Index](../../INDEX.md)*

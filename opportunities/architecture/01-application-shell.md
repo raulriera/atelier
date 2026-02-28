@@ -7,7 +7,7 @@
 
 ## Current State (Electron / Cowork)
 
-Electron (Chromium wrapper) — high RAM usage (~500MB+), slow startup, non-native UI rendering. The Claude Desktop app is confirmed to be built with Electron by Boris Cherny, a Claude Code team engineer. This means every instance runs a full Chromium browser engine alongside Atelierlication logic, resulting in a heavy memory footprint, sluggish launch times, and a UI that doesn't match macOS conventions (no native menu behaviors, no system font rendering, no respect for Reduce Motion or other accessibility settings).
+Electron (Chromium wrapper) — high RAM usage (~500MB+), slow startup, non-native UI rendering. The Claude Desktop app is confirmed to be built with Electron by Boris Cherny, a Claude Code team engineer. This means every instance runs a full Chromium browser engine alongside application logic, resulting in a heavy memory footprint, sluggish launch times, and a UI that doesn't match macOS conventions (no native menu behaviors, no system font rendering, no respect for Reduce Motion or other accessibility settings).
 
 ## Native macOS Approach
 
@@ -19,7 +19,7 @@ Electron (Chromium wrapper) — high RAM usage (~500MB+), slow startup, non-nati
 - **Rendering:** Native Metal-backed rendering via SwiftUI — no Chromium overhead. Text rendering uses CoreText, matching system fonts and Dynamic Type.
 - **Accessibility:** Automatic VoiceOver support, Reduce Motion, Increase Contrast, and all macOS accessibility features come free with native controls.
 - **Appearance:** Automatic Dark Mode, accent color, sidebar tinting, and vibrancy (`NSVisualEffectView`) — Atelier looks like it belongs on macOS.
-- **Launch time:** Ateliers launch in <1 second vs. 3–5 seconds for Electron.
+- **Launch time:** Native apps launch in <1 second vs. 3–5 seconds for Electron.
 
 ### Estimated Impact
 
@@ -34,7 +34,7 @@ Electron (Chromium wrapper) — high RAM usage (~500MB+), slow startup, non-nati
 
 - Swift 6.2+, macOS 26 minimum deployment target (aligned with Containerization framework requirement)
 - SwiftUI for primary UI, AppKit for specialized views
-- Combine / async-await for reactive data flow
+- `@Observable` + async/await for reactive data flow (Combine only where required by system APIs)
 
 ### Risks & Mitigations
 

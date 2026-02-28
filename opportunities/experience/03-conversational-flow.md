@@ -1,10 +1,7 @@
 # Conversational Flow
 
-## Type
-🆕 New
-
-## Priority
-🟠 High
+> **Category:** Experience
+> **Type:** 🆕 New Capability · **Priority:** 🟠 High
 
 ---
 
@@ -62,3 +59,7 @@ Fluid escalation and de-escalation between modes, all within the same conversati
 ## Notes
 
 This is the most ambitious UX challenge in Atelier. The risk is making it feel magical when it works but confusing when it doesn't. Start with explicit buttons for mode transitions; add intelligent suggestions later.
+
+---
+
+*Back to [Index](../../INDEX.md)*

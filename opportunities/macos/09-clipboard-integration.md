@@ -1,6 +1,6 @@
 # Clipboard Integration
 
-> **Category:** Document & File Handling
+> **Category:** macOS Integration
 > **Type:** 🆕 New Capability · **Priority:** 🟡 Medium
 
 ---

@@ -1,10 +1,7 @@
 # Hub & Navigation
 
-## Type
-🆕 New
-
-## Priority
-🔴 Critical
+> **Category:** Experience
+> **Type:** 🆕 New Capability · **Priority:** 🔴 Critical
 
 ---
 
@@ -28,10 +25,11 @@ Mode switching is instant and preserves scroll position, draft text, and unsaved
 ## Implementation
 
 ### Phase 1 — Window Shell
-- `NSWindow` with `NSSplitViewController` for sidebar / content / context panel
-- `NSTabViewController` or custom segment control for mode switching
-- State restoration via `NSUserActivity` and `NSWindowRestoration`
-- Respect system appearance (Dark Mode, accent color, sidebar style)
+- `NavigationSplitView` for the three-column layout (sidebar / content / detail). On macOS 26 this is the native pattern for sidebar-based apps — provides collapse, resize, and state restoration for free.
+- SwiftUI `TabView` with the `Tab` API (macOS 26) for mode switching (Chat / Cowork / Code), or a custom `Picker` segment control if more control is needed.
+- AppKit bridging via `NSViewRepresentable` only for the embedded terminal view and other controls without SwiftUI equivalents.
+- State restoration via `NSUserActivity` and `@SceneStorage`.
+- Respect system appearance (Dark Mode, accent color, sidebar tinting via `.listStyle(.sidebar)`).
 
 ### Phase 2 — Split Views
 - Horizontal and vertical split support within the content area
@@ -51,3 +49,7 @@ Mode switching is instant and preserves scroll position, draft text, and unsaved
 ## Notes
 
 This is the most important design decision in the app. Everything else is a feature inside this shell. Get the navigation wrong and every feature suffers.
+
+---
+
+*Back to [Index](../../INDEX.md)*

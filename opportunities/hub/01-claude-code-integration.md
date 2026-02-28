@@ -45,7 +45,7 @@ Claude Code is a completely separate CLI tool with no connection to Cowork. User
 │  └──────────────┬──────────────────────┘    │
 │                 │                            │
 │  ┌──────────────▼──────────────────────┐    │
-│  │  Shared VM (Ubuntu + Claude Code)   │    │
+│  │  Shared Container (OCI + Claude Code)│    │
 │  └─────────────────────────────────────┘    │
 └─────────────────────────────────────────────┘
 ```

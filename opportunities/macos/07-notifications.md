@@ -7,7 +7,7 @@
 
 ## Current State (Electron / Cowork)
 
-Basic Electron notifications — no inline actions, no grouping, no threading. Notifications are plain text with no ability to take action without switching to Atelier.
+Basic Electron notifications — no inline actions, no grouping, no threading. Notifications are plain text with no ability to take action without switching to the app.
 
 ## Native macOS Approach
 

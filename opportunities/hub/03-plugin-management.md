@@ -7,7 +7,7 @@
 
 ## Current State (Electron / Cowork)
 
-11+ starter plugins, private enterprise marketplaces via GitHub — but management is clunky and the failure rate is approximately 25%. Plugins fail silently, there's no crash isolation (a bad plugin can destabilize Atelier), and no health monitoring.
+11+ starter plugins, private enterprise marketplaces via GitHub — but management is clunky and the failure rate is approximately 25%. Plugins fail silently, there's no crash isolation (a bad plugin can destabilize the app), and no health monitoring.
 
 ## Native macOS Approach
 

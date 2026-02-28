@@ -1,10 +1,7 @@
 # Onboarding & Setup
 
-## Type
-🆕 New
-
-## Priority
-🟠 High
+> **Category:** Experience
+> **Type:** 🆕 New Capability · **Priority:** 🟠 High
 
 ---
 
@@ -57,3 +54,7 @@ A single guided setup flow that gets you from launch to first useful interaction
 ## Notes
 
 Onboarding is the first impression. It should feel native-Mac: clean, fast, no wizards with 10 steps. Think of how Xcode handles "Open a project" — you pick a folder and you're working.
+
+---
+
+*Back to [Index](../../INDEX.md)*
