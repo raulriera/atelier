@@ -24,7 +24,7 @@ A project contains multiple **sessions** (conversations). Each session is a self
 - Project context (CLAUDE.md, settings, permissions) carries across all sessions
 - Session-specific conversation history does not leak into other sessions
 
-This maps to how people work: Monday's refactoring is a different conversation than Tuesday's bug fix, but they're in the same project.
+This maps to how people work: Monday's itinerary research is a different conversation than Tuesday's packing list, but they're in the same trip folder. A developer's refactoring session is separate from their bug fix. A consultant's client call prep is separate from their invoice review. Different conversations, same project.
 
 ### Storage: files, not a database
 
@@ -68,6 +68,7 @@ enum TimelineContent: Codable {
     case userMessage(UserMessage)
     case assistantMessage(AssistantMessage)
     case fileCard(FileCard)
+    case artifact(ArtifactCard)
     case diff(DiffCard)
     case toolUse(ToolUseCard)
     case progress(ProgressCard)
@@ -96,7 +97,7 @@ struct UserMessage: Codable {
 struct AssistantMessage: Codable {
     var text: String
     var isComplete: Bool
-    var children: [TimelineItem]       // nested: tool uses, file reads, diffs
+    var children: [TimelineItem]       // nested: tool uses, file reads, artifacts
     var inputTokens: Int
     var outputTokens: Int
 }
@@ -104,7 +105,14 @@ struct AssistantMessage: Codable {
 struct FileCard: Codable {
     var path: String
     var action: FileAction             // .read, .write, .delete, .create
-    var summary: String?               // "Read 72 lines"
+    var summary: String?               // "Read travel-itinerary.pdf" or "Created report.xlsx"
+}
+
+struct ArtifactCard: Codable {
+    var title: String                  // "Japan Day-by-Day Itinerary", "Q3 Client Report"
+    var contentType: String            // "text/markdown", "text/html", "application/pdf"
+    var content: String                // the generated content (markdown, HTML, etc.)
+    var isExpandable: Bool             // show inline or as a preview card
 }
 
 struct DiffCard: Codable {
@@ -132,14 +140,14 @@ struct ResultCard: Codable {
 }
 
 struct SystemEvent: Codable {
-    var kind: SystemEventKind          // .sessionStarted, .containerBooted, .projectOpened
+    var kind: SystemEventKind          // .sessionStarted, .projectOpened
     var message: String
 }
 ```
 
 ### The drillable assistant message
 
-An `AssistantMessage` is more than text. Its `children` array contains the work that happened during that response — file reads, tool uses, diffs. The default view shows the text. Expanding the message reveals the nested cards, like the Xcode Claude integration where "LockScreenInlineWidget · 72 lines read" appears as a card within the response.
+An `AssistantMessage` is more than text. Its `children` array contains the work that happened during that response — file reads, tool uses, generated artifacts. The default view shows the text. Expanding reveals the nested cards: "Read travel-itinerary.pdf", "Created day-by-day-plan.md", or a diff of changes made to a document.
 
 ### Streaming
 
@@ -174,7 +182,7 @@ protocol ConversationEngine: Sendable {
 }
 ```
 
-The engine receives the user's message, the project context (CLAUDE.md, folder structure, settings), and the session history (for conversational continuity). It returns a stream of events that the UI renders progressively.
+The engine receives the user's message, the project context (folder contents, context files, settings), and the session history (for conversational continuity). It returns a stream of events that the UI renders progressively.
 
 ### Context management for the API
 
