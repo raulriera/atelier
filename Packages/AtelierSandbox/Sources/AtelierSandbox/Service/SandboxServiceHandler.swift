@@ -8,15 +8,18 @@ import AtelierSecurity
 public final class SandboxServiceHandler: NSObject, SandboxXPCProtocol, Sendable {
     private let coordinatedOperator: CoordinatedFileOperator
     private let safeOperator: SafeFileOperator
+    private let permissionGate: PermissionGating
     private nonisolated(unsafe) let fileManager: FileManager
 
     public init(
         coordinatedOperator: CoordinatedFileOperator = CoordinatedFileOperator(),
         safeOperator: SafeFileOperator = SafeFileOperator(),
+        permissionGate: PermissionGating = AllowAllPermissionGate(),
         fileManager: FileManager = .default
     ) {
         self.coordinatedOperator = coordinatedOperator
         self.safeOperator = safeOperator
+        self.permissionGate = permissionGate
         self.fileManager = fileManager
     }
 
@@ -44,6 +47,8 @@ public final class SandboxServiceHandler: NSObject, SandboxXPCProtocol, Sendable
     }
 
     private func dispatch(_ request: SandboxRequest) async throws -> SandboxResponse {
+        try await permissionGate.validate(request)
+
         switch request {
         case .readFile(let path):
             let url = URL(fileURLWithPath: path)

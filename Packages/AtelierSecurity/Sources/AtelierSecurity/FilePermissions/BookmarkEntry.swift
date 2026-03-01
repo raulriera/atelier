@@ -1,7 +1,7 @@
 import Foundation
 
 /// A persisted security-scoped bookmark with its metadata.
-public struct BookmarkEntry: Sendable, Identifiable {
+public struct BookmarkEntry: Sendable, Identifiable, Codable {
     public let id: UUID
     public let url: URL
     public let bookmarkData: Data

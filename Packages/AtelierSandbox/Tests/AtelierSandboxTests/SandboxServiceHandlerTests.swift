@@ -69,6 +69,13 @@ private final class MockFileOperator: FileOperating, @unchecked Sendable {
     }
 }
 
+/// Permission gate that denies every request unconditionally.
+private struct DenyAllPermissionGate: PermissionGating {
+    func validate(_ request: SandboxRequest) async throws {
+        throw SandboxError.permissionDenied(request.affectedPaths.first ?? "unknown")
+    }
+}
+
 // MARK: - Tests
 
 @Suite("SandboxServiceHandler")
@@ -79,7 +86,8 @@ struct SandboxServiceHandlerTests {
         shouldFailOnRead: Bool = false,
         shouldFailOnWrite: Bool = false,
         shouldFailOnMove: Bool = false,
-        existingFiles: Set<String> = []
+        existingFiles: Set<String> = [],
+        permissionGate: PermissionGating = AllowAllPermissionGate()
     ) -> SandboxServiceHandler {
         let coordinator = MockFileCoordinator(
             readData: readData,
@@ -92,7 +100,8 @@ struct SandboxServiceHandlerTests {
 
         return SandboxServiceHandler(
             coordinatedOperator: CoordinatedFileOperator(coordinator: coordinator),
-            safeOperator: SafeFileOperator(fileOperator: fileOp)
+            safeOperator: SafeFileOperator(fileOperator: fileOp),
+            permissionGate: permissionGate
         )
     }
 
@@ -352,5 +361,43 @@ struct SandboxServiceHandlerTests {
 
         #expect(result.0 == nil)
         #expect(result.1 != nil)
+    }
+
+    // MARK: - Permission gate integration
+
+    @Test func denyAllGateReturnsPermissionDenied() async {
+        let handler = makeHandler(
+            readData: Data("secret".utf8),
+            permissionGate: DenyAllPermissionGate()
+        )
+
+        do {
+            _ = try await callHandler(
+                handler,
+                request: .readFile(path: "/tmp/test.txt")
+            )
+            Issue.record("Expected permissionDenied error")
+        } catch let error as SandboxError {
+            if case .permissionDenied = error {} else {
+                Issue.record("Expected permissionDenied, got \(error)")
+            }
+        } catch {
+            Issue.record("Expected SandboxError, got \(error)")
+        }
+    }
+
+    @Test func defaultHandlerUsesAllowAllGate() async throws {
+        let testData = Data("allowed".utf8)
+        let handler = makeHandler(readData: testData)
+        let response = try await callHandler(
+            handler,
+            request: .readFile(path: "/tmp/test.txt")
+        )
+
+        guard case .data(let data) = response else {
+            Issue.record("Expected data response")
+            return
+        }
+        #expect(data == testData)
     }
 }
