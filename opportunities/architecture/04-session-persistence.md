@@ -74,4 +74,26 @@ Use macOS **Background Tasks framework**, `NSProcessInfo` activity assertions, a
 
 ---
 
+## Current Implementation Status
+
+> ⚠️ **The current implementation uses global primitives that don't support the multi-project model.**
+
+What's been built:
+- `DiskSessionPersistence` saves/loads sessions as JSON files in `~/Library/Application Support/Atelier/sessions/`
+- `Session.save(to:)` and auto-restore of most recent session on launch
+- Sessions survive app closure and relaunch
+
+What's wrong:
+- **Global persistence:** A single `DiskSessionPersistence` instance is shared across all windows. `loadMostRecent()` returns the same session regardless of which project window is asking.
+- **No project scoping:** Sessions aren't tied to a project folder. Opening two project windows overwrites the same "most recent" slot.
+- **No per-project storage:** Session files live in a flat global directory, not organized by project.
+
+What needs to change for multi-project support:
+- Session persistence must be scoped per-project (e.g., `~/Library/.../sessions/{projectID}/`)
+- Each window must receive its own `SessionPersistence` instance bound to its project
+- `loadMostRecent()` should be per-project, not global
+- Depends on 3.1 Project Workspace establishing the `Project` model first
+
+---
+
 *Back to [Index](../../INDEX.md)*

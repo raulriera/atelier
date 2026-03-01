@@ -68,4 +68,29 @@ This is what makes Atelier feel like *your* workspace rather than a chat window 
 
 ---
 
+## Current Implementation Status
+
+> ⚠️ **No Project model exists yet. Current implementation uses global state that doesn't support multiple projects.**
+
+What's been built (ahead of this opportunity, in M0/M2 work):
+- `WindowGroup` with a single `ConversationWindow` — opens new windows but each is identical
+- `FileAccessStore` for folder access grants — shared globally, not per-project
+- `DiskSessionPersistence` for saving/restoring sessions — shared globally, not per-project
+- `Session.reset()` and Cmd+Shift+N for new conversations within a window
+
+What's wrong:
+- **No `Project` type:** There's no model connecting a window to a folder. Windows have no identity.
+- **Global `FileAccessStore`:** All folder grants are shared across every window. A folder granted in one project is visible in all others.
+- **Global `SessionPersistence`:** All sessions stored in one flat directory. `loadMostRecent()` returns the same session for every window.
+- **`WindowGroup` has no data binding:** New windows via Cmd+N are clones, not new projects. No `openWindow(value:)` with a project identifier.
+
+What needs to happen:
+1. Create `Project` model (root path, display name, detected type, creation/last-opened dates)
+2. Use `WindowGroup(for: Project.ID.self)` so each window carries its project identity
+3. Scope `SessionPersistence` and `FileAccessStore` per-project
+4. Add File → Open (Cmd+O) to select a folder and open as a new project window
+5. Cmd+N opens a fresh project window (no folder selected yet)
+
+---
+
 *Back to [Index](../../INDEX.md)*
