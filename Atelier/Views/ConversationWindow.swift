@@ -73,7 +73,7 @@ struct ConversationWindow: View {
                 } label: {
                     Label("New Conversation", systemImage: "plus.message")
                 }
-                .keyboardShortcut("n", modifiers: .command)
+                .keyboardShortcut("n", modifiers: [.command, .shift])
                 .disabled(session.isStreaming)
             }
             ToolbarItem(placement: .automatic) {
