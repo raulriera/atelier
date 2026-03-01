@@ -1,34 +1,60 @@
 import SwiftUI
 import AtelierKit
-import AtelierSecurity
-import AtelierSandbox
 
 @main
 struct AtelierApp: App {
-    @State private var sessionPersistence: DiskSessionPersistence = {
-        let directory = DiskSessionPersistence.defaultDirectory
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return DiskSessionPersistence(baseDirectory: directory)
+    @State private var projectStore: ProjectStore = {
+        let base = ProjectStore.defaultBaseDirectory
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        let store = ProjectStore(baseDirectory: base)
+        try? store.load()
+
+        if ProjectMigration.isMigrationNeeded(baseDirectory: base) {
+            _ = try? ProjectMigration.migrateGlobalState(
+                baseDirectory: base,
+                projectStore: store
+            )
+        }
+
+        return store
     }()
 
-    @State private var fileAccessStore: FileAccessStore = {
-        let storeURL = SandboxServiceDelegate.defaultBookmarkStoreURL
-        try? FileManager.default.createDirectory(
-            at: storeURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        let bookmarkStore = DiskBookmarkStore(fileURL: storeURL)
-        let manager = FilePermissionManager(store: bookmarkStore)
-        return FileAccessStore(permissionManager: manager, store: bookmarkStore)
-    }()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        WindowGroup {
-            ConversationWindow(fileAccessStore: fileAccessStore, sessionPersistence: sessionPersistence)
-                .task {
-                    await fileAccessStore.load()
-                }
+        WindowGroup(for: UUID.self) { $projectID in
+            ProjectWindow(projectID: projectID, projectStore: projectStore)
+        } defaultValue: {
+            (try? projectStore.nextRestoredProject())?.id ?? UUID()
         }
         .defaultSize(width: 600, height: 700)
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("New Window") {
+                    let metadata = try? projectStore.createProject(rootURL: nil)
+                    if let id = metadata?.id {
+                        openWindow(value: id)
+                    }
+                }
+                .keyboardShortcut("n")
+
+                Button("Open Folder...") {
+                    Task { @MainActor in
+                        guard let url = await FolderPicker.chooseFolder(
+                            message: "Choose a folder to open as a project",
+                            prompt: "Open"
+                        ) else { return }
+
+                        if let existing = projectStore.findProject(rootURL: url) {
+                            try? projectStore.touch(existing.id)
+                            openWindow(value: existing.id)
+                        } else if let metadata = try? projectStore.createProject(rootURL: url) {
+                            openWindow(value: metadata.id)
+                        }
+                    }
+                }
+                .keyboardShortcut("o")
+            }
+        }
     }
 }

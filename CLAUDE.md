@@ -118,6 +118,13 @@ Examples:
 - Preserve the existing markdown structure when editing
 - Categories are organized by domain; milestones define build order
 
+### Problem-solving approach
+
+- **Search Apple documentation and built-in APIs first.** Before writing custom workarounds, check if Apple already provides a solution. Example: `WindowGroup(for:content:defaultValue:)` exists specifically for handling nil state restoration — don't reinvent it with custom BootstrapView/claiming logic.
+- **Search WWDC sessions, Swift forums, and developer blogs** for known issues and patterns before guessing at solutions.
+- **Don't iterate on symptoms.** When something breaks, stop and understand the root cause before writing more code. Adding band-aids on band-aids makes things worse.
+- **Simplify aggressively.** If a fix requires more than ~10 lines of new code, question whether you're solving the right problem.
+
 ### Status tracking
 
 - 🔲 Not started

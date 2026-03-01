@@ -1,3 +1,5 @@
+import Foundation
+
 public protocol ConversationEngine: Sendable {
-    func send(message: String, model: ModelConfiguration, sessionId: String?) -> AsyncThrowingStream<StreamEvent, Error>
+    func send(message: String, model: ModelConfiguration, sessionId: String?, workingDirectory: URL?) -> AsyncThrowingStream<StreamEvent, Error>
 }

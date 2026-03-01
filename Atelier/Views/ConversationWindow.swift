@@ -5,6 +5,7 @@ import AtelierKit
 struct ConversationWindow: View {
     @Bindable var fileAccessStore: FileAccessStore
     var sessionPersistence: SessionPersistence
+    var workingDirectory: URL?
     @State private var session = Session()
     @State private var draft = ""
     @State private var selectedModel: ModelConfiguration = .default
@@ -73,7 +74,7 @@ struct ConversationWindow: View {
                 } label: {
                     Label("New Conversation", systemImage: "plus.message")
                 }
-                .keyboardShortcut("n", modifiers: [.command, .shift])
+                .keyboardShortcut("t", modifiers: [.command, .shift])
                 .disabled(session.isStreaming)
             }
             ToolbarItem(placement: .automatic) {
@@ -119,7 +120,7 @@ struct ConversationWindow: View {
         }
 
         streamingTask = Task {
-            let stream = engine.send(message: text, model: selectedModel, sessionId: session.sessionId)
+            let stream = engine.send(message: text, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory)
             do {
                 for try await event in stream {
                     switch event {

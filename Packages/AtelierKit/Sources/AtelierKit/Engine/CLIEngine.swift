@@ -11,10 +11,12 @@ public final class CLIEngine: ConversationEngine, Sendable {
     public func send(
         message: String,
         model: ModelConfiguration,
-        sessionId: String? = nil
+        sessionId: String? = nil,
+        workingDirectory: URL? = nil
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         let path = cliPath
         let alias = model.cliAlias
+        let cwd = workingDirectory ?? FileManager.default.temporaryDirectory
         let processLock = OSAllocatedUnfairLock<Process?>(initialState: nil)
 
         return AsyncThrowingStream { continuation in
@@ -26,9 +28,9 @@ public final class CLIEngine: ConversationEngine, Sendable {
                         message: message, modelAlias: alias, sessionId: sessionId
                     )
 
-                    // Use a temp directory so the CLI doesn't scan the user's
-                    // working directory for project files (avoids filesystem permission prompts)
-                    process.currentDirectoryURL = FileManager.default.temporaryDirectory
+                    // Use the project's root directory so the CLI can see project files,
+                    // or fall back to a temp directory for scratchpad sessions.
+                    process.currentDirectoryURL = cwd
 
                     let stdout = Pipe()
                     let stderr = Pipe()
