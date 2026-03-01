@@ -5,34 +5,24 @@ import AtelierKit
 struct TimelineView: View {
     let session: Session
 
-    @State private var scrollPosition = ScrollPosition(edge: .bottom)
-
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                WelcomeMessage()
-
-                ForEach(session.items) { item in
+            LazyVStack(alignment: .leading, spacing: Spacing.md) {
+                ForEach(session.items.reversed()) { item in
                     itemView(for: item)
                         .id(item.id)
-                        .transition(.opacity)
+                        .scaleEffect(x: 1, y: -1)
+                }
+
+                if session.items.isEmpty {
+                    WelcomeMessage()
+                        .scaleEffect(x: 1, y: -1)
                 }
             }
             .padding(.horizontal, Spacing.md)
             .padding(.bottom, Spacing.md)
         }
-        .scrollPosition($scrollPosition)
-        .defaultScrollAnchor(.bottom)
-        .onChange(of: session.items.count) { _, _ in
-            withAnimation(Motion.settle) {
-                scrollPosition.scrollTo(edge: .bottom)
-            }
-        }
-        .onChange(of: session.activeAssistantText) { _, _ in
-            withAnimation(Motion.settle) {
-                scrollPosition.scrollTo(edge: .bottom)
-            }
-        }
+        .scaleEffect(x: 1, y: -1)
     }
 
     @ViewBuilder
@@ -43,7 +33,8 @@ struct TimelineView: View {
         case .assistantMessage(let msg):
             AssistantMessageCell(
                 message: msg,
-                streamingText: session.isStreaming && !msg.isComplete ? session.activeAssistantText : nil
+                streamingText: session.isStreaming && !msg.isComplete ? session.activeAssistantText : nil,
+                isThinking: session.isStreaming && !msg.isComplete && session.isThinking
             )
         case .system(let event):
             SystemEventCell(event: event)

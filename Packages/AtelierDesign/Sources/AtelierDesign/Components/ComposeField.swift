@@ -15,7 +15,9 @@ import SwiftUI
 public struct ComposeField: View {
     @Binding var text: String
     let placeholder: String
+    let isStreaming: Bool
     let onSubmit: () -> Void
+    let onStop: (() -> Void)?
 
     @FocusState private var isFocused: Bool
     @State private var glowPhase: CGFloat = 0
@@ -24,11 +26,15 @@ public struct ComposeField: View {
     public init(
         text: Binding<String>,
         placeholder: String = "Message Claude...",
-        onSubmit: @escaping () -> Void
+        isStreaming: Bool = false,
+        onSubmit: @escaping () -> Void,
+        onStop: (() -> Void)? = nil
     ) {
         self._text = text
         self.placeholder = placeholder
+        self.isStreaming = isStreaming
         self.onSubmit = onSubmit
+        self.onStop = onStop
     }
 
     private var hasText: Bool {
@@ -75,27 +81,34 @@ public struct ComposeField: View {
                     .scrollIndicators(.hidden)
                     .frame(minHeight: 20, maxHeight: 200)
                     .fixedSize(horizontal: false, vertical: true)
+                    .disabled(isStreaming)
                     .onKeyPress(keys: [.return], phases: .down) { keyPress in
                         if keyPress.modifiers.contains(.shift) {
                             return .ignored
                         }
-                        guard hasText else { return .handled }
+                        guard hasText, !isStreaming else { return .handled }
                         onSubmit()
                         return .handled
                     }
             }
 
             Button {
-                guard hasText else { return }
-                onSubmit()
+                if isStreaming {
+                    onStop?()
+                } else {
+                    guard hasText else { return }
+                    onSubmit()
+                }
             } label: {
-                Image(systemName: "arrow.up.circle.fill")
+                Image(systemName: isStreaming ? "stop.circle.fill" : "arrow.up.circle.fill")
                     .font(.title)
                     .symbolRenderingMode(.hierarchical)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.contentAccent)
-            .opacity(hasText ? 1 : 0.3)
+            .foregroundStyle(isStreaming ? AnyShapeStyle(.statusError) : AnyShapeStyle(.contentAccent))
+            .opacity(isStreaming || hasText ? 1 : 0.3)
+            .animation(Motion.morph, value: isStreaming)
             .animation(Motion.morph, value: hasText)
         }
         .clipShape(.rect(cornerRadius: innerCornerRadius, style: .continuous))

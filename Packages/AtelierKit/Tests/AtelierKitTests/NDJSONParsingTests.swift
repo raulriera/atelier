@@ -63,4 +63,25 @@ struct NDJSONParsingTests {
         #expect(envelope.type == "assistant")
         #expect(envelope.subtype == nil)
     }
+
+    @Test func thinkingBlockStartParsesContentBlockType() throws {
+        let json = """
+        {"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"thinking"}}}
+        """
+        let data = json.data(using: .utf8)!
+        let streamEvent = try decoder.decode(CLIStreamEvent.self, from: data)
+        #expect(streamEvent.event.type == "content_block_start")
+        #expect(streamEvent.event.contentBlock?.type == "thinking")
+    }
+
+    @Test func thinkingDeltaExtractsText() throws {
+        let json = """
+        {"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Let me consider"}}}
+        """
+        let data = json.data(using: .utf8)!
+        let streamEvent = try decoder.decode(CLIStreamEvent.self, from: data)
+        #expect(streamEvent.event.type == "content_block_delta")
+        #expect(streamEvent.event.delta?.type == "thinking_delta")
+        #expect(streamEvent.event.delta?.thinking == "Let me consider")
+    }
 }

@@ -15,16 +15,67 @@ struct ConversationWindow: View {
     private let engine: CLIEngine = CLIEngine()
 
     var body: some View {
-        TimelineView(session: session)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                ComposeField(text: $draft) {
-                    sendMessage()
+        ZStack(alignment: .top) {
+            TimelineView(session: session)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    ComposeField(
+                        text: $draft,
+                        isStreaming: session.isStreaming,
+                        onSubmit: { sendMessage() },
+                        onStop: { stopGeneration() }
+                    )
+                    .disabled(!cliAvailable)
+                    .padding(Spacing.md)
                 }
-                .disabled(!cliAvailable || session.isStreaming)
-                .padding(Spacing.md)
-            }
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(.bar)
+                        .frame(height: Spacing.xxl)
+                        .ignoresSafeArea(edges: .bottom)
+                        .mask {
+                            LinearGradient(
+                                colors: [.clear, .black],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        }
+                        .allowsHitTesting(false)
+                }
+
+            Rectangle()
+                .fill(.bar)
+                .frame(height: Spacing.xxl)
+                .mask {
+                    LinearGradient(
+                        stops: [
+                            .init(color: .black, location: 0),
+                            .init(color: .black, location: 0.5),
+                            .init(color: .clear, location: 1),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
+        }
         .frame(minWidth: 400, minHeight: 500)
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .onKeyPress(.escape) {
+            guard session.isStreaming else { return .ignored }
+            stopGeneration()
+            return .handled
+        }
         .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    startNewConversation()
+                } label: {
+                    Label("New Conversation", systemImage: "plus.message")
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .disabled(session.isStreaming)
+            }
             ToolbarItem(placement: .automatic) {
                 Button {
                     showingFolderAccess.toggle()
@@ -76,6 +127,10 @@ struct ConversationWindow: View {
                         session.sessionId = id
                     case .textDelta(let chunk):
                         session.applyDelta(chunk)
+                    case .thinkingStarted:
+                        session.beginThinking()
+                    case .thinkingDelta(let chunk):
+                        session.applyThinkingDelta(chunk)
                     case .messageComplete(let usage):
                         session.completeAssistantMessage(usage: usage)
                         try? await session.save(to: sessionPersistence)
@@ -88,6 +143,8 @@ struct ConversationWindow: View {
                 if session.isStreaming {
                     session.completeAssistantMessage(usage: TokenUsage())
                 }
+            } catch is CancellationError {
+                // Intentional stop — stopGeneration() already finalized state
             } catch {
                 if let engineError = error as? EngineError {
                     session.handleError(engineError)
@@ -95,6 +152,28 @@ struct ConversationWindow: View {
                     session.handleError(.cliError(error.localizedDescription))
                 }
             }
+        }
+    }
+
+    private func stopGeneration() {
+        streamingTask?.cancel()
+        streamingTask = nil
+        session.completeAssistantMessage(usage: TokenUsage())
+        Task {
+            try? await session.save(to: sessionPersistence)
+        }
+    }
+
+    private func startNewConversation() {
+        if !session.items.isEmpty {
+            Task {
+                try? await session.save(to: sessionPersistence)
+            }
+        }
+        streamingTask?.cancel()
+        streamingTask = nil
+        withAnimation(Motion.appear) {
+            session.reset()
         }
     }
 }

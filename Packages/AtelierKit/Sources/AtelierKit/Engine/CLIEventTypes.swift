@@ -28,14 +28,25 @@ struct CLIStreamEvent: Decodable {
 }
 
 struct RawStreamEvent: Decodable {
-    let type: String // "content_block_delta", "message_start", etc.
+    let type: String // "content_block_delta", "content_block_start", "message_start", etc.
     let delta: RawDelta?
     let usage: RawUsage?
+    let contentBlock: RawContentBlock?
+
+    enum CodingKeys: String, CodingKey {
+        case type, delta, usage
+        case contentBlock = "content_block"
+    }
+}
+
+struct RawContentBlock: Decodable {
+    let type: String // "thinking", "text", etc.
 }
 
 struct RawDelta: Decodable {
-    let type: String // "text_delta", "input_json_delta"
+    let type: String // "text_delta", "thinking_delta", "input_json_delta"
     let text: String?
+    let thinking: String?
 }
 
 // MARK: - result (final message)

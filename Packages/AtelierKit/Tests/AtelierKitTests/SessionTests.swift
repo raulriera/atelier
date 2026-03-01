@@ -78,3 +78,61 @@ import Foundation
     #expect(session.items.count == 4)
     #expect(!session.isStreaming)
 }
+
+@Test @MainActor func resetClearsAllState() {
+    let session = Session()
+    session.sessionId = "test-session"
+    session.appendUserMessage("Hello")
+    session.beginAssistantMessage()
+    session.applyDelta("Hi!")
+    session.completeAssistantMessage(usage: TokenUsage(inputTokens: 5, outputTokens: 3))
+
+    session.reset()
+
+    #expect(session.items.isEmpty)
+    #expect(session.activeAssistantText == "")
+    #expect(!session.isStreaming)
+    #expect(!session.isThinking)
+    #expect(session.thinkingText == "")
+    #expect(session.sessionId == nil)
+}
+
+@Test @MainActor func thinkingStateTransitions() {
+    let session = Session()
+    session.beginAssistantMessage()
+
+    session.beginThinking()
+    #expect(session.isThinking)
+    #expect(session.thinkingText == "")
+
+    session.applyThinkingDelta("Let me think...")
+    #expect(session.thinkingText == "Let me think...")
+
+    // applyDelta clears thinking state
+    session.applyDelta("Here's my answer")
+    #expect(!session.isThinking)
+    #expect(session.activeAssistantText == "Here's my answer")
+}
+
+@Test @MainActor func thinkingClearedOnComplete() {
+    let session = Session()
+    session.beginAssistantMessage()
+    session.beginThinking()
+    session.applyThinkingDelta("thinking...")
+    session.applyDelta("answer")
+    session.completeAssistantMessage(usage: TokenUsage(inputTokens: 10, outputTokens: 5))
+
+    #expect(!session.isThinking)
+    #expect(session.thinkingText == "")
+}
+
+@Test @MainActor func thinkingClearedOnError() {
+    let session = Session()
+    session.beginAssistantMessage()
+    session.beginThinking()
+    session.applyThinkingDelta("thinking...")
+    session.handleError(.cliError("Error"))
+
+    #expect(!session.isThinking)
+    #expect(session.thinkingText == "")
+}

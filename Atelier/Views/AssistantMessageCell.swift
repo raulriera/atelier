@@ -5,6 +5,13 @@ import AtelierKit
 struct AssistantMessageCell: View {
     let message: AssistantMessage
     let streamingText: String?
+    let isThinking: Bool
+
+    init(message: AssistantMessage, streamingText: String?, isThinking: Bool = false) {
+        self.message = message
+        self.streamingText = streamingText
+        self.isThinking = isThinking
+    }
 
     var displayText: String {
         if let streaming = streamingText, !streaming.isEmpty {
@@ -18,11 +25,16 @@ struct AssistantMessageCell: View {
             HStack {
                 Group {
                     if displayText.isEmpty {
-                        StreamingIndicator()
+                        if message.isComplete {
+                            // Stopped before any text arrived — show nothing
+                            EmptyView()
+                        } else if isThinking {
+                            ThinkingIndicator()
+                        } else {
+                            StreamingIndicator()
+                        }
                     } else {
-                        Text(displayText)
-                            .font(.conversationBody)
-                            .textSelection(.enabled)
+                        MarkdownContent(source: displayText)
                     }
                 }
                 .plainContainer()

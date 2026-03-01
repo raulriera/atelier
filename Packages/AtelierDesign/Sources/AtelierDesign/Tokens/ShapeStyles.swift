@@ -23,6 +23,13 @@ public struct SurfaceElevated: ShapeStyle {
     }
 }
 
+/// Code block backgrounds.
+public struct SurfaceCode: ShapeStyle {
+    public func resolve(in environment: EnvironmentValues) -> some ShapeStyle {
+        Color("surfaceCode", bundle: .module)
+    }
+}
+
 /// Overlays, dimming layers.
 public struct SurfaceOverlay: ShapeStyle {
     public func resolve(in environment: EnvironmentValues) -> some ShapeStyle {
@@ -124,6 +131,11 @@ extension ShapeStyle where Self == SurfaceTinted {
 extension ShapeStyle where Self == SurfaceElevated {
     /// Cards, popovers, elevated content.
     public static var surfaceElevated: SurfaceElevated { SurfaceElevated() }
+}
+
+extension ShapeStyle where Self == SurfaceCode {
+    /// Code block backgrounds.
+    public static var surfaceCode: SurfaceCode { SurfaceCode() }
 }
 
 extension ShapeStyle where Self == SurfaceOverlay {

@@ -5,6 +5,8 @@ public final class Session {
     public private(set) var items: [TimelineItem] = []
     public private(set) var activeAssistantText: String = ""
     public private(set) var isStreaming: Bool = false
+    public private(set) var isThinking: Bool = false
+    public private(set) var thinkingText: String = ""
     public var sessionId: String?
 
     private var activeItemID: UUID?
@@ -42,6 +44,18 @@ public final class Session {
         return session
     }
 
+    /// Resets all session state to start a new conversation.
+    @MainActor
+    public func reset() {
+        items = []
+        activeAssistantText = ""
+        activeItemID = nil
+        isStreaming = false
+        isThinking = false
+        thinkingText = ""
+        sessionId = nil
+    }
+
     @MainActor
     public func appendUserMessage(_ text: String) {
         let item = TimelineItem(content: .userMessage(UserMessage(text: text)))
@@ -58,7 +72,21 @@ public final class Session {
     }
 
     @MainActor
+    public func beginThinking() {
+        isThinking = true
+        thinkingText = ""
+    }
+
+    @MainActor
+    public func applyThinkingDelta(_ text: String) {
+        thinkingText += text
+    }
+
+    @MainActor
     public func applyDelta(_ text: String) {
+        if isThinking {
+            isThinking = false
+        }
         activeAssistantText += text
     }
 
@@ -74,6 +102,8 @@ public final class Session {
         activeAssistantText = ""
         activeItemID = nil
         isStreaming = false
+        isThinking = false
+        thinkingText = ""
     }
 
     @MainActor
@@ -100,5 +130,7 @@ public final class Session {
         activeAssistantText = ""
         activeItemID = nil
         isStreaming = false
+        isThinking = false
+        thinkingText = ""
     }
 }

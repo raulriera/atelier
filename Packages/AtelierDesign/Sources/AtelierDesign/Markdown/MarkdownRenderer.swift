@@ -1,0 +1,91 @@
+import Foundation
+import Markdown
+
+/// Parses a markdown string into an array of `MarkdownBlock` values.
+public struct MarkdownRenderer {
+    public static func parse(_ source: String) -> [MarkdownBlock] {
+        let document = Document(parsing: source)
+        var blocks: [MarkdownBlock] = []
+
+        for child in document.children {
+            guard let blockMarkup = child as? any BlockMarkup,
+                  let block = convert(blockMarkup) else { continue }
+            blocks.append(block)
+        }
+
+        return blocks
+    }
+
+    private static func convert(_ markup: any BlockMarkup) -> MarkdownBlock? {
+        switch markup {
+        case let paragraph as Paragraph:
+            let attr = InlineText.attributedString(from: paragraph.inlineChildren)
+            return .paragraph(attr)
+
+        case let heading as Heading:
+            let attr = InlineText.attributedString(from: heading.inlineChildren)
+            return .heading(level: heading.level, attr)
+
+        case let codeBlock as CodeBlock:
+            let language = codeBlock.language?.trimmingCharacters(in: .whitespaces)
+            let trimmedCode = codeBlock.code.hasSuffix("\n")
+                ? String(codeBlock.code.dropLast())
+                : codeBlock.code
+            return .codeBlock(
+                language: language?.isEmpty == true ? nil : language,
+                code: trimmedCode
+            )
+
+        case let list as UnorderedList:
+            let items = Array(list.listItems.map { item in
+                InlineText.attributedString(from: inlines(in: item))
+            })
+            return .list(ordered: false, items: items)
+
+        case let list as OrderedList:
+            let items = Array(list.listItems.map { item in
+                InlineText.attributedString(from: inlines(in: item))
+            })
+            return .list(ordered: true, items: items)
+
+        case let blockQuote as BlockQuote:
+            let text = blockQuote.children.compactMap { child -> AttributedString? in
+                guard let paragraph = child as? Paragraph else { return nil }
+                return InlineText.attributedString(from: paragraph.inlineChildren)
+            }
+            let combined = text.reduce(AttributedString()) { result, next in
+                var r = result
+                if !r.characters.isEmpty {
+                    r.append(AttributedString("\n"))
+                }
+                r.append(next)
+                return r
+            }
+            return .blockQuote(combined)
+
+        case is ThematicBreak:
+            return .thematicBreak
+
+        default:
+            return nil
+        }
+    }
+
+    private static func inlines(in listItem: ListItem) -> [any InlineMarkup] {
+        listItem.children.compactMap { $0 as? Paragraph }.flatMap { paragraph in
+            paragraph.children.compactMap { $0 as? any InlineMarkup }
+        }
+    }
+}
+
+private extension Heading {
+    var inlineChildren: [any InlineMarkup] {
+        children.compactMap { $0 as? any InlineMarkup }
+    }
+}
+
+private extension Paragraph {
+    var inlineChildren: [any InlineMarkup] {
+        children.compactMap { $0 as? any InlineMarkup }
+    }
+}

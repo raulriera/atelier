@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 public final class CLIEngine: ConversationEngine, Sendable {
     private let cliPath: String
@@ -14,6 +15,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         let path = cliPath
         let alias = model.cliAlias
+        let processLock = OSAllocatedUnfairLock<Process?>(initialState: nil)
 
         return AsyncThrowingStream { continuation in
             let task = Task.detached {
@@ -34,6 +36,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
                     process.standardError = stderr
 
                     try process.run()
+                    processLock.withLock { $0 = process }
 
                     let handle = stdout.fileHandleForReading
 
@@ -57,12 +60,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
                             }
 
                         case "stream_event":
-                            if let streamEvent = try? decoder.decode(CLIStreamEvent.self, from: data),
-                               streamEvent.event.type == "content_block_delta",
-                               let delta = streamEvent.event.delta,
-                               delta.type == "text_delta",
-                               let text = delta.text {
-                                continuation.yield(.textDelta(text))
+                            if let streamEvent = try? decoder.decode(CLIStreamEvent.self, from: data) {
+                                Self.handleStreamEvent(streamEvent.event, continuation: continuation)
                             }
 
                         case "result":
@@ -86,7 +85,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
                     process.waitUntilExit()
 
-                    if process.terminationStatus != 0 {
+                    if process.terminationStatus != 0 && !Task.isCancelled {
                         let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
                         let stderrText = String(data: stderrData, encoding: .utf8) ?? ""
                         continuation.finish(throwing: EngineError.processFailure(
@@ -103,7 +102,38 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
             continuation.onTermination = { _ in
                 task.cancel()
+                processLock.withLock { $0?.terminate() }
             }
+        }
+    }
+
+    private static func handleStreamEvent(
+        _ event: RawStreamEvent,
+        continuation: AsyncThrowingStream<StreamEvent, Error>.Continuation
+    ) {
+        switch event.type {
+        case "content_block_start":
+            if event.contentBlock?.type == "thinking" {
+                continuation.yield(.thinkingStarted)
+            }
+
+        case "content_block_delta":
+            guard let delta = event.delta else { return }
+            switch delta.type {
+            case "text_delta":
+                if let text = delta.text {
+                    continuation.yield(.textDelta(text))
+                }
+            case "thinking_delta":
+                if let thinking = delta.thinking {
+                    continuation.yield(.thinkingDelta(thinking))
+                }
+            default:
+                break
+            }
+
+        default:
+            break
         }
     }
 
