@@ -11,6 +11,37 @@ public final class Session {
 
     public init() {}
 
+    /// Creates a snapshot of the current session and saves it to persistence.
+    ///
+    /// Transient system events (errors) are filtered out — they don't need
+    /// to survive a relaunch.
+    @MainActor
+    public func save(to persistence: SessionPersistence) async throws {
+        guard let sessionId else { return }
+
+        let persistableItems = items.filter { item in
+            if case .system(let event) = item.content, event.kind == .error {
+                return false
+            }
+            return true
+        }
+
+        let snapshot = SessionSnapshot(
+            sessionId: sessionId,
+            items: persistableItems
+        )
+        try await persistence.save(snapshot)
+    }
+
+    /// Restores a session from a previously saved snapshot.
+    @MainActor
+    public static func restore(from snapshot: SessionSnapshot) -> Session {
+        let session = Session()
+        session.sessionId = snapshot.sessionId
+        session.items = snapshot.items
+        return session
+    }
+
     @MainActor
     public func appendUserMessage(_ text: String) {
         let item = TimelineItem(content: .userMessage(UserMessage(text: text)))
@@ -36,8 +67,9 @@ public final class Session {
         guard let id = activeItemID,
               let index = items.firstIndex(where: { $0.id == id }) else { return }
 
+        let trimmedText = activeAssistantText.trimmingCharacters(in: .whitespacesAndNewlines)
         items[index].content = .assistantMessage(
-            AssistantMessage(text: activeAssistantText, isComplete: true, usage: usage)
+            AssistantMessage(text: trimmedText, isComplete: true, usage: usage)
         )
         activeAssistantText = ""
         activeItemID = nil

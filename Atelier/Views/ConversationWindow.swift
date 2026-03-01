@@ -4,6 +4,7 @@ import AtelierKit
 
 struct ConversationWindow: View {
     @Bindable var fileAccessStore: FileAccessStore
+    var sessionPersistence: SessionPersistence
     @State private var session = Session()
     @State private var draft = ""
     @State private var selectedModel: ModelConfiguration = .default
@@ -41,6 +42,11 @@ struct ConversationWindow: View {
                 ModelPickerView(selection: $selectedModel)
             }
         }
+        .task {
+            if let snapshot = try? await sessionPersistence.loadMostRecent() {
+                session = Session.restore(from: snapshot)
+            }
+        }
         .onAppear {
             cliAvailable = CLIEngine.isAvailable
             if !cliAvailable {
@@ -72,8 +78,10 @@ struct ConversationWindow: View {
                         session.applyDelta(chunk)
                     case .messageComplete(let usage):
                         session.completeAssistantMessage(usage: usage)
+                        try? await session.save(to: sessionPersistence)
                     case .error(let engineError):
                         session.handleError(engineError)
+                        try? await session.save(to: sessionPersistence)
                     }
                 }
                 // If stream ends without messageComplete (e.g. empty response)
