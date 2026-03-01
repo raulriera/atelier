@@ -28,8 +28,9 @@ struct ConversationWindow: View {
                 Button {
                     showingFolderAccess.toggle()
                 } label: {
-                    Image(systemName: "folder.badge.gearshape")
+                    Label("Folder Access", systemImage: "folder")
                 }
+                .badge(fileAccessStore.entries.count)
                 .help("Folder Access")
                 .popover(isPresented: $showingFolderAccess) {
                     FolderAccessCard(fileAccessStore: fileAccessStore)
