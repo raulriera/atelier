@@ -3,11 +3,13 @@ import AtelierDesign
 import AtelierKit
 
 struct ConversationWindow: View {
+    @Bindable var fileAccessStore: FileAccessStore
     @State private var session = Session()
     @State private var draft = ""
     @State private var selectedModel: ModelConfiguration = .default
     @State private var streamingTask: Task<Void, Never>?
     @State private var cliAvailable = true
+    @State private var showingFolderAccess = false
 
     private let engine: CLIEngine = CLIEngine()
 
@@ -22,6 +24,18 @@ struct ConversationWindow: View {
             }
         .frame(minWidth: 400, minHeight: 500)
         .toolbar {
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showingFolderAccess.toggle()
+                } label: {
+                    Image(systemName: "folder.badge.gearshape")
+                }
+                .help("Folder Access")
+                .popover(isPresented: $showingFolderAccess) {
+                    FolderAccessCard(fileAccessStore: fileAccessStore)
+                        .padding(Spacing.sm)
+                }
+            }
             ToolbarItem(placement: .automatic) {
                 ModelPickerView(selection: $selectedModel)
             }

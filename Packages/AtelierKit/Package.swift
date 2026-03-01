@@ -10,9 +10,15 @@ let package = Package(
     products: [
         .library(name: "AtelierKit", targets: ["AtelierKit"]),
     ],
+    dependencies: [
+        .package(path: "../AtelierSecurity"),
+    ],
     targets: [
         .target(
-            name: "AtelierKit"
+            name: "AtelierKit",
+            dependencies: [
+                .product(name: "AtelierSecurity", package: "AtelierSecurity"),
+            ]
         ),
 
         .testTarget(
