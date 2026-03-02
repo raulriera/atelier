@@ -12,6 +12,8 @@ struct ConversationWindow: View {
     @State private var streamingTask: Task<Void, Never>?
     @State private var cliAvailable = true
     @State private var showingFolderAccess = false
+    @State private var showingContextFiles = false
+    @State private var activeContextFiles: [ContextFile] = []
 
     private let engine: CLIEngine = CLIEngine()
 
@@ -91,6 +93,19 @@ struct ConversationWindow: View {
                 }
             }
             ToolbarItem(placement: .automatic) {
+                Button {
+                    showingContextFiles.toggle()
+                } label: {
+                    Label("Context Files", systemImage: "doc.text")
+                }
+                .badge(activeContextFiles.count)
+                .help("Context Files")
+                .popover(isPresented: $showingContextFiles) {
+                    ContextFilesCard(files: activeContextFiles)
+                        .padding(Spacing.sm)
+                }
+            }
+            ToolbarItem(placement: .automatic) {
                 ModelPickerView(selection: $selectedModel)
             }
         }
@@ -106,6 +121,9 @@ struct ConversationWindow: View {
                     SystemEvent(kind: .error, message: "Claude CLI not found. Install it from claude.ai/download.")
                 )
             }
+            if let cwd = workingDirectory {
+                activeContextFiles = ContextFileLoader.discover(from: cwd)
+            }
         }
     }
 
@@ -119,8 +137,16 @@ struct ConversationWindow: View {
             session.beginAssistantMessage()
         }
 
+        // Discover context files fresh on every send so edits take effect immediately.
+        var injectedPrompt: String?
+        if let cwd = workingDirectory {
+            let discovered = ContextFileLoader.discover(from: cwd)
+            activeContextFiles = discovered
+            injectedPrompt = ContextFileLoader.contentForInjection(from: discovered)
+        }
+
         streamingTask = Task {
-            let stream = engine.send(message: text, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory)
+            let stream = engine.send(message: text, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: injectedPrompt)
             do {
                 for try await event in stream {
                     switch event {

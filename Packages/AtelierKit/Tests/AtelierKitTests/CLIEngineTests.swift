@@ -55,4 +55,32 @@ struct CLIEngineTests {
         }
         #expect(args[mIdx + 1] == "haiku")
     }
+
+    @Test func appendSystemPromptAddsFlag() {
+        let args = CLIEngine.buildArguments(
+            message: "hi", modelAlias: "opus", sessionId: nil,
+            appendSystemPrompt: "Extra context here"
+        )
+        guard let idx = args.firstIndex(of: "--append-system-prompt") else {
+            Issue.record("--append-system-prompt flag missing")
+            return
+        }
+        #expect(args[idx + 1] == "Extra context here")
+    }
+
+    @Test func nilAppendSystemPromptOmitsFlag() {
+        let args = CLIEngine.buildArguments(
+            message: "hi", modelAlias: "opus", sessionId: nil,
+            appendSystemPrompt: nil
+        )
+        #expect(!args.contains("--append-system-prompt"))
+    }
+
+    @Test func emptyAppendSystemPromptOmitsFlag() {
+        let args = CLIEngine.buildArguments(
+            message: "hi", modelAlias: "opus", sessionId: nil,
+            appendSystemPrompt: ""
+        )
+        #expect(!args.contains("--append-system-prompt"))
+    }
 }

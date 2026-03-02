@@ -13,7 +13,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
         message: String,
         model: ModelConfiguration,
         sessionId: String? = nil,
-        workingDirectory: URL? = nil
+        workingDirectory: URL? = nil,
+        appendSystemPrompt: String? = nil
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         let path = cliPath
         let alias = model.cliAlias
@@ -26,7 +27,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
                     let process = Process()
                     process.executableURL = URL(fileURLWithPath: path)
                     process.arguments = Self.buildArguments(
-                        message: message, modelAlias: alias, sessionId: sessionId
+                        message: message, modelAlias: alias, sessionId: sessionId,
+                        appendSystemPrompt: appendSystemPrompt
                     )
 
                     // Use the project's root directory so the CLI can see project files,
@@ -153,7 +155,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
     static func buildArguments(
         message: String,
         modelAlias: String,
-        sessionId: String?
+        sessionId: String?,
+        appendSystemPrompt: String? = nil
     ) -> [String] {
         var args = [
             "-p", message,
@@ -166,6 +169,10 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
         if let sessionId {
             args += ["--resume", sessionId]
+        }
+
+        if let prompt = appendSystemPrompt, !prompt.isEmpty {
+            args += ["--append-system-prompt", prompt]
         }
 
         return args

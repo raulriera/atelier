@@ -58,7 +58,8 @@ public enum ProjectDetector {
         return .unknown
     }
 
-    /// Returns `true` if the directory contains a context file (`CLAUDE.md` or `COWORK.md`).
+    /// Returns `true` if the directory contains a context file
+    /// (`CLAUDE.md`, `COWORK.md`, or `.atelier/context.md`).
     public static func hasContextFile(at url: URL) -> Bool {
         let manager = FileManager.default
         return contextFilenames.contains(where: {
@@ -91,6 +92,6 @@ public enum ProjectDetector {
     ]
 
     private static let contextFilenames: Set<String> = [
-        "CLAUDE.md", "COWORK.md",
+        "CLAUDE.md", "COWORK.md", ".atelier/context.md",
     ]
 }
