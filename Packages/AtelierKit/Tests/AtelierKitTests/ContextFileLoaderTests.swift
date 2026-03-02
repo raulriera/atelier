@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import AtelierKit
 
+@Suite("ContextFileLoader")
 struct ContextFileLoaderTests {
     private let manager = FileManager.default
 
@@ -134,7 +135,8 @@ struct ContextFileLoaderTests {
         #expect(content == nil)
     }
 
-    @Test func contentForInjectionConcatenatesMultipleFiles() throws {
+    @Test("Content for injection concatenates multiple files")
+    func contentForInjectionConcatenatesMultipleFiles() throws {
         let dir = try makeTempDir()
         defer { cleanup(dir) }
 
@@ -152,12 +154,11 @@ struct ContextFileLoaderTests {
 
         let files = ContextFileLoader.discover(from: dir)
         let localFiles = files.filter { $0.url.path.hasPrefix(dir.path) }
-        let content = ContextFileLoader.contentForInjection(from: localFiles)
+        let content = try #require(ContextFileLoader.contentForInjection(from: localFiles))
 
-        #expect(content != nil)
-        #expect(content!.contains("First file"))
-        #expect(content!.contains("Second file"))
-        #expect(content!.contains("---"))
+        #expect(content.contains("First file"))
+        #expect(content.contains("Second file"))
+        #expect(content.contains("---"))
     }
 
     @Test func contentForInjectionReturnsNilForEmptyContent() throws {

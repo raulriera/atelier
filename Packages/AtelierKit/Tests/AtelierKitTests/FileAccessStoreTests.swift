@@ -5,23 +5,10 @@ import AtelierSecurity
 
 // MARK: - Mocks
 
-private struct MockBookmarkCreator: BookmarkCreator {
-    var shouldFail = false
-
-    func createBookmarkData(for url: URL, readOnly: Bool) throws -> Data {
-        if shouldFail {
-            throw NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "mock failure"])
-        }
-        return Data("mock-bookmark-\(url.path)".utf8)
-    }
-}
-
 private struct MockSecurityScopeAccessor: SecurityScopeAccessor {
     func startAccessing(_ url: URL) -> Bool { true }
     func stopAccessing(_ url: URL) {}
 }
-
-// MARK: - Tests
 
 @Suite("FileAccessStore")
 struct FileAccessStoreTests {

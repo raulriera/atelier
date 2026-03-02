@@ -1,35 +1,44 @@
 import Testing
 @testable import AtelierKit
 
+@Suite("CLIEngine argument building")
 struct CLIEngineTests {
-    @Test func freshSessionNeverIncludesContinue() {
-        let args = CLIEngine.buildArguments(
-            message: "hello", modelAlias: "opus", sessionId: nil
-        )
-        #expect(!args.contains("--continue"))
-        #expect(!args.contains("--resume"))
+
+    @Suite("Fresh session")
+    struct FreshSession {
+        @Test("Never includes --continue or --resume")
+        func neverIncludesContinueOrResume() {
+            let args = CLIEngine.buildArguments(
+                message: "hello", modelAlias: "opus", sessionId: nil
+            )
+            #expect(!args.contains("--continue"))
+            #expect(!args.contains("--resume"))
+        }
+
+        @Test("Includes required flags")
+        func includesRequiredFlags() {
+            let args = CLIEngine.buildArguments(
+                message: "hello", modelAlias: "opus", sessionId: nil
+            )
+            #expect(args.contains("-p"))
+            #expect(args.contains("--output-format"))
+            #expect(args.contains("stream-json"))
+            #expect(args.contains("--model"))
+            #expect(args.contains("opus"))
+            #expect(args.contains("--include-partial-messages"))
+        }
+
+        @Test("Does not include --max-turns")
+        func maxTurnsNotPresent() {
+            let args = CLIEngine.buildArguments(
+                message: "hello", modelAlias: "opus", sessionId: nil
+            )
+            #expect(!args.contains("--max-turns"))
+        }
     }
 
-    @Test func freshSessionIncludesRequiredFlags() {
-        let args = CLIEngine.buildArguments(
-            message: "hello", modelAlias: "opus", sessionId: nil
-        )
-        #expect(args.contains("-p"))
-        #expect(args.contains("--output-format"))
-        #expect(args.contains("stream-json"))
-        #expect(args.contains("--model"))
-        #expect(args.contains("opus"))
-        #expect(args.contains("--include-partial-messages"))
-    }
-
-    @Test func maxTurnsNotPresent() {
-        let args = CLIEngine.buildArguments(
-            message: "hello", modelAlias: "opus", sessionId: nil
-        )
-        #expect(!args.contains("--max-turns"))
-    }
-
-    @Test func resumeSessionPassesSessionId() {
+    @Test("Resume session passes session ID and --resume flag")
+    func resumeSessionPassesSessionId() {
         let args = CLIEngine.buildArguments(
             message: "follow up", modelAlias: "sonnet", sessionId: "abc-123"
         )
@@ -38,54 +47,50 @@ struct CLIEngineTests {
         #expect(!args.contains("--continue"))
     }
 
-    @Test func messageIsPassedVerbatim() {
+    @Test("Message is passed verbatim after -p flag")
+    func messageIsPassedVerbatim() throws {
         let msg = "What is 2+2?"
         let args = CLIEngine.buildArguments(
             message: msg, modelAlias: "haiku", sessionId: nil
         )
-        guard let pIdx = args.firstIndex(of: "-p") else {
-            Issue.record("-p flag missing")
-            return
-        }
+        let pIdx = try #require(args.firstIndex(of: "-p"), "-p flag missing")
         #expect(args[pIdx + 1] == msg)
     }
 
-    @Test func modelAliasIsPassedVerbatim() {
+    @Test("Model alias is passed verbatim after --model flag")
+    func modelAliasIsPassedVerbatim() throws {
         let args = CLIEngine.buildArguments(
             message: "hi", modelAlias: "haiku", sessionId: nil
         )
-        guard let mIdx = args.firstIndex(of: "--model") else {
-            Issue.record("--model flag missing")
-            return
-        }
+        let mIdx = try #require(args.firstIndex(of: "--model"), "--model flag missing")
         #expect(args[mIdx + 1] == "haiku")
     }
 
-    @Test func appendSystemPromptAddsFlag() {
-        let args = CLIEngine.buildArguments(
-            message: "hi", modelAlias: "opus", sessionId: nil,
-            appendSystemPrompt: "Extra context here"
-        )
-        guard let idx = args.firstIndex(of: "--append-system-prompt") else {
-            Issue.record("--append-system-prompt flag missing")
-            return
+    @Suite("Append system prompt")
+    struct AppendSystemPrompt {
+        @Test("Non-empty value adds --append-system-prompt flag")
+        func appendSystemPromptAddsFlag() throws {
+            let args = CLIEngine.buildArguments(
+                message: "hi", modelAlias: "opus", sessionId: nil,
+                appendSystemPrompt: "Extra context here"
+            )
+            let idx = try #require(
+                args.firstIndex(of: "--append-system-prompt"),
+                "--append-system-prompt flag missing"
+            )
+            #expect(args[idx + 1] == "Extra context here")
         }
-        #expect(args[idx + 1] == "Extra context here")
-    }
 
-    @Test func nilAppendSystemPromptOmitsFlag() {
-        let args = CLIEngine.buildArguments(
-            message: "hi", modelAlias: "opus", sessionId: nil,
-            appendSystemPrompt: nil
+        @Test(
+            "Nil or empty value omits --append-system-prompt flag",
+            arguments: [nil, ""] as [String?]
         )
-        #expect(!args.contains("--append-system-prompt"))
-    }
-
-    @Test func emptyAppendSystemPromptOmitsFlag() {
-        let args = CLIEngine.buildArguments(
-            message: "hi", modelAlias: "opus", sessionId: nil,
-            appendSystemPrompt: ""
-        )
-        #expect(!args.contains("--append-system-prompt"))
+        func omitsFlagForNilOrEmpty(value: String?) {
+            let args = CLIEngine.buildArguments(
+                message: "hi", modelAlias: "opus", sessionId: nil,
+                appendSystemPrompt: value
+            )
+            #expect(!args.contains("--append-system-prompt"))
+        }
     }
 }

@@ -87,11 +87,3 @@ struct ProjectMigrationTests {
         #expect(!ProjectMigration.isMigrationNeeded(baseDirectory: base))
     }
 }
-
-// MARK: - Mock
-
-private struct MockBookmarkCreator: BookmarkCreator {
-    func createBookmarkData(for url: URL, readOnly: Bool) throws -> Data {
-        Data("mock-bookmark-\(url.path)".utf8)
-    }
-}

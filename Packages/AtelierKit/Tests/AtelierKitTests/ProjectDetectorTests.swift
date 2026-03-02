@@ -16,55 +16,54 @@ struct ProjectDetectorTests {
         try? FileManager.default.removeItem(at: url)
     }
 
-    @Test func detectsCodeFromGitDirectory() throws {
+    // MARK: - Single-marker detection (parameterized)
+
+    /// Describes a filesystem marker and the ``ProjectKind`` it should produce.
+    struct DetectionCase: CustomTestStringConvertible, Sendable {
+        let label: String
+        /// Relative path to create. Trailing `/` means directory.
+        let marker: String
+        let expected: ProjectKind
+
+        var testDescription: String { label }
+    }
+
+    @Test(
+        "Detects project kind from a single marker",
+        arguments: [
+            DetectionCase(label: ".git directory -> code", marker: ".git/", expected: .code),
+            DetectionCase(label: "Package.swift -> code", marker: "Package.swift", expected: .code),
+            DetectionCase(label: "notes.md -> writing", marker: "notes.md", expected: .writing),
+            DetectionCase(label: "data.csv -> research", marker: "data.csv", expected: .research),
+            DetectionCase(label: "empty directory -> unknown", marker: "", expected: .unknown),
+        ]
+    )
+    func detectsSingleMarker(_ testCase: DetectionCase) throws {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
-        try FileManager.default.createDirectory(
-            at: dir.appendingPathComponent(".git", isDirectory: true),
-            withIntermediateDirectories: true
-        )
+        if !testCase.marker.isEmpty {
+            if testCase.marker.hasSuffix("/") {
+                let name = String(testCase.marker.dropLast())
+                try FileManager.default.createDirectory(
+                    at: dir.appendingPathComponent(name, isDirectory: true),
+                    withIntermediateDirectories: true
+                )
+            } else {
+                FileManager.default.createFile(
+                    atPath: dir.appendingPathComponent(testCase.marker).path,
+                    contents: Data("content".utf8)
+                )
+            }
+        }
 
-        #expect(ProjectDetector.detect(at: dir) == .code)
+        #expect(ProjectDetector.detect(at: dir) == testCase.expected)
     }
 
-    @Test func detectsCodeFromPackageSwift() throws {
-        let dir = try makeTempDirectory()
-        defer { cleanup(dir) }
+    // MARK: - Mixed detection
 
-        FileManager.default.createFile(
-            atPath: dir.appendingPathComponent("Package.swift").path,
-            contents: Data("// swift package".utf8)
-        )
-
-        #expect(ProjectDetector.detect(at: dir) == .code)
-    }
-
-    @Test func detectsWritingFromMarkdownFiles() throws {
-        let dir = try makeTempDirectory()
-        defer { cleanup(dir) }
-
-        FileManager.default.createFile(
-            atPath: dir.appendingPathComponent("notes.md").path,
-            contents: Data("# Notes".utf8)
-        )
-
-        #expect(ProjectDetector.detect(at: dir) == .writing)
-    }
-
-    @Test func detectsResearchFromCSV() throws {
-        let dir = try makeTempDirectory()
-        defer { cleanup(dir) }
-
-        FileManager.default.createFile(
-            atPath: dir.appendingPathComponent("data.csv").path,
-            contents: Data("a,b,c".utf8)
-        )
-
-        #expect(ProjectDetector.detect(at: dir) == .research)
-    }
-
-    @Test func detectsMixedFromCodeAndWriting() throws {
+    @Test("Detects mixed when code and writing markers coexist")
+    func detectsMixedFromCodeAndWriting() throws {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
@@ -80,14 +79,10 @@ struct ProjectDetectorTests {
         #expect(ProjectDetector.detect(at: dir) == .mixed)
     }
 
-    @Test func detectsUnknownForEmptyDirectory() throws {
-        let dir = try makeTempDirectory()
-        defer { cleanup(dir) }
+    // MARK: - Context file detection
 
-        #expect(ProjectDetector.detect(at: dir) == .unknown)
-    }
-
-    @Test func hasContextFileDetectsCLAUDEmd() throws {
+    @Test("CLAUDE.md is detected as context file")
+    func hasContextFileDetectsCLAUDEmd() throws {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 
@@ -99,7 +94,8 @@ struct ProjectDetectorTests {
         #expect(ProjectDetector.hasContextFile(at: dir))
     }
 
-    @Test func hasContextFileReturnsFalseWhenAbsent() throws {
+    @Test("Returns false when no context file present")
+    func hasContextFileReturnsFalseWhenAbsent() throws {
         let dir = try makeTempDirectory()
         defer { cleanup(dir) }
 

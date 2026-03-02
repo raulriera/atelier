@@ -85,9 +85,8 @@ struct ProjectStoreTests {
         try await Task.sleep(for: .milliseconds(10))
         try store.touch(metadata.id)
 
-        let updated = store.project(for: metadata.id)
-        #expect(updated != nil)
-        #expect(updated!.lastOpenedAt > originalDate)
+        let updated = try #require(store.project(for: metadata.id))
+        #expect(updated.lastOpenedAt > originalDate)
     }
 
     @Test @MainActor func deleteProjectRemovesMetadataAndDirectory() throws {
@@ -125,9 +124,8 @@ struct ProjectStoreTests {
             savedAt: Date()
         )
         try await project.sessionPersistence.save(snapshot)
-        let loaded = try await project.sessionPersistence.load(id: "test-session")
-        #expect(loaded != nil)
-        #expect(loaded?.sessionId == "test-session")
+        let loaded = try #require(await project.sessionPersistence.load(id: "test-session"))
+        #expect(loaded.sessionId == "test-session")
     }
 
     @Test @MainActor func findProjectByRootURL() throws {
@@ -139,10 +137,8 @@ struct ProjectStoreTests {
         try FileManager.default.createDirectory(at: projectRoot, withIntermediateDirectories: true)
 
         let metadata = try store.createProject(rootURL: projectRoot)
-        let found = store.findProject(rootURL: projectRoot)
-
-        #expect(found != nil)
-        #expect(found?.id == metadata.id)
+        let found = try #require(store.findProject(rootURL: projectRoot))
+        #expect(found.id == metadata.id)
     }
 
     @Test @MainActor func findProjectReturnsNilForUnknownURL() throws {
@@ -222,6 +218,23 @@ struct ProjectStoreTests {
         #expect(store.allProjects().count == 2)
     }
 
+    @Test("nextRestoredProject does not update lastOpenedAt")
+    @MainActor func nextRestoredProjectDoesNotTouch() async throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+        let metadata = try store.createProject(rootURL: nil)
+        let originalDate = metadata.lastOpenedAt
+
+        try await Task.sleep(for: .milliseconds(10))
+        let restored = try store.nextRestoredProject()
+
+        #expect(restored.id == metadata.id)
+        let current = try #require(store.project(for: metadata.id))
+        #expect(current.lastOpenedAt == originalDate)
+    }
+
     @Test @MainActor func nextRestoredProjectCreatesScratchpadWhenEmpty() throws {
         let base = try makeTempDirectory()
         defer { cleanup(base) }
@@ -244,17 +257,8 @@ struct ProjectStoreTests {
         let store2 = makeStore(baseDirectory: base)
         try store2.load()
 
-        let loaded = store2.project(for: metadata.id)
-        #expect(loaded != nil)
-        #expect(loaded?.id == metadata.id)
-        #expect(loaded?.displayName == metadata.displayName)
-    }
-}
-
-// MARK: - Mock
-
-private struct MockBookmarkCreator: BookmarkCreator {
-    func createBookmarkData(for url: URL, readOnly: Bool) throws -> Data {
-        Data("mock-bookmark-\(url.path)".utf8)
+        let loaded = try #require(store2.project(for: metadata.id))
+        #expect(loaded.id == metadata.id)
+        #expect(loaded.displayName == metadata.displayName)
     }
 }
