@@ -14,12 +14,13 @@ struct ConversationWindow: View {
     @State private var showingFolderAccess = false
     @State private var showingContextFiles = false
     @State private var activeContextFiles: [ContextFile] = []
+    @State private var selectedToolEvent: ToolUseEvent?
 
     private let engine: CLIEngine = CLIEngine()
 
     var body: some View {
         ZStack(alignment: .top) {
-            TimelineView(session: session)
+            TimelineView(session: session, onSelectTool: { selectedToolEvent = $0 })
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     ComposeField(
                         text: $draft,
@@ -63,6 +64,9 @@ struct ConversationWindow: View {
                 .allowsHitTesting(false)
         }
         .frame(minWidth: 400, minHeight: 500)
+        .sheet(item: $selectedToolEvent) { event in
+            ToolDetailSheet(event: event)
+        }
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onKeyPress(.escape) {
             guard session.isStreaming else { return .ignored }
@@ -186,6 +190,8 @@ struct ConversationWindow: View {
                         session.applyToolInputDelta(id: id, json: json)
                     case .toolUseFinished(let id):
                         session.completeToolUse(id: id)
+                    case .toolResultReceived(let id, let output):
+                        session.applyToolResult(id: id, output: output)
                     case .messageComplete(let usage):
                         session.completeAssistantMessage(usage: usage)
                         try? await session.save(to: sessionPersistence)

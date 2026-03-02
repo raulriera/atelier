@@ -6,6 +6,7 @@ public enum StreamEvent: Sendable {
     case toolUseStarted(id: String, name: String)
     case toolInputDelta(id: String, json: String)
     case toolUseFinished(id: String)
+    case toolResultReceived(id: String, output: String)
     case messageComplete(TokenUsage)
     case error(EngineError)
 }

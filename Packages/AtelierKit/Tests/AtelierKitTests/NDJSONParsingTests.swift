@@ -130,6 +130,47 @@ struct NDJSONParsingTests {
         #expect(streamEvent.event.index == 1)
     }
 
+    @Test("User message with tool_result parses content blocks")
+    func userMessageWithToolResultParsesContentBlocks() throws {
+        let json = """
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_abc","content":"file contents here"}]}}
+        """
+        let data = Data(json.utf8)
+        let envelope = try decoder.decode(CLIMessage.self, from: data)
+        #expect(envelope.type == "user")
+
+        let userMsg = try decoder.decode(CLIUserMessage.self, from: data)
+        #expect(userMsg.message.content.count == 1)
+        let block = userMsg.message.content[0]
+        #expect(block.type == "tool_result")
+        #expect(block.toolUseId == "toolu_abc")
+        #expect(block.content?.text == "file contents here")
+    }
+
+    @Test("Tool result with array content parses parts")
+    func toolResultWithArrayContentParsesParts() throws {
+        let json = """
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_xyz","content":[{"type":"text","text":"line 1"},{"type":"text","text":"line 2"}]}]}}
+        """
+        let data = Data(json.utf8)
+        let userMsg = try decoder.decode(CLIUserMessage.self, from: data)
+        let block = userMsg.message.content[0]
+        #expect(block.toolUseId == "toolu_xyz")
+        #expect(block.content?.text == "line 1line 2")
+    }
+
+    @Test("Tool result with no content parses as nil")
+    func toolResultWithNoContentParsesAsNil() throws {
+        let json = """
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_empty"}]}}
+        """
+        let data = Data(json.utf8)
+        let userMsg = try decoder.decode(CLIUserMessage.self, from: data)
+        let block = userMsg.message.content[0]
+        #expect(block.toolUseId == "toolu_empty")
+        #expect(block.content == nil)
+    }
+
     @Test("Text block parses with optional fields absent")
     func textBlockStillParsesWithOptionalFields() throws {
         let json = """

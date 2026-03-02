@@ -4,6 +4,11 @@ import AtelierKit
 
 struct ToolUseCell: View {
     let event: ToolUseEvent
+    var onSelect: ((ToolUseEvent) -> Void)?
+
+    private var isTappable: Bool {
+        event.status == .completed && !event.resultOutput.isEmpty
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -19,6 +24,10 @@ struct ToolUseCell: View {
                 if event.status == .running {
                     ProgressView()
                         .controlSize(.small)
+                } else if isTappable {
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.contentTertiary)
+                        .font(.caption)
                 } else {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.statusSuccess)
@@ -29,8 +38,19 @@ struct ToolUseCell: View {
                 summaryText
                     .lineLimit(2)
             }
+
+            if !event.resultSummary.isEmpty {
+                Text(event.resultSummary)
+                    .font(.conversationCode)
+                    .foregroundStyle(.contentTertiary)
+                    .lineLimit(2)
+            }
         }
         .cardContainer()
+        .contentShape(.rect)
+        .onTapGesture {
+            if isTappable { onSelect?(event) }
+        }
         .transition(Motion.cardReveal)
     }
 

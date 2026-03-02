@@ -95,8 +95,18 @@ public final class CLIEngine: ConversationEngine, Sendable {
                                 }
                             }
 
+                        case "user":
+                            if let userMsg = try? decoder.decode(CLIUserMessage.self, from: data) {
+                                for block in userMsg.message.content
+                                    where block.type == "tool_result" {
+                                    if let toolId = block.toolUseId {
+                                        let output = block.content?.text ?? ""
+                                        continuation.yield(.toolResultReceived(id: toolId, output: output))
+                                    }
+                                }
+                            }
+
                         default:
-                            // assistant, user — ignore for streaming purposes
                             break
                         }
                     }

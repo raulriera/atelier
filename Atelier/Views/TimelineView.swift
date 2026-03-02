@@ -4,6 +4,7 @@ import AtelierKit
 
 struct TimelineView: View {
     let session: Session
+    var onSelectTool: ((ToolUseEvent) -> Void)?
 
     var body: some View {
         ScrollView {
@@ -39,7 +40,7 @@ struct TimelineView: View {
         case .system(let event):
             SystemEventCell(event: event)
         case .toolUse(let event):
-            ToolUseCell(event: event)
+            ToolUseCell(event: event, onSelect: onSelectTool)
         }
     }
 }

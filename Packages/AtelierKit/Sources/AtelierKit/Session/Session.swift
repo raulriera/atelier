@@ -186,6 +186,18 @@ public final class Session {
     }
 
     @MainActor
+    public func applyToolResult(id: String, output: String) {
+        // Tool results arrive after content_block_stop, so the tool is no longer
+        // in activeToolIndices. Scan items from the end (most recent first).
+        guard let index = items.lastIndex(where: {
+            if case .toolUse(let event) = $0.content { return event.id == id }
+            return false
+        }), case .toolUse(var event) = items[index].content else { return }
+        event.resultOutput += output
+        items[index].content = .toolUse(event)
+    }
+
+    @MainActor
     public func completeToolUse(id: String) {
         guard let index = activeToolIndices[id],
               case .toolUse(var event) = items[index].content else { return }

@@ -55,6 +55,26 @@ struct TimelineItemTests {
             #expect(evt.status == .completed)
         }
 
+        @Test("ToolUseEvent with resultOutput round-trips through JSON")
+        func toolUseEventWithResultOutputRoundTrip() throws {
+            let event = ToolUseEvent(id: "toolu_abc", name: "Read", inputJSON: "{}", status: .completed, resultOutput: "file contents")
+            let item = TimelineItem(content: .toolUse(event))
+            let data = try JSONEncoder().encode(item)
+            let decoded = try JSONDecoder().decode(TimelineItem.self, from: data)
+            let evt = try #require(decoded.content.toolUse)
+            #expect(evt.resultOutput == "file contents")
+        }
+
+        @Test("Legacy ToolUseEvent without resultOutput decodes as empty string")
+        func legacyToolUseEventDecodesResultOutputAsEmpty() throws {
+            let json = """
+            {"id":"toolu_old","name":"Bash","inputJSON":"{}","status":"completed"}
+            """
+            let data = Data(json.utf8)
+            let event = try JSONDecoder().decode(ToolUseEvent.self, from: data)
+            #expect(event.resultOutput == "")
+        }
+
         @Test("Stable identity preserved through encoding")
         func stableIdentity() throws {
             let id = UUID()
@@ -101,6 +121,35 @@ struct TimelineItemTests {
         func returnsEmptyForEmptyJSON() {
             let event = ToolUseEvent(id: "t6", name: "Read", inputJSON: "")
             #expect(event.inputSummary == "")
+        }
+    }
+
+    @Suite("Result summary")
+    struct ResultSummary {
+        @Test("Returns first 3 lines of output")
+        func returnsFirstThreeLines() {
+            let event = ToolUseEvent(id: "t", name: "Bash", resultOutput: "line1\nline2\nline3\nline4\nline5")
+            #expect(event.resultSummary == "line1\nline2\nline3")
+        }
+
+        @Test("Truncates long lines to 120 characters")
+        func truncatesLongOutput() {
+            let longLine = String(repeating: "x", count: 200)
+            let event = ToolUseEvent(id: "t", name: "Bash", resultOutput: longLine)
+            #expect(event.resultSummary.count == 120)
+            #expect(event.resultSummary.hasSuffix("..."))
+        }
+
+        @Test("Returns empty string for empty resultOutput")
+        func returnsEmptyForEmptyResult() {
+            let event = ToolUseEvent(id: "t", name: "Bash", resultOutput: "")
+            #expect(event.resultSummary == "")
+        }
+
+        @Test("Short single line returned as-is")
+        func shortSingleLineReturnedAsIs() {
+            let event = ToolUseEvent(id: "t", name: "Read", resultOutput: "hello world")
+            #expect(event.resultSummary == "hello world")
         }
     }
 

@@ -10,12 +10,31 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
     public var name: String
     public var inputJSON: String
     public var status: Status
+    public var resultOutput: String
 
-    public init(id: String, name: String, inputJSON: String = "", status: Status = .running) {
+    public init(id: String, name: String, inputJSON: String = "", status: Status = .running, resultOutput: String = "") {
         self.id = id
         self.name = name
         self.inputJSON = inputJSON
         self.status = status
+        self.resultOutput = resultOutput
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        inputJSON = try container.decode(String.self, forKey: .inputJSON)
+        status = try container.decode(Status.self, forKey: .status)
+        resultOutput = try container.decodeIfPresent(String.self, forKey: .resultOutput) ?? ""
+    }
+
+    public var resultSummary: String {
+        guard !resultOutput.isEmpty else { return "" }
+        let lines = resultOutput.split(separator: "\n", omittingEmptySubsequences: false).prefix(3)
+        let joined = lines.joined(separator: "\n")
+        if joined.count <= 120 { return joined }
+        return String(joined.prefix(117)) + "..."
     }
 
     public var inputSummary: String {

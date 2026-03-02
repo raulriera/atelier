@@ -73,6 +73,56 @@ struct CLIResult: Decodable {
     }
 }
 
+// MARK: - user / assistant messages (tool results)
+
+struct CLIUserMessage: Decodable {
+    let type: String
+    let message: CLIMessageBody
+}
+
+struct CLIMessageBody: Decodable {
+    let content: [CLIContentBlock]
+}
+
+struct CLIContentBlock: Decodable {
+    let type: String
+    let toolUseId: String?
+    let content: CLIBlockContent?
+
+    enum CodingKeys: String, CodingKey {
+        case type, content
+        case toolUseId = "tool_use_id"
+    }
+}
+
+/// The `content` field on a `tool_result` block can be a plain string
+/// or an array of `{type, text}` parts. This enum handles both.
+enum CLIBlockContent: Decodable {
+    case string(String)
+    case parts([CLIContentPart])
+
+    var text: String {
+        switch self {
+        case .string(let s): s
+        case .parts(let parts): parts.compactMap(\.text).joined()
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let s = try? container.decode(String.self) {
+            self = .string(s)
+        } else {
+            self = .parts(try container.decode([CLIContentPart].self))
+        }
+    }
+}
+
+struct CLIContentPart: Decodable {
+    let type: String
+    let text: String?
+}
+
 // MARK: - Shared
 
 struct RawUsage: Decodable {

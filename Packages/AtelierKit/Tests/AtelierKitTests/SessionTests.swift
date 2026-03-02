@@ -251,6 +251,46 @@ struct SessionTests {
             #expect(event2.status == .running)
         }
 
+        @Test("Apply tool result sets resultOutput on correct tool")
+        @MainActor func applyToolResultSetsResultOutput() throws {
+            let session = Session()
+            session.beginAssistantMessage()
+            session.beginToolUse(id: "toolu_1", name: "Read")
+            session.completeToolUse(id: "toolu_1")
+
+            session.applyToolResult(id: "toolu_1", output: "file contents here")
+
+            let event = try #require(session.items[0].content.toolUse)
+            #expect(event.resultOutput == "file contents here")
+        }
+
+        @Test("Apply tool result accumulates output")
+        @MainActor func applyToolResultAccumulatesOutput() throws {
+            let session = Session()
+            session.beginAssistantMessage()
+            session.beginToolUse(id: "toolu_1", name: "Bash")
+            session.completeToolUse(id: "toolu_1")
+
+            session.applyToolResult(id: "toolu_1", output: "part1")
+            session.applyToolResult(id: "toolu_1", output: "part2")
+
+            let event = try #require(session.items[0].content.toolUse)
+            #expect(event.resultOutput == "part1part2")
+        }
+
+        @Test("Apply tool result ignores unknown tool ID")
+        @MainActor func applyToolResultIgnoresUnknownId() {
+            let session = Session()
+            session.beginAssistantMessage()
+            session.beginToolUse(id: "toolu_1", name: "Read")
+            session.completeToolUse(id: "toolu_1")
+
+            session.applyToolResult(id: "toolu_unknown", output: "data")
+
+            // Should not crash, item count unchanged
+            #expect(session.items.count == 1)
+        }
+
         @Test("Complete assistant message cleans up active tools")
         @MainActor func completeAssistantMessageCleansUpActiveTools() throws {
             let session = Session()
