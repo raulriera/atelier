@@ -2,6 +2,7 @@ public struct SystemEvent: Sendable, Codable {
     public enum Kind: String, Sendable, Codable {
         case sessionStarted
         case error
+        case info
     }
 
     public var kind: Kind

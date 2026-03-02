@@ -20,6 +20,7 @@ struct AtelierApp: App {
     }()
 
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some Scene {
         WindowGroup(for: UUID.self) { $projectID in
@@ -47,6 +48,7 @@ struct AtelierApp: App {
 
                         if let existing = projectStore.findProject(rootURL: url) {
                             try? projectStore.touch(existing.id)
+                            dismissWindow(value: existing.id)
                             openWindow(value: existing.id)
                         } else if let metadata = try? projectStore.createProject(rootURL: url) {
                             openWindow(value: metadata.id)

@@ -6,9 +6,24 @@ struct SystemEventCell: View {
     let event: SystemEvent
 
     var body: some View {
-        Text(event.message)
+        Label(event.message, systemImage: iconName)
             .systemContainer()
-            .foregroundStyle(event.kind == .error ? AnyShapeStyle(.statusError) : AnyShapeStyle(.contentSecondary))
+            .foregroundStyle(foregroundStyle)
             .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private var iconName: String {
+        switch event.kind {
+        case .error:
+            "exclamationmark.triangle"
+        case .sessionStarted:
+            "bubble.left"
+        case .info:
+            "info.circle"
+        }
+    }
+
+    private var foregroundStyle: AnyShapeStyle {
+        event.kind == .error ? AnyShapeStyle(.statusError) : AnyShapeStyle(.contentSecondary)
     }
 }

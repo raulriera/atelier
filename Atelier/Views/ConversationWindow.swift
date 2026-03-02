@@ -112,6 +112,11 @@ struct ConversationWindow: View {
         .task {
             if let snapshot = try? await sessionPersistence.loadMostRecent() {
                 session = Session.restore(from: snapshot)
+                if snapshot.wasInterrupted {
+                    session.appendSystemEvent(
+                        SystemEvent(kind: .info, message: "Session interrupted — send a message to continue.")
+                    )
+                }
             }
         }
         .onAppear {
@@ -126,18 +131,19 @@ struct ConversationWindow: View {
             }
         }
         .onDisappear {
-            if session.isStreaming {
+            let wasStreaming = session.isStreaming
+            if wasStreaming {
                 streamingTask?.cancel()
                 streamingTask = nil
                 session.completeAssistantMessage(usage: TokenUsage())
             }
-            if session.sessionId != nil {
-                let session = session
-                let persistence = sessionPersistence
-                Task { try? await session.save(to: persistence) }
+            if let captured = session.snapshot(wasInterrupted: wasStreaming) {
+                try? sessionPersistence.saveImmediately(captured)
             }
         }
     }
+
+    // MARK: - Actions
 
     private func sendMessage() {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -157,8 +163,12 @@ struct ConversationWindow: View {
             injectedPrompt = ContextFileLoader.contentForInjection(from: discovered)
         }
 
+        startStreaming(message: text, appendSystemPrompt: injectedPrompt)
+    }
+
+    private func startStreaming(message: String, appendSystemPrompt: String? = nil) {
         streamingTask = Task {
-            let stream = engine.send(message: text, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: injectedPrompt)
+            let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt)
             do {
                 for try await event in stream {
                     switch event {
@@ -210,15 +220,15 @@ struct ConversationWindow: View {
     }
 
     private func startNewConversation() {
-        if !session.items.isEmpty {
-            Task {
-                try? await session.save(to: sessionPersistence)
-            }
-        }
         streamingTask?.cancel()
         streamingTask = nil
+        let captured = session.snapshot()
         withAnimation(Motion.appear) {
             session.reset()
+        }
+        if let captured {
+            let persistence = sessionPersistence
+            Task { try? await persistence.save(captured) }
         }
     }
 }

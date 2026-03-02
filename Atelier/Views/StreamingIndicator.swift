@@ -3,7 +3,7 @@ import AtelierDesign
 
 struct StreamingIndicator: View {
     var body: some View {
-        TimelineView(.periodic(every: 0.3)) { timeline in
+        SwiftUI.TimelineView(.periodic(from: .now, by: 0.3)) { timeline in
             let phase = Int(timeline.date.timeIntervalSinceReferenceDate / 0.3) % 3
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { index in

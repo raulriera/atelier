@@ -21,16 +21,25 @@ public final class Session {
     /// incomplete assistant messages, running tools) are cleaned up so we
     /// never write broken state to disk.
     @MainActor
-    public func save(to persistence: SessionPersistence) async throws {
-        guard let sessionId else { return }
+    public func save(to persistence: SessionPersistence, wasInterrupted: Bool = false) async throws {
+        guard let snapshot = snapshot(wasInterrupted: wasInterrupted) else { return }
+        try await persistence.save(snapshot)
+    }
+
+    /// Captures the current session state as a snapshot without persisting it.
+    ///
+    /// Returns `nil` if the session has no ID (never connected to the CLI).
+    @MainActor
+    public func snapshot(wasInterrupted: Bool = false) -> SessionSnapshot? {
+        guard let sessionId else { return nil }
 
         let persistableItems = items.filter { Self.isPersistable($0) }
 
-        let snapshot = SessionSnapshot(
+        return SessionSnapshot(
             sessionId: sessionId,
-            items: persistableItems
+            items: persistableItems,
+            wasInterrupted: wasInterrupted
         )
-        try await persistence.save(snapshot)
     }
 
     /// Restores a session from a previously saved snapshot.
@@ -60,8 +69,8 @@ public final class Session {
     private static func isPersistable(_ item: TimelineItem) -> Bool {
         switch item.content {
         case .system(let event):
-            // Transient errors don't survive a relaunch
-            return event.kind != .error
+            // Transient system events don't survive a relaunch
+            return event.kind == .sessionStarted
 
         case .assistantMessage(let msg):
             // An incomplete message with no text is an orphaned placeholder

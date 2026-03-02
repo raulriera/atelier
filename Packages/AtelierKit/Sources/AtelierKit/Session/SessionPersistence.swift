@@ -5,11 +5,28 @@ public struct SessionSnapshot: Sendable, Codable {
     public var sessionId: String
     public var items: [TimelineItem]
     public var savedAt: Date
+    public var wasInterrupted: Bool
 
-    public init(sessionId: String, items: [TimelineItem], savedAt: Date = Date()) {
+    public init(sessionId: String, items: [TimelineItem], savedAt: Date = Date(), wasInterrupted: Bool = false) {
         self.sessionId = sessionId
         self.items = items
         self.savedAt = savedAt
+        self.wasInterrupted = wasInterrupted
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try container.decode(String.self, forKey: .sessionId)
+        // Decode items fault-tolerantly: skip individual items that fail
+        // to decode rather than losing the entire session.
+        let lossy = try container.decode([LossyDecodable<TimelineItem>].self, forKey: .items)
+        items = lossy.compactMap(\.value)
+        savedAt = try container.decode(Date.self, forKey: .savedAt)
+        wasInterrupted = try container.decodeIfPresent(Bool.self, forKey: .wasInterrupted) ?? false
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case sessionId, items, savedAt, wasInterrupted
     }
 }
 
@@ -27,6 +44,7 @@ public struct SessionSnapshotMetadata: Sendable {
 /// Persistence contract for saving and restoring conversation sessions.
 public protocol SessionPersistence: Sendable {
     func save(_ snapshot: SessionSnapshot) async throws
+    func saveImmediately(_ snapshot: SessionSnapshot) throws
     func load(id: String) async throws -> SessionSnapshot?
     func loadMostRecent() async throws -> SessionSnapshot?
     func list() async -> [SessionSnapshotMetadata]
@@ -50,6 +68,17 @@ public actor DiskSessionPersistence: SessionPersistence {
     }
 
     public func save(_ snapshot: SessionSnapshot) throws {
+        try writeSnapshot(snapshot)
+    }
+
+    /// Synchronous save that bypasses actor isolation for use during app termination.
+    ///
+    /// Safe because `baseDirectory` is immutable (`let`) and file writes are atomic.
+    nonisolated public func saveImmediately(_ snapshot: SessionSnapshot) throws {
+        try writeSnapshot(snapshot)
+    }
+
+    private nonisolated func writeSnapshot(_ snapshot: SessionSnapshot) throws {
         let manager = FileManager.default
         if !manager.fileExists(atPath: baseDirectory.path) {
             try manager.createDirectory(at: baseDirectory, withIntermediateDirectories: true)
@@ -58,7 +87,7 @@ public actor DiskSessionPersistence: SessionPersistence {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(snapshot)
-        let fileURL = url(for: snapshot.sessionId)
+        let fileURL = baseDirectory.appendingPathComponent("\(snapshot.sessionId).json")
         try data.write(to: fileURL, options: .atomic)
     }
 
@@ -118,6 +147,9 @@ public actor InMemorySessionPersistence: SessionPersistence {
     public func save(_ snapshot: SessionSnapshot) {
         snapshots[snapshot.sessionId] = snapshot
     }
+
+    /// No-op for in-memory persistence — tests don't exercise app termination paths.
+    nonisolated public func saveImmediately(_ snapshot: SessionSnapshot) {}
 
     public func load(id: String) -> SessionSnapshot? {
         snapshots[id]

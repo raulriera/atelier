@@ -96,13 +96,14 @@ public final class ProjectStore {
     /// Returns the next project for a restored window, unique from previous calls.
     ///
     /// Each call returns a different project (most recent first). When all
-    /// projects have been assigned, creates a scratchpad. Mutations are immediate
-    /// (no SwiftUI state batching) because `ProjectStore` is a class.
+    /// projects have been assigned, creates a scratchpad.
+    ///
+    /// Does NOT update `lastOpenedAt` — restoration should preserve the
+    /// existing ordering so repeated launches are stable.
     public func nextRestoredProject() throws -> ProjectMetadata {
         let projects = allProjects()
         if let available = projects.first(where: { !restoredIDs.contains($0.id) }) {
             restoredIDs.insert(available.id)
-            try touch(available.id)
             return available
         }
         let created = try createProject(rootURL: nil)

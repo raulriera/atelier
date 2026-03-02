@@ -4,3 +4,9 @@
 [submodule ".claude/skills/marketingskills"]
 	path = .claude/skills/marketingskills
 	url = https://github.com/coreyhaines31/marketingskills.git
+[submodule ".claude/skills/swift-testing-agent-skill"]
+	path = .claude/skills/swift-testing-agent-skill
+	url = https://github.com/AvdLee/Swift-Testing-Agent-Skill.git
+[submodule ".claude/skills/swift-concurrency-agent-skill"]
+	path = .claude/skills/swift-concurrency-agent-skill
+	url = https://github.com/AvdLee/Swift-Concurrency-Agent-Skill.git
