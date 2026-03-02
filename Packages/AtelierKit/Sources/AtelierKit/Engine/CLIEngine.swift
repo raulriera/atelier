@@ -45,6 +45,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
                     processLock.withLock { $0 = process }
 
                     let handle = stdout.fileHandleForReading
+                    var activeToolBlocks: [Int: String] = [:]
+                    var receivedResult = false
 
                     for try await line in handle.bytes.lines {
                         if Task.isCancelled { break }
@@ -68,17 +70,26 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
                         case "stream_event":
                             if let streamEvent = try? decoder.decode(CLIStreamEvent.self, from: data) {
-                                Self.handleStreamEvent(streamEvent.event, continuation: continuation)
+                                Self.handleStreamEvent(
+                                    streamEvent.event,
+                                    activeToolBlocks: &activeToolBlocks,
+                                    continuation: continuation
+                                )
                             }
 
                         case "result":
+                            receivedResult = true
                             if let result = try? decoder.decode(CLIResult.self, from: data) {
                                 let usage = TokenUsage(
                                     inputTokens: result.usage?.inputTokens ?? 0,
                                     outputTokens: result.usage?.outputTokens ?? 0
                                 )
                                 if result.isError == true {
-                                    continuation.yield(.error(.cliError(result.result ?? "Unknown error")))
+                                    let message = result.result
+                                        ?? result.subtype
+                                        ?? "The CLI returned an error with no details."
+                                    Self.logger.error("CLI result error: subtype=\(result.subtype ?? "nil", privacy: .public) result=\(result.result ?? "nil", privacy: .public)")
+                                    continuation.yield(.error(.cliError(message)))
                                 } else {
                                     continuation.yield(.messageComplete(usage))
                                 }
@@ -96,15 +107,16 @@ public final class CLIEngine: ConversationEngine, Sendable {
                     let stderrText = String(data: stderrData, encoding: .utf8) ?? ""
                     let exitCode = Int(process.terminationStatus)
 
-                    if exitCode != 0 && !Task.isCancelled {
+                    if !stderrText.isEmpty {
+                        Self.logger.warning("CLI stderr: \(stderrText, privacy: .public)")
+                    }
+
+                    if exitCode != 0 && !Task.isCancelled && !receivedResult {
                         continuation.finish(throwing: EngineError.processFailure(
                             exitCode: exitCode,
                             stderr: stderrText
                         ))
                     } else {
-                        if !stderrText.isEmpty {
-                            Self.logger.warning("CLI exited 0 with stderr: \(stderrText, privacy: .public)")
-                        }
                         Self.logger.debug("CLI process exited with code \(exitCode)")
                         continuation.finish()
                     }
@@ -122,12 +134,19 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
     private static func handleStreamEvent(
         _ event: RawStreamEvent,
+        activeToolBlocks: inout [Int: String],
         continuation: AsyncThrowingStream<StreamEvent, Error>.Continuation
     ) {
         switch event.type {
         case "content_block_start":
             if event.contentBlock?.type == "thinking" {
                 continuation.yield(.thinkingStarted)
+            } else if event.contentBlock?.type == "tool_use",
+                      let id = event.contentBlock?.id,
+                      let name = event.contentBlock?.name,
+                      let index = event.index {
+                activeToolBlocks[index] = id
+                continuation.yield(.toolUseStarted(id: id, name: name))
             }
 
         case "content_block_delta":
@@ -141,8 +160,20 @@ public final class CLIEngine: ConversationEngine, Sendable {
                 if let thinking = delta.thinking {
                     continuation.yield(.thinkingDelta(thinking))
                 }
+            case "input_json_delta":
+                if let json = delta.partialJson,
+                   let index = event.index,
+                   let toolId = activeToolBlocks[index] {
+                    continuation.yield(.toolInputDelta(id: toolId, json: json))
+                }
             default:
                 break
+            }
+
+        case "content_block_stop":
+            if let index = event.index, let toolId = activeToolBlocks[index] {
+                continuation.yield(.toolUseFinished(id: toolId))
+                activeToolBlocks.removeValue(forKey: index)
             }
 
         default:
@@ -164,7 +195,6 @@ public final class CLIEngine: ConversationEngine, Sendable {
             "--verbose",
             "--include-partial-messages",
             "--model", modelAlias,
-            "--max-turns", "1",
         ]
 
         if let sessionId {

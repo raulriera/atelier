@@ -84,4 +84,49 @@ struct NDJSONParsingTests {
         #expect(streamEvent.event.delta?.type == "thinking_delta")
         #expect(streamEvent.event.delta?.thinking == "Let me consider")
     }
+
+    @Test func toolUseBlockStartParsesIdAndName() throws {
+        let json = """
+        {"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_123","name":"Read"}}}
+        """
+        let data = json.data(using: .utf8)!
+        let streamEvent = try decoder.decode(CLIStreamEvent.self, from: data)
+        #expect(streamEvent.event.type == "content_block_start")
+        #expect(streamEvent.event.index == 1)
+        #expect(streamEvent.event.contentBlock?.type == "tool_use")
+        #expect(streamEvent.event.contentBlock?.id == "toolu_123")
+        #expect(streamEvent.event.contentBlock?.name == "Read")
+    }
+
+    @Test func inputJsonDeltaParsesPartialJson() throws {
+        let json = """
+        {"type":"stream_event","event":{"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\\"file_path\\":\\"src/"}}}
+        """
+        let data = json.data(using: .utf8)!
+        let streamEvent = try decoder.decode(CLIStreamEvent.self, from: data)
+        #expect(streamEvent.event.delta?.type == "input_json_delta")
+        #expect(streamEvent.event.delta?.partialJson == "{\"file_path\":\"src/")
+        #expect(streamEvent.event.index == 1)
+    }
+
+    @Test func contentBlockStopParsesIndex() throws {
+        let json = """
+        {"type":"stream_event","event":{"type":"content_block_stop","index":1}}
+        """
+        let data = json.data(using: .utf8)!
+        let streamEvent = try decoder.decode(CLIStreamEvent.self, from: data)
+        #expect(streamEvent.event.type == "content_block_stop")
+        #expect(streamEvent.event.index == 1)
+    }
+
+    @Test func textBlockStillParsesWithOptionalFields() throws {
+        let json = """
+        {"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text"}}}
+        """
+        let data = json.data(using: .utf8)!
+        let streamEvent = try decoder.decode(CLIStreamEvent.self, from: data)
+        #expect(streamEvent.event.contentBlock?.type == "text")
+        #expect(streamEvent.event.contentBlock?.id == nil)
+        #expect(streamEvent.event.contentBlock?.name == nil)
+    }
 }

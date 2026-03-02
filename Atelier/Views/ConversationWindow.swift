@@ -125,6 +125,18 @@ struct ConversationWindow: View {
                 activeContextFiles = ContextFileLoader.discover(from: cwd)
             }
         }
+        .onDisappear {
+            if session.isStreaming {
+                streamingTask?.cancel()
+                streamingTask = nil
+                session.completeAssistantMessage(usage: TokenUsage())
+            }
+            if session.sessionId != nil {
+                let session = session
+                let persistence = sessionPersistence
+                Task { try? await session.save(to: persistence) }
+            }
+        }
     }
 
     private func sendMessage() {
@@ -158,6 +170,12 @@ struct ConversationWindow: View {
                         session.beginThinking()
                     case .thinkingDelta(let chunk):
                         session.applyThinkingDelta(chunk)
+                    case .toolUseStarted(let id, let name):
+                        session.beginToolUse(id: id, name: name)
+                    case .toolInputDelta(let id, let json):
+                        session.applyToolInputDelta(id: id, json: json)
+                    case .toolUseFinished(let id):
+                        session.completeToolUse(id: id)
                     case .messageComplete(let usage):
                         session.completeAssistantMessage(usage: usage)
                         try? await session.save(to: sessionPersistence)

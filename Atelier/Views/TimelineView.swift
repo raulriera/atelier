@@ -38,6 +38,8 @@ struct TimelineView: View {
             )
         case .system(let event):
             SystemEventCell(event: event)
+        case .toolUse(let event):
+            ToolUseCell(event: event)
         }
     }
 }

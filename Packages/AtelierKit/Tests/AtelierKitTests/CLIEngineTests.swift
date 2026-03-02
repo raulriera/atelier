@@ -19,9 +19,14 @@ struct CLIEngineTests {
         #expect(args.contains("stream-json"))
         #expect(args.contains("--model"))
         #expect(args.contains("opus"))
-        #expect(args.contains("--max-turns"))
-        #expect(args.contains("1"))
         #expect(args.contains("--include-partial-messages"))
+    }
+
+    @Test func maxTurnsNotPresent() {
+        let args = CLIEngine.buildArguments(
+            message: "hello", modelAlias: "opus", sessionId: nil
+        )
+        #expect(!args.contains("--max-turns"))
     }
 
     @Test func resumeSessionPassesSessionId() {
