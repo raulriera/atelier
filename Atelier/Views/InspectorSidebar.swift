@@ -2,14 +2,20 @@ import SwiftUI
 import AtelierDesign
 import AtelierKit
 
-struct ToolDetailSheet: View {
-    let event: ToolUseEvent
-
-    @Environment(\.dismiss) private var dismiss
+struct InspectorSidebar: View {
+    let selectedTool: ToolUseEvent?
 
     var body: some View {
+        if let event = selectedTool {
+            toolDetail(for: event)
+        } else {
+            emptyState
+        }
+    }
+
+    private func toolDetail(for event: ToolUseEvent) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
+            header(for: event)
                 .padding(Spacing.md)
 
             Divider()
@@ -23,16 +29,14 @@ struct ToolDetailSheet: View {
                     .padding(Spacing.md)
             }
         }
-        .frame(minWidth: 480, idealWidth: 600, minHeight: 300)
-        .presentationDetents([.medium, .large])
     }
 
-    private var header: some View {
+    private func header(for event: ToolUseEvent) -> some View {
         HStack(spacing: Spacing.xs) {
-            Image(systemName: iconName)
+            Image(systemName: iconName(for: event))
                 .foregroundStyle(.contentSecondary)
 
-            Text(displayName)
+            Text(displayName(for: event))
                 .font(.cardBody)
 
             if !event.inputSummary.isEmpty {
@@ -42,15 +46,18 @@ struct ToolDetailSheet: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
-
-            Spacer()
-
-            Button("Done") { dismiss() }
-                .buttonStyle(.ghost)
         }
     }
 
-    private var displayName: String {
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No Selection", systemImage: "sidebar.right")
+        } description: {
+            Text("Select a tool card to inspect its output")
+        }
+    }
+
+    private func displayName(for event: ToolUseEvent) -> String {
         switch event.name {
         case "Bash": "Terminal Command"
         case "Read": "Read File"
@@ -65,7 +72,7 @@ struct ToolDetailSheet: View {
         }
     }
 
-    private var iconName: String {
+    private func iconName(for event: ToolUseEvent) -> String {
         switch event.name {
         case "Read": "doc.text"
         case "Write": "doc.badge.plus"

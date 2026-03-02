@@ -4,6 +4,7 @@ import AtelierKit
 
 struct ToolUseCell: View {
     let event: ToolUseEvent
+    var isSelected: Bool = false
     var onSelect: ((ToolUseEvent) -> Void)?
 
     private var isTappable: Bool {
@@ -47,6 +48,12 @@ struct ToolUseCell: View {
             }
         }
         .cardContainer()
+        .overlay {
+            if isSelected {
+                RoundedRectangle(cornerRadius: Radii.md, style: .continuous)
+                    .strokeBorder(.contentAccent, lineWidth: 1.5)
+            }
+        }
         .contentShape(.rect)
         .onTapGesture {
             if isTappable { onSelect?(event) }

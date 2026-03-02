@@ -120,6 +120,7 @@ Examples:
 
 ### Problem-solving approach
 
+- **NEVER reimplement system components.** `SplitView`, `NavigationStack`, `.inspector()`, `.sheet()`, `.popover()`, `.alert()`, `.confirmationDialog()`, and other built-in SwiftUI containers are ALWAYS the right choice — no custom HStack/VStack replacements, no manual reimplementations. If a system component has a bug, work around the bug with clear comments (including radar/FB numbers when available) so the workaround can be removed when Apple fixes it.
 - **Search Apple documentation and built-in APIs first.** Before writing custom workarounds, check if Apple already provides a solution. Example: `WindowGroup(for:content:defaultValue:)` exists specifically for handling nil state restoration — don't reinvent it with custom BootstrapView/claiming logic.
 - **Search WWDC sessions, Swift forums, and developer blogs** for known issues and patterns before guessing at solutions.
 - **Don't iterate on symptoms.** When something breaks, stop and understand the root cause before writing more code. Adding band-aids on band-aids makes things worse.

@@ -4,12 +4,14 @@ import AtelierKit
 
 struct TimelineView: View {
     let session: Session
+    var selectedToolID: String?
     var onSelectTool: ((ToolUseEvent) -> Void)?
 
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: Spacing.md) {
-                ForEach(session.items.reversed()) { item in
+                ForEach(session.items.indices.reversed(), id: \.self) { index in
+                    let item = session.items[index]
                     itemView(for: item)
                         .id(item.id)
                         .scaleEffect(x: 1, y: -1)
@@ -40,7 +42,7 @@ struct TimelineView: View {
         case .system(let event):
             SystemEventCell(event: event)
         case .toolUse(let event):
-            ToolUseCell(event: event, onSelect: onSelectTool)
+            ToolUseCell(event: event, isSelected: event.id == selectedToolID, onSelect: onSelectTool)
         }
     }
 }

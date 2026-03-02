@@ -14,13 +14,26 @@ struct ConversationWindow: View {
     @State private var showingFolderAccess = false
     @State private var showingContextFiles = false
     @State private var activeContextFiles: [ContextFile] = []
+    @State private var showInspector = false
     @State private var selectedToolEvent: ToolUseEvent?
+    @State private var showComposeField = false
 
     private let engine: CLIEngine = CLIEngine()
 
     var body: some View {
-        ZStack(alignment: .top) {
-            TimelineView(session: session, onSelectTool: { selectedToolEvent = $0 })
+        NavigationStack {
+            TimelineView(session: session, selectedToolID: selectedToolEvent?.id, onSelectTool: { event in
+                    if selectedToolEvent?.id == event.id {
+                        selectedToolEvent = nil
+                    } else {
+                        selectedToolEvent = event
+                        showInspector = true
+                    }
+                })
+                // WORKAROUND: NavigationStack (required for .inspector() to compress
+                // content in-place) animates safeAreaInset content on first layout.
+                // Keeping ComposeField always in the layout (stable safe area from
+                // frame 1) and fading opacity avoids the position animation. Revisit.
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     ComposeField(
                         text: $draft,
@@ -30,6 +43,8 @@ struct ConversationWindow: View {
                     )
                     .disabled(!cliAvailable)
                     .padding(Spacing.md)
+                    .opacity(showComposeField ? 1 : 0)
+                    .animation(Motion.appear, value: showComposeField)
                 }
                 .overlay(alignment: .bottom) {
                     Rectangle()
@@ -45,34 +60,35 @@ struct ConversationWindow: View {
                         }
                         .allowsHitTesting(false)
                 }
-
-            Rectangle()
-                .fill(.bar)
-                .frame(height: Spacing.xxl)
-                .mask {
-                    LinearGradient(
-                        stops: [
-                            .init(color: .black, location: 0),
-                            .init(color: .black, location: 0.5),
-                            .init(color: .clear, location: 1),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(.bar)
+                        .frame(height: Spacing.xxl)
+                        .mask {
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .black, location: 0),
+                                    .init(color: .black, location: 0.5),
+                                    .init(color: .clear, location: 1),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        }
+                        .ignoresSafeArea(edges: .top)
+                        .allowsHitTesting(false)
                 }
-                .ignoresSafeArea(edges: .top)
-                .allowsHitTesting(false)
+            // WORKAROUND: SwiftUI .inspector() on macOS expands the window instead of
+            // compressing content in-place (unlike AppKit NSSplitViewController which
+            // uses holdingPriority). Wrapping in NavigationStack prevents the window
+            // from growing. File FB to Apple.
+            .inspector(isPresented: $showInspector) {
+                InspectorSidebar(selectedTool: selectedToolEvent)
+                    .inspectorColumnWidth(min: 260, ideal: 320, max: 480)
+            }
         }
-        .frame(minWidth: 400, minHeight: 500)
-        .sheet(item: $selectedToolEvent) { event in
-            ToolDetailSheet(event: event)
-        }
+        .frame(minWidth: 600, minHeight: 500)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .onKeyPress(.escape) {
-            guard session.isStreaming else { return .ignored }
-            stopGeneration()
-            return .handled
-        }
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
@@ -112,6 +128,19 @@ struct ConversationWindow: View {
             ToolbarItem(placement: .automatic) {
                 ModelPickerView(selection: $selectedModel)
             }
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showInspector.toggle()
+                } label: {
+                    Label("Inspector", systemImage: "sidebar.right")
+                }
+                .help("Toggle Inspector")
+            }
+        }
+        .onKeyPress(.escape) {
+            guard session.isStreaming else { return .ignored }
+            stopGeneration()
+            return .handled
         }
         .task {
             if let snapshot = try? await sessionPersistence.loadMostRecent() {
@@ -122,6 +151,13 @@ struct ConversationWindow: View {
                     )
                 }
             }
+            // WORKAROUND continued: NavigationStack animates safeAreaInset content
+            // on first layout. Wait for that to settle, then reveal ComposeField.
+            // The scoped .animation(_:value:) on ComposeField handles the fade —
+            // no withAnimation here to avoid giving NavigationStack an animation
+            // context it can hijack for position changes.
+            try? await Task.sleep(for: .milliseconds(160))
+            showComposeField = true
         }
         .onAppear {
             cliAvailable = CLIEngine.isAvailable

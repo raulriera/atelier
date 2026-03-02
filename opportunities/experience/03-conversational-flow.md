@@ -47,6 +47,9 @@ There are no modes. There's one conversation that adapts to what's happening.
 - ✅ **Thinking indicator** — brain icon + pulsing animation during extended thinking
 - ✅ **Token usage** — displayed below completed assistant messages
 - ✅ **System events** — error and session-started events rendered inline
+- ✅ **Tool use cards** — inline cards for each tool invocation (Read, Write, Edit, Bash, etc.) with input summary, status, and result preview
+- ✅ **Inspector sidebar** — right-side panel (`.inspector()`) showing full tool output, togglable via toolbar, compresses content in-place
+- 🔲 **Scrolling performance** — timeline scrolling needs profiling and optimization (LazyVStack recycling, view diffing cost)
 - 🔲 **File card** — compact representation of a file read/write, expandable to show content
 - 🔲 **Diff view** — syntax-highlighted, collapsible, with approve/reject actions
 - 🔲 **Progress indicator** — shows what Claude is doing, estimated time, cancellation
