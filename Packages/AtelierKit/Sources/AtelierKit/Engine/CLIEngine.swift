@@ -2,6 +2,7 @@ import Foundation
 import os
 
 public final class CLIEngine: ConversationEngine, Sendable {
+    private static let logger = Logger(subsystem: "com.atelier.kit", category: "CLIEngine")
     private let cliPath: String
 
     public init(cliPath: String? = nil) {
@@ -31,6 +32,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
                     // Use the project's root directory so the CLI can see project files,
                     // or fall back to a temp directory for scratchpad sessions.
                     process.currentDirectoryURL = cwd
+                    Self.logger.debug("Launching CLI with cwd: \(cwd.path, privacy: .public)")
 
                     let stdout = Pipe()
                     let stderr = Pipe()
@@ -51,6 +53,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
                         // Peek at the type field
                         guard let envelope = try? decoder.decode(CLIMessage.self, from: data) else {
+                            Self.logger.warning("Failed to decode CLI message: \(line, privacy: .public)")
                             continue
                         }
 
@@ -87,14 +90,20 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
                     process.waitUntilExit()
 
-                    if process.terminationStatus != 0 && !Task.isCancelled {
-                        let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
-                        let stderrText = String(data: stderrData, encoding: .utf8) ?? ""
+                    let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
+                    let stderrText = String(data: stderrData, encoding: .utf8) ?? ""
+                    let exitCode = Int(process.terminationStatus)
+
+                    if exitCode != 0 && !Task.isCancelled {
                         continuation.finish(throwing: EngineError.processFailure(
-                            exitCode: Int(process.terminationStatus),
+                            exitCode: exitCode,
                             stderr: stderrText
                         ))
                     } else {
+                        if !stderrText.isEmpty {
+                            Self.logger.warning("CLI exited 0 with stderr: \(stderrText, privacy: .public)")
+                        }
+                        Self.logger.debug("CLI process exited with code \(exitCode)")
                         continuation.finish()
                     }
                 } catch {

@@ -7,5 +7,6 @@ public enum MarkdownBlock: Sendable, Equatable {
     case codeBlock(language: String?, code: String)
     case list(ordered: Bool, items: [AttributedString])
     case blockQuote(AttributedString)
+    case table(headers: [AttributedString], rows: [[AttributedString]])
     case thematicBreak
 }

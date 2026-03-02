@@ -75,6 +75,31 @@ public struct MarkdownContent: View {
                     .textSelection(.enabled)
             }
 
+        case .table(let headers, let rows):
+            Grid(alignment: .leading, horizontalSpacing: Spacing.md, verticalSpacing: Spacing.xxs) {
+                GridRow {
+                    ForEach(Array(headers.enumerated()), id: \.offset) { _, header in
+                        Text(header)
+                            .font(.conversationBody)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.contentSecondary)
+                    }
+                }
+
+                Divider()
+
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    GridRow {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
+                            Text(cell)
+                                .font(.conversationBody)
+                                .foregroundStyle(.contentPrimary)
+                                .textSelection(.enabled)
+                        }
+                    }
+                }
+            }
+
         case .thematicBreak:
             Divider()
                 .padding(.vertical, Spacing.xs)

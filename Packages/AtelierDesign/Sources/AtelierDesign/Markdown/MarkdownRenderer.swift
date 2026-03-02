@@ -63,6 +63,20 @@ public struct MarkdownRenderer {
             }
             return .blockQuote(combined)
 
+        case let table as Table:
+            let headerCells = table.head.children.compactMap { $0 as? Table.Cell }
+            let headers = headerCells.map { cell in
+                InlineText.attributedString(from: cell.children.compactMap { $0 as? any InlineMarkup })
+            }
+            let bodyRows = table.body.children.compactMap { $0 as? Table.Row }
+            let rows = bodyRows.map { row in
+                let cells = row.children.compactMap { $0 as? Table.Cell }
+                return cells.map { cell in
+                    InlineText.attributedString(from: cell.children.compactMap { $0 as? any InlineMarkup })
+                }
+            }
+            return .table(headers: headers, rows: rows)
+
         case is ThematicBreak:
             return .thematicBreak
 
