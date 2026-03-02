@@ -62,9 +62,9 @@ With a working conversation (M0) and a safe sandbox (M1), this is where Atelier 
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 3.1 | Project Workspace | New | 🔲 Not started | [→](opportunities/experience/02-project-workspace.md) |
+| 3.1 | Project Workspace | New | ✅ Done | [→](opportunities/experience/02-project-workspace.md) |
 | 3.2 | Project Context Files | New | 🔲 Not started | [→](opportunities/context/01-project-context-files.md) |
-| 3.3 | Session Persistence | New | 🔨 In progress | [→](opportunities/architecture/04-session-persistence.md) |
+| 3.3 | Session Persistence | New | ✅ Done | [→](opportunities/architecture/04-session-persistence.md) |
 | 3.4 | Conversational Flow | New | 🔨 In progress | [→](opportunities/experience/03-conversational-flow.md) |
 
 ---

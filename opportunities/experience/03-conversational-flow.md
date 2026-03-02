@@ -32,23 +32,29 @@ There are no modes. There's one conversation that adapts to what's happening.
 
 ## Implementation
 
-### Phase 1 — Unified Conversation Model
+### Phase 1 — Unified Conversation Model ✅
 
-- Single `Conversation` model that holds a heterogeneous list of timeline items (messages, file operations, task progress, diffs, approvals, results)
-- No mode state. The conversation model doesn't know about "chat" vs "cowork" vs "code" — it knows about content types
-- Shared rendering pipeline that handles all inline content types with consistent styling
+- ✅ `TimelineItem` holds heterogeneous `TimelineContent` (user, assistant, system)
+- ✅ No mode state — `Session` is the single model, UI responds to content types
+- ✅ `TimelineView` renders all content types with consistent styling via `@ViewBuilder` switch
+- ✅ All models are `Sendable` + `Codable` for persistence and thread safety
 
-### Phase 2 — Inline Content Types
+### Phase 2 — Inline Content Types 🔨
 
-- **Text message** — user and assistant messages, streaming support
-- **File card** — compact representation of a file read/write, expandable to show content
-- **Diff view** — syntax-highlighted, collapsible, with approve/reject actions
-- **Progress indicator** — shows what Claude is doing, estimated time, cancellation
-- **Approval gate** — inline request with context, one-click approve, Touch ID for high-risk
-- **Result card** — summary of completed work with expandable details
+- ✅ **Text message** — user (tinted bubble) and assistant (plain bubble), real-time streaming with `activeAssistantText`
+- ✅ **Markdown rendering** — paragraphs, headings, code blocks (with copy button), lists, tables, blockquotes, thematic breaks, inline markup (bold, italic, code, links, strikethrough)
+- ✅ **Streaming indicator** — animated dots while waiting for text
+- ✅ **Thinking indicator** — brain icon + pulsing animation during extended thinking
+- ✅ **Token usage** — displayed below completed assistant messages
+- ✅ **System events** — error and session-started events rendered inline
+- 🔲 **File card** — compact representation of a file read/write, expandable to show content
+- 🔲 **Diff view** — syntax-highlighted, collapsible, with approve/reject actions
+- 🔲 **Progress indicator** — shows what Claude is doing, estimated time, cancellation
+- 🔲 **Approval gate** — inline request with context, one-click approve, Touch ID for high-risk
+- 🔲 **Result card** — summary of completed work with expandable details
 - Each type must render fast — pre-computed layouts, minimal view recomputation
 
-### Phase 3 — Background Work
+### Phase 3 — Background Work 🔲
 
 - When Claude begins a long-running task, the conversation shows it started and continues to accept input
 - Progress updates stream into the timeline without blocking interaction
