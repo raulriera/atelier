@@ -17,6 +17,7 @@ struct ConversationWindow: View {
     @State private var showInspector = false
     @State private var selectedToolEvent: ToolUseEvent?
     @State private var showComposeField = false
+    @State private var toolPayloads: [String: ToolPayload] = [:]
 
     private let engine: CLIEngine = CLIEngine()
 
@@ -150,6 +151,10 @@ struct ConversationWindow: View {
                         SystemEvent(kind: .info, message: "Session interrupted — send a message to continue.")
                     )
                 }
+                // Preload sidecar payloads in background for on-demand inspector use
+                if let id = session.sessionId {
+                    toolPayloads = (try? await sessionPersistence.loadToolPayloads(sessionId: id)) ?? [:]
+                }
             }
             // WORKAROUND continued: NavigationStack animates safeAreaInset content
             // on first layout. Wait for that to settle, then reveal ComposeField.
@@ -158,6 +163,20 @@ struct ConversationWindow: View {
             // context it can hijack for position changes.
             try? await Task.sleep(for: .milliseconds(160))
             showComposeField = true
+        }
+        .onChange(of: selectedToolEvent?.id) { _, newID in
+            guard let newID,
+                  let payload = toolPayloads[newID] else { return }
+            session.populateToolPayload(toolId: newID, inputJSON: payload.inputJSON, resultOutput: payload.resultOutput)
+            toolPayloads.removeValue(forKey: newID)
+            // Refresh the selected event — it's a value-type copy that doesn't
+            // see the mutation we just made inside session.items.
+            if let item = session.items.last(where: {
+                if case .toolUse(let e) = $0.content { return e.id == newID }
+                return false
+            }), case .toolUse(let updated) = item.content {
+                selectedToolEvent = updated
+            }
         }
         .onAppear {
             cliAvailable = CLIEngine.isAvailable

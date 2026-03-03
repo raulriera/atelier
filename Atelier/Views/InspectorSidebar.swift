@@ -21,7 +21,7 @@ struct InspectorSidebar: View {
             Divider()
 
             ScrollView {
-                Text(event.resultOutput)
+                Text(event.resultOutput.isEmpty ? event.resultSummary : event.resultOutput)
                     .font(.conversationCode)
                     .foregroundStyle(.contentPrimary)
                     .textSelection(.enabled)

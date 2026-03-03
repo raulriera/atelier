@@ -8,7 +8,7 @@ struct ToolUseCell: View {
     var onSelect: ((ToolUseEvent) -> Void)?
 
     private var isTappable: Bool {
-        event.status == .completed && !event.resultOutput.isEmpty
+        event.status == .completed && event.hasResultOutput
     }
 
     var body: some View {

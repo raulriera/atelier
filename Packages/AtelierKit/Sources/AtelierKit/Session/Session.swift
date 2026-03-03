@@ -206,6 +206,26 @@ public final class Session {
         activeToolIndices.removeValue(forKey: id)
     }
 
+    // MARK: - Tool Payload Population
+
+    /// Replaces lightweight tool stubs with full payload data loaded from the sidecar.
+    ///
+    /// After population the cached summaries are cleared so the live computed
+    /// properties take over (they'll produce the same text from full data).
+    @MainActor
+    public func populateToolPayload(toolId: String, inputJSON: String, resultOutput: String) {
+        guard let index = items.lastIndex(where: {
+            if case .toolUse(let event) = $0.content { return event.id == toolId }
+            return false
+        }), case .toolUse(var event) = items[index].content else { return }
+
+        event.inputJSON = inputJSON
+        event.resultOutput = resultOutput
+        event.cachedInputSummary = ""
+        event.cachedResultSummary = ""
+        items[index].content = .toolUse(event)
+    }
+
     // MARK: - Private Helpers
 
     /// Finalizes the current assistant message. Removes the item if it has no text.
