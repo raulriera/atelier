@@ -64,6 +64,12 @@ There are no modes. There's one conversation that adapts to what's happening.
 - Completion triggers an inline result card and (optionally) a system notification
 - Multiple background tasks can be active in the same conversation
 
+## Why there's no "Chat Integration"
+
+Cowork treats Chat and Tasks as separate tabs with no shared context or handoff. Starting a task from a chat requires re-explaining everything. This is a design failure, not a feature gap.
+
+In Atelier, the conversation *is* the interface. There is no "chat mode" vs. "task mode." You type a message and Claude responds. If the response involves work (reading files, making changes, running commands), that work appears inline. If it's a simple answer, it's just text. The entire conversation history is context for every interaction — one continuous thread. This makes a separate "chat integration" opportunity unnecessary.
+
 ## Dependencies
 
 - experience/01-window-conversation.md (the conversation timeline)

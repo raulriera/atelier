@@ -8,7 +8,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 35 |
+| **Total opportunities** | 34 |
 | **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -24,8 +24,8 @@ Build order. Each milestone produces something usable and testable. Earlier mile
 | **M1** | Safe foundation | Sandboxed execution, file sharing, network isolation, permissions, credentials |
 | **M2** | The product | Project model, context files, session persistence, conversational flow |
 | **M3** | Intelligence | Embedded Code terminal, approval flow, token visibility, prompt injection defense |
-| **M4** | Native power | System services, menu bar, notifications, Shortcuts |
-| **M5** | Growth & polish | Chat integration, onboarding, workflows, Spotlight, drag-drop, everything else |
+| **M4** | Native power | System services, menu bar, notifications, Shortcuts, **scheduled tasks & templates** |
+| **M5** | Growth & polish | Onboarding, Spotlight, drag-drop, and everything else |
 
 ---
 
@@ -93,6 +93,7 @@ macOS differentiation. These are the features that make people say "this could o
 | 5.3 | Rich Notifications | Improvement | 🔲 Not started | [→](opportunities/macos/07-notifications.md) |
 | 5.4 | Shortcuts & Automation | New | 🔲 Not started | [→](opportunities/macos/06-shortcuts-automation.md) |
 | 5.5 | Memory Management | Improvement | 🔲 Not started | [→](opportunities/architecture/05-memory-management.md) |
+| 5.6 | Scheduled Tasks & Templates | New | 🔲 Not started | [→](opportunities/context/02-task-templates-workflows.md) |
 
 ---
 
@@ -102,19 +103,17 @@ Expand the product surface. Chat integration, onboarding, workflows, and all the
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 6.1 | Claude Chat Integration | New | 🔲 Not started | [→](opportunities/hub/02-claude-chat-integration.md) |
-| 6.2 | Onboarding & Setup | New | 🔲 Not started | [→](opportunities/experience/04-onboarding.md) |
-| 6.3 | Task Templates & Workflows | New | 🔲 Not started | [→](opportunities/context/02-task-templates-workflows.md) |
-| 6.4 | File System Events | New | 🔲 Not started | [→](opportunities/macos/08-file-system-events.md) |
-| 6.5 | Capabilities | Improvement | 🔲 Not started | [→](opportunities/hub/03-plugin-management.md) |
-| 6.6 | Capability Health | Improvement | 🔲 Not started | [→](opportunities/hub/04-mcp-connector-health.md) |
-| 6.7 | Multi-Agent Orchestration | Improvement | 🔲 Not started | [→](opportunities/context/03-multi-agent-orchestration.md) |
-| 6.8 | Spotlight & System Search | New | 🔲 Not started | [→](opportunities/macos/02-spotlight-search.md) |
-| 6.9 | Drag & Drop | New | 🔲 Not started | [→](opportunities/macos/03-drag-and-drop.md) |
-| 6.10 | Clipboard Integration | New | 🔲 Not started | [→](opportunities/macos/09-clipboard-integration.md) |
-| 6.11 | Document Generation | Improvement | 🔲 Not started | [→](opportunities/macos/10-document-generation.md) |
-| 6.12 | Quick Look Previews | New | 🔲 Not started | [→](opportunities/macos/04-quick-look-previews.md) |
-| 6.13 | Audit & Compliance | New | 🔲 Not started | [→](opportunities/security/05-audit-compliance.md) |
+| 6.1 | Onboarding & Setup | New | 🔲 Not started | [→](opportunities/experience/04-onboarding.md) |
+| 6.2 | File System Events | New | 🔲 Not started | [→](opportunities/macos/08-file-system-events.md) |
+| 6.3 | Capabilities | Improvement | 🔲 Not started | [→](opportunities/hub/03-plugin-management.md) |
+| 6.4 | Capability Health | Improvement | 🔲 Not started | [→](opportunities/hub/04-mcp-connector-health.md) |
+| 6.5 | Multi-Agent Orchestration | Improvement | 🔲 Not started | [→](opportunities/context/03-multi-agent-orchestration.md) |
+| 6.6 | Spotlight & System Search | New | 🔲 Not started | [→](opportunities/macos/02-spotlight-search.md) |
+| 6.7 | Drag & Drop | New | 🔲 Not started | [→](opportunities/macos/03-drag-and-drop.md) |
+| 6.8 | Clipboard Integration | New | 🔲 Not started | [→](opportunities/macos/09-clipboard-integration.md) |
+| 6.9 | Document Generation | Improvement | 🔲 Not started | [→](opportunities/macos/10-document-generation.md) |
+| 6.10 | Quick Look Previews | New | 🔲 Not started | [→](opportunities/macos/04-quick-look-previews.md) |
+| 6.11 | Audit & Compliance | New | 🔲 Not started | [→](opportunities/security/05-audit-compliance.md) |
 
 ---
 
@@ -162,17 +161,16 @@ Project context files, templates, multi-agent visibility, approval flow.
 | File | Milestone |
 |------|-----------|
 | [01-project-context-files.md](opportunities/context/01-project-context-files.md) | M2 |
-| [02-task-templates-workflows.md](opportunities/context/02-task-templates-workflows.md) | M5 |
+| [02-task-templates-workflows.md](opportunities/context/02-task-templates-workflows.md) | M4 |
 | [03-multi-agent-orchestration.md](opportunities/context/03-multi-agent-orchestration.md) | M5 |
 | [04-approval-review-flow.md](opportunities/context/04-approval-review-flow.md) | M3 |
 
 ### Hub (`opportunities/hub/`)
-Code/Chat integration, capabilities, capability health, token usage.
+Code integration, capabilities, capability health, token usage.
 
 | File | Milestone |
 |------|-----------|
 | [01-claude-code-integration.md](opportunities/hub/01-claude-code-integration.md) | M3 |
-| [02-claude-chat-integration.md](opportunities/hub/02-claude-chat-integration.md) | M5 |
 | [03-plugin-management.md](opportunities/hub/03-plugin-management.md) | M5 |
 | [04-mcp-connector-health.md](opportunities/hub/04-mcp-connector-health.md) | M5 |
 | [05-token-usage-visibility.md](opportunities/hub/05-token-usage-visibility.md) | M3 |
@@ -230,7 +228,6 @@ atelier/
     │   └── 04-approval-review-flow.md
     ├── hub/
     │   ├── 01-claude-code-integration.md
-    │   ├── 02-claude-chat-integration.md
     │   ├── 03-plugin-management.md
     │   ├── 04-mcp-connector-health.md
     │   └── 05-token-usage-visibility.md
