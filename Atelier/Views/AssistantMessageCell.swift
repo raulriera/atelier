@@ -6,11 +6,13 @@ struct AssistantMessageCell: View {
     let message: AssistantMessage
     let streamingText: String?
     let isThinking: Bool
+    var showsTail: Bool = true
 
-    init(message: AssistantMessage, streamingText: String?, isThinking: Bool = false) {
+    init(message: AssistantMessage, streamingText: String?, isThinking: Bool = false, showsTail: Bool = true) {
         self.message = message
         self.streamingText = streamingText
         self.isThinking = isThinking
+        self.showsTail = showsTail
     }
 
     var displayText: String {
@@ -37,7 +39,7 @@ struct AssistantMessageCell: View {
                         MarkdownContent(source: displayText)
                     }
                 }
-                .plainContainer()
+                .plainContainer(showsTail: showsTail)
 
                 Spacer(minLength: Spacing.xxl)
             }
