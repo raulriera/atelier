@@ -18,6 +18,8 @@ struct ConversationWindow: View {
     @State private var selectedToolEvent: ToolUseEvent?
     @State private var showComposeField = false
     @State private var toolPayloads: [String: ToolPayload] = [:]
+    @State private var isWindowActive = true
+    @State private var unreadCount = 0
 
     private let engine: CLIEngine = CLIEngine()
 
@@ -200,6 +202,14 @@ struct ConversationWindow: View {
                 try? sessionPersistence.saveImmediately(captured)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            isWindowActive = true
+            unreadCount = 0
+            NSApp.dockTile.badgeLabel = nil
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
+            isWindowActive = false
+        }
     }
 
     // MARK: - Actions
@@ -208,6 +218,13 @@ struct ConversationWindow: View {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         draft = ""
+
+        if session.isStreaming {
+            withAnimation(Motion.appear) {
+                session.enqueuePendingMessage(text)
+            }
+            return
+        }
 
         withAnimation(Motion.appear) {
             session.appendUserMessage(text)
@@ -249,6 +266,24 @@ struct ConversationWindow: View {
                         session.applyToolResult(id: id, output: output)
                     case .messageComplete(let usage):
                         session.completeAssistantMessage(usage: usage)
+
+                        if !isWindowActive {
+                            unreadCount += 1
+                            NSApp.requestUserAttention(.informationalRequest)
+                            NSApp.dockTile.badgeLabel = "\(unreadCount)"
+                        }
+
+                        // Dispatch queued message before saving — the save
+                        // suspends the main actor, which could let user input
+                        // bypass the queue while isStreaming is false.
+                        if let queued = session.dequeuePendingMessage() {
+                            withAnimation(Motion.appear) {
+                                session.beginAssistantMessage()
+                            }
+                            startStreaming(message: queued)
+                            return
+                        }
+
                         try? await session.save(to: sessionPersistence)
                     case .error(let engineError):
                         session.handleError(engineError)
@@ -274,6 +309,7 @@ struct ConversationWindow: View {
     private func stopGeneration() {
         streamingTask?.cancel()
         streamingTask = nil
+        session.clearPendingMessages()
         session.completeAssistantMessage(usage: TokenUsage())
         Task {
             try? await session.save(to: sessionPersistence)

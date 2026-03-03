@@ -448,4 +448,279 @@ struct SessionTests {
             #expect(event.status == .completed)
         }
     }
+
+    @Suite("Pending message queue")
+    struct PendingMessageQueue {
+        @Test("Enqueue adds message to queue and timeline")
+        @MainActor func enqueueAddsToQueueAndTimeline() throws {
+            let session = Session()
+            session.enqueuePendingMessage("Next thought")
+
+            #expect(session.pendingMessages == ["Next thought"])
+            #expect(session.items.count == 1)
+            let msg = try #require(session.items[0].content.userMessage)
+            #expect(msg.text == "Next thought")
+        }
+
+        @Test("Dequeue returns messages in FIFO order")
+        @MainActor func dequeueReturnsFIFO() {
+            let session = Session()
+            session.enqueuePendingMessage("First")
+            session.enqueuePendingMessage("Second")
+
+            #expect(session.dequeuePendingMessage() == "First")
+            #expect(session.dequeuePendingMessage() == "Second")
+            #expect(session.dequeuePendingMessage() == nil)
+        }
+
+        @Test("Dequeue returns nil when empty")
+        @MainActor func dequeueReturnsNilWhenEmpty() {
+            let session = Session()
+            #expect(session.dequeuePendingMessage() == nil)
+        }
+
+        @Test("Reset clears pending messages")
+        @MainActor func resetClearsPendingMessages() {
+            let session = Session()
+            session.enqueuePendingMessage("Queued")
+
+            session.reset()
+
+            #expect(session.pendingMessages.isEmpty)
+        }
+
+        @Test("Pending messages persist in snapshot")
+        @MainActor func pendingMessagesPersistInSnapshot() async throws {
+            let session = Session()
+            session.sessionId = "test"
+            session.enqueuePendingMessage("Waiting")
+
+            let persistence = InMemorySessionPersistence()
+            try await session.save(to: persistence)
+
+            let snapshot = try #require(await persistence.load(id: "test"))
+            #expect(snapshot.pendingMessages == ["Waiting"])
+        }
+
+        @Test("Clear marks pending items as cancelled")
+        @MainActor func clearMarksPendingAsCancelled() {
+            let session = Session()
+            session.enqueuePendingMessage("First")
+            session.enqueuePendingMessage("Second")
+
+            let itemIDs = session.items.map(\.id)
+            session.clearPendingMessages()
+
+            #expect(session.pendingMessages.isEmpty)
+            #expect(session.dequeuePendingMessage() == nil)
+            // User bubbles stay in the timeline
+            #expect(session.items.count == 2)
+            // Their IDs are in the cancelled set
+            for id in itemIDs {
+                #expect(session.cancelledItemIDs.contains(id))
+            }
+        }
+
+        @Test("Error clears pending messages and marks them cancelled but not the active message")
+        @MainActor func errorClearsPendingMessages() {
+            let session = Session()
+            session.appendUserMessage("Ask something")
+            let activeID = session.items[0].id
+            session.beginAssistantMessage()
+            session.enqueuePendingMessage("Queued")
+            let queuedID = session.items.last!.id
+
+            session.handleError(.cliError("Failed"))
+
+            #expect(session.pendingMessages.isEmpty)
+            // Queued message is cancelled
+            #expect(session.cancelledItemIDs.contains(queuedID))
+            // Active message is NOT cancelled — the error event handles that UX
+            #expect(!session.cancelledItemIDs.contains(activeID))
+        }
+
+        @Test("Pending messages are not restored from snapshot")
+        @MainActor func pendingMessagesNotRestoredFromSnapshot() {
+            let snapshot = SessionSnapshot(
+                sessionId: "test",
+                items: [TimelineItem(content: .userMessage(UserMessage(text: "Queued")))],
+                pendingMessages: ["Queued"]
+            )
+            let session = Session.restore(from: snapshot)
+
+            // Pending messages are transient — restoring them without
+            // pendingItemIDs would crash dequeuePendingMessage().
+            #expect(session.pendingMessages.isEmpty)
+        }
+    }
+
+    @Suite("Queue orchestration")
+    struct QueueOrchestration {
+        @Test("Normal conversation: send, stream, complete")
+        @MainActor func normalConversation() throws {
+            let session = Session()
+
+            // User sends a message
+            session.appendUserMessage("Hello")
+            session.beginAssistantMessage()
+            #expect(session.isStreaming)
+
+            // Claude responds
+            session.applyDelta("Hi there!")
+            session.completeAssistantMessage(usage: TokenUsage(inputTokens: 5, outputTokens: 3))
+
+            #expect(!session.isStreaming)
+            #expect(session.pendingMessages.isEmpty)
+            #expect(session.items.count == 2)
+
+            let user = try #require(session.items[0].content.userMessage)
+            #expect(user.text == "Hello")
+            let assistant = try #require(session.items[1].content.assistantMessage)
+            #expect(assistant.text == "Hi there!")
+            #expect(assistant.isComplete)
+        }
+
+        @Test("Queued messages: all dispatched in sequence")
+        @MainActor func queuedMessagesAllDispatched() throws {
+            let session = Session()
+
+            // First message begins streaming
+            session.appendUserMessage("First")
+            session.beginAssistantMessage()
+            session.applyDelta("Response to first")
+
+            // While streaming, user queues two more messages
+            session.enqueuePendingMessage("Second")
+            session.enqueuePendingMessage("Third")
+
+            #expect(session.pendingMessages.count == 2)
+            // Timeline: user("First"), assistant(streaming), user("Second"), user("Third")
+            #expect(session.items.count == 4)
+
+            // First response completes — dequeue "Second"
+            session.completeAssistantMessage(usage: TokenUsage(inputTokens: 10, outputTokens: 5))
+            let queued1 = session.dequeuePendingMessage()
+            #expect(queued1 == "Second")
+            #expect(session.pendingMessages == ["Third"])
+
+            // Begin response to "Second"
+            session.beginAssistantMessage()
+            session.applyDelta("Got it")
+            session.completeAssistantMessage(usage: TokenUsage(inputTokens: 8, outputTokens: 3))
+
+            // Dequeue "Third"
+            let queued2 = session.dequeuePendingMessage()
+            #expect(queued2 == "Third")
+            #expect(session.pendingMessages.isEmpty)
+
+            // Begin response to "Third"
+            session.beginAssistantMessage()
+            session.applyDelta("Done")
+            session.completeAssistantMessage(usage: TokenUsage(inputTokens: 6, outputTokens: 2))
+
+            // No more queued messages
+            #expect(session.dequeuePendingMessage() == nil)
+            #expect(!session.isStreaming)
+            // Timeline: user, assistant, user, user, assistant, assistant
+            #expect(session.items.count == 6)
+        }
+
+        @Test("Stop with no queue cancels the active user message")
+        @MainActor func stopWithNoQueueCancelsActiveMessage() throws {
+            let session = Session()
+
+            // User sends a message, streaming begins
+            session.appendUserMessage("Hello")
+            let userItemID = session.items[0].id
+            session.beginAssistantMessage()
+            session.applyDelta("Starting to respond...")
+
+            // User hits stop — simulating stopGeneration()
+            session.clearPendingMessages()
+            session.completeAssistantMessage(usage: TokenUsage())
+
+            #expect(!session.isStreaming)
+            #expect(session.cancelledItemIDs.contains(userItemID))
+        }
+
+        @Test("Stop generation clears queue and marks all bubbles cancelled")
+        @MainActor func stopGenerationClearsQueue() throws {
+            let session = Session()
+
+            // User sends first message, streaming begins
+            session.appendUserMessage("Hello")
+            let activeID = session.items[0].id
+            session.beginAssistantMessage()
+            session.applyDelta("Starting to respond...")
+
+            // User queues a follow-up while streaming
+            session.enqueuePendingMessage("Follow up")
+            #expect(session.pendingMessages == ["Follow up"])
+
+            // User hits stop — simulating stopGeneration()
+            session.clearPendingMessages()
+            session.completeAssistantMessage(usage: TokenUsage())
+
+            // Queue is cleared, no messages dispatched
+            #expect(session.pendingMessages.isEmpty)
+            #expect(session.dequeuePendingMessage() == nil)
+            #expect(!session.isStreaming)
+
+            // Timeline: user("Hello"), assistant, user("Follow up" cancelled)
+            #expect(session.items.count == 3)
+            let assistant = try #require(session.items[1].content.assistantMessage)
+            #expect(assistant.text == "Starting to respond...")
+            // Both the active and queued messages are cancelled
+            #expect(session.cancelledItemIDs.contains(activeID))
+            #expect(session.cancelledItemIDs.contains(session.items[2].id))
+        }
+
+        @Test("Stop after dispatched queued message marks it cancelled")
+        @MainActor func stopAfterDispatchedQueuedMessage() throws {
+            let session = Session()
+
+            // First message streaming
+            session.appendUserMessage("Hello")
+            session.beginAssistantMessage()
+            session.applyDelta("Hi!")
+
+            // User queues a follow-up
+            session.enqueuePendingMessage("Follow up")
+
+            // First response completes, queued message auto-dispatched
+            session.completeAssistantMessage(usage: TokenUsage(inputTokens: 5, outputTokens: 3))
+            let queued = session.dequeuePendingMessage()
+            #expect(queued == "Follow up")
+
+            // New stream starts for the dispatched message
+            session.beginAssistantMessage()
+            session.applyDelta("Starting follow-up response...")
+
+            // User hits stop — simulating stopGeneration()
+            session.clearPendingMessages()
+            session.completeAssistantMessage(usage: TokenUsage())
+
+            // The dispatched message's bubble should be cancelled
+            #expect(session.cancelledItemIDs.contains(session.items[2].id))
+        }
+
+        @Test("Error during streaming clears queued messages")
+        @MainActor func errorDuringStreamingClearsQueue() {
+            let session = Session()
+
+            session.appendUserMessage("Try this")
+            session.beginAssistantMessage()
+            session.enqueuePendingMessage("And this")
+
+            #expect(session.pendingMessages == ["And this"])
+
+            // CLI errors out
+            session.handleError(.cliError("Rate limited"))
+
+            #expect(session.pendingMessages.isEmpty)
+            #expect(!session.isStreaming)
+            // Queued messages are not dispatched
+            #expect(session.dequeuePendingMessage() == nil)
+        }
+    }
 }

@@ -200,7 +200,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
         appendSystemPrompt: String? = nil
     ) -> [String] {
         var args = [
-            "-p", message,
+            "-p",
             "--output-format", "stream-json",
             "--verbose",
             "--include-partial-messages",
@@ -214,6 +214,10 @@ public final class CLIEngine: ConversationEngine, Sendable {
         if let prompt = appendSystemPrompt, !prompt.isEmpty {
             args += ["--append-system-prompt", prompt]
         }
+
+        // End-of-options marker so the positional prompt is never
+        // misinterpreted as a flag (e.g. "-7" or "--help").
+        args += ["--", message]
 
         return args
     }

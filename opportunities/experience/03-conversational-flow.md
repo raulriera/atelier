@@ -57,12 +57,12 @@ There are no modes. There's one conversation that adapts to what's happening.
 - 🔲 **Result card** — summary of completed work with expandable details (blocked on M3 — hub/01-claude-code-integration.md)
 - Each type must render fast — pre-computed layouts, minimal view recomputation
 
-### Phase 3 — Background Work 🔲
+### Phase 3 — Background Work 🔨
 
-- When Claude begins a long-running task, the conversation shows it started and continues to accept input
-- Progress updates stream into the timeline without blocking interaction
-- Completion triggers an inline result card and (optionally) a system notification
-- Multiple background tasks can be active in the same conversation
+- ✅ Non-blocking compose: user can type and queue messages while Claude streams
+- ✅ Queued messages appear as normal user bubbles immediately, dispatched after current response completes
+- ✅ Dock icon bounce + red badge when response completes while app is not focused; badge clears on window focus
+- 🔲 Multiple concurrent background tasks (deferred to M3 — requires multi-subprocess support)
 
 ## Why there's no "Chat Integration"
 

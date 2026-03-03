@@ -4,6 +4,7 @@ import AtelierKit
 
 struct UserMessageCell: View {
     let message: UserMessage
+    var isCancelled: Bool = false
 
     var body: some View {
         HStack {
@@ -12,6 +13,7 @@ struct UserMessageCell: View {
                 .font(.conversationBody)
                 .textSelection(.enabled)
                 .tintedContainer()
+                .opacity(isCancelled ? 0.5 : 1)
         }
     }
 }

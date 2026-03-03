@@ -47,14 +47,24 @@ struct CLIEngineTests {
         #expect(!args.contains("--continue"))
     }
 
-    @Test("Message is passed verbatim after -p flag")
-    func messageIsPassedVerbatim() throws {
+    @Test("Message is passed as positional argument after end-of-options marker")
+    func messageIsPassedAfterEndOfOptions() throws {
         let msg = "What is 2+2?"
         let args = CLIEngine.buildArguments(
             message: msg, modelAlias: "haiku", sessionId: nil
         )
-        let pIdx = try #require(args.firstIndex(of: "-p"), "-p flag missing")
-        #expect(args[pIdx + 1] == msg)
+        let ddIdx = try #require(args.firstIndex(of: "--"), "-- marker missing")
+        #expect(args[ddIdx + 1] == msg)
+        #expect(args.last == msg)
+    }
+
+    @Test("Dash-prefixed message is not misinterpreted as a flag")
+    func dashPrefixedMessageSafe() throws {
+        let args = CLIEngine.buildArguments(
+            message: "-7", modelAlias: "haiku", sessionId: nil
+        )
+        let ddIdx = try #require(args.firstIndex(of: "--"), "-- marker missing")
+        #expect(args[ddIdx + 1] == "-7")
     }
 
     @Test("Model alias is passed verbatim after --model flag")

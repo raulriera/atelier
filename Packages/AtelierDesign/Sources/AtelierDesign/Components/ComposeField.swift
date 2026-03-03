@@ -41,6 +41,11 @@ public struct ComposeField: View {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// The button shows stop (red) when streaming with an empty field.
+    private var showsStopButton: Bool {
+        isStreaming && !hasText
+    }
+
     /// Pill when single-line, rounded rect when grown.
     private var cornerRadius: CGFloat {
         fieldHeight <= 48 ? fieldHeight / 2 : Radii.lg
@@ -81,32 +86,31 @@ public struct ComposeField: View {
                     .scrollIndicators(.hidden)
                     .frame(minHeight: 20, maxHeight: 200)
                     .fixedSize(horizontal: false, vertical: true)
-                    .disabled(isStreaming)
                     .onKeyPress(keys: [.return], phases: .down) { keyPress in
                         if keyPress.modifiers.contains(.shift) {
                             return .ignored
                         }
-                        guard hasText, !isStreaming else { return .handled }
+                        guard hasText else { return .handled }
                         onSubmit()
                         return .handled
                     }
             }
 
             Button {
-                if isStreaming {
+                if showsStopButton {
                     onStop?()
                 } else {
                     guard hasText else { return }
                     onSubmit()
                 }
             } label: {
-                Image(systemName: isStreaming ? "stop.circle.fill" : "arrow.up.circle.fill")
+                Image(systemName: showsStopButton ? "stop.circle.fill" : "arrow.up.circle.fill")
                     .font(.title)
                     .symbolRenderingMode(.hierarchical)
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(isStreaming ? AnyShapeStyle(.statusError) : AnyShapeStyle(.contentAccent))
+            .foregroundStyle(showsStopButton ? AnyShapeStyle(.statusError) : AnyShapeStyle(.contentAccent))
             .opacity(isStreaming || hasText ? 1 : 0.3)
             .animation(Motion.morph, value: isStreaming)
             .animation(Motion.morph, value: hasText)

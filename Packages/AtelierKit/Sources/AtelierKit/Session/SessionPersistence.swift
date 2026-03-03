@@ -6,12 +6,14 @@ public struct SessionSnapshot: Sendable, Codable {
     public var items: [TimelineItem]
     public var savedAt: Date
     public var wasInterrupted: Bool
+    public var pendingMessages: [String]
 
-    public init(sessionId: String, items: [TimelineItem], savedAt: Date = Date(), wasInterrupted: Bool = false) {
+    public init(sessionId: String, items: [TimelineItem], savedAt: Date = Date(), wasInterrupted: Bool = false, pendingMessages: [String] = []) {
         self.sessionId = sessionId
         self.items = items
         self.savedAt = savedAt
         self.wasInterrupted = wasInterrupted
+        self.pendingMessages = pendingMessages
     }
 
     public init(from decoder: Decoder) throws {
@@ -23,10 +25,11 @@ public struct SessionSnapshot: Sendable, Codable {
         items = lossy.compactMap(\.value)
         savedAt = try container.decode(Date.self, forKey: .savedAt)
         wasInterrupted = try container.decodeIfPresent(Bool.self, forKey: .wasInterrupted) ?? false
+        pendingMessages = try container.decodeIfPresent([String].self, forKey: .pendingMessages) ?? []
     }
 
     private enum CodingKeys: String, CodingKey {
-        case sessionId, items, savedAt, wasInterrupted
+        case sessionId, items, savedAt, wasInterrupted, pendingMessages
     }
 }
 

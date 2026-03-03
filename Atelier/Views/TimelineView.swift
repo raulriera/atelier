@@ -45,7 +45,7 @@ private struct TimelineItemView: View {
     var body: some View {
         switch item.content {
         case .userMessage(let msg):
-            UserMessageCell(message: msg)
+            UserMessageCell(message: msg, isCancelled: session.cancelledItemIDs.contains(item.id))
         case .assistantMessage(let msg):
             if msg.isComplete {
                 AssistantMessageCell(message: msg, streamingText: nil)
