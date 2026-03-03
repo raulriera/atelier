@@ -206,6 +206,49 @@ struct ToolUseEventTests {
         }
     }
 
+    @Suite("editOldString / editNewString")
+    struct EditStrings {
+        @Test("Parses old_string and new_string from Edit tool")
+        func parsesEditStrings() {
+            let event = ToolUseEvent(
+                id: "t",
+                name: "Edit",
+                inputJSON: #"{"file_path":"/tmp/f.md","old_string":"hello","new_string":"world"}"#
+            )
+            #expect(event.editOldString == "hello")
+            #expect(event.editNewString == "world")
+        }
+
+        @Test("Returns nil for non-Edit tools")
+        func returnsNilForNonEdit() {
+            let event = ToolUseEvent(
+                id: "t",
+                name: "Read",
+                inputJSON: #"{"file_path":"/tmp/f.md","old_string":"hello","new_string":"world"}"#
+            )
+            #expect(event.editOldString == nil)
+            #expect(event.editNewString == nil)
+        }
+
+        @Test("Returns nil when inputJSON has no old_string")
+        func returnsNilWhenMissing() {
+            let event = ToolUseEvent(
+                id: "t",
+                name: "Edit",
+                inputJSON: #"{"file_path":"/tmp/f.md"}"#
+            )
+            #expect(event.editOldString == nil)
+            #expect(event.editNewString == nil)
+        }
+
+        @Test("Returns nil when inputJSON is empty")
+        func returnsNilWhenEmpty() {
+            let event = ToolUseEvent(id: "t", name: "Edit")
+            #expect(event.editOldString == nil)
+            #expect(event.editNewString == nil)
+        }
+    }
+
     @Suite("fileContent")
     struct FileContent {
         @Test("Strips cat -n line number prefixes")

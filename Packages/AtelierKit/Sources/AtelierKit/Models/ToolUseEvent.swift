@@ -167,6 +167,20 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
             .joined(separator: "\n")
     }
 
+    // MARK: - Edit operations
+
+    /// The original text from an Edit tool's `old_string` parameter.
+    public var editOldString: String? {
+        guard name == "Edit", let dict = parsedInput else { return nil }
+        return dict["old_string"] as? String
+    }
+
+    /// The replacement text from an Edit tool's `new_string` parameter.
+    public var editNewString: String? {
+        guard name == "Edit", let dict = parsedInput else { return nil }
+        return dict["new_string"] as? String
+    }
+
     // MARK: - Display metadata
 
     /// User-friendly display name for the tool.

@@ -50,11 +50,11 @@ There are no modes. There's one conversation that adapts to what's happening.
 - ✅ **Tool use cards** — inline cards for each tool invocation (Read, Write, Edit, Bash, etc.) with input summary, status, and result preview
 - ✅ **Inspector sidebar** — right-side panel (`.inspector()`) showing full tool output, togglable via toolbar, compresses content in-place
 - 🔲 **Scrolling performance** — timeline scrolling needs profiling and optimization (LazyVStack recycling, view diffing cost)
-- 🔲 **File card** — compact representation of a file read/write, expandable to show content
-- 🔲 **Diff view** — syntax-highlighted, collapsible, with approve/reject actions
+- ✅ **File card** — compact representation of a file read/write, expandable to show content
+- ✅ **Diff view** — track-changes view in inspector for Edit operations (strikethrough removed, highlighted added)
 - 🔲 **Progress indicator** — shows what Claude is doing, estimated time, cancellation
-- 🔲 **Approval gate** — inline request with context, one-click approve, Touch ID for high-risk
-- 🔲 **Result card** — summary of completed work with expandable details
+- 🔲 **Approval gate** — inline request with context, one-click approve, Touch ID for high-risk (blocked on M3 — hub/02-approval-flow.md)
+- 🔲 **Result card** — summary of completed work with expandable details (blocked on M3 — hub/01-claude-code-integration.md)
 - Each type must render fast — pre-computed layouts, minimal view recomputation
 
 ### Phase 3 — Background Work 🔲

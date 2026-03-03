@@ -61,7 +61,10 @@ struct InspectorSidebar: View {
 
     @ViewBuilder
     private func resultView(for event: ToolUseEvent) -> some View {
-        if event.isFileOperation && event.fileType == .markdown {
+        if let oldText = event.editOldString,
+           let newText = event.editNewString {
+            ChangePreview(oldText: oldText, newText: newText)
+        } else if event.isFileOperation && event.fileType == .markdown {
             MarkdownContent(source: event.fileContent)
         } else {
             let content = event.isFileOperation
