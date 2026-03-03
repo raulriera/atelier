@@ -14,7 +14,7 @@ struct CardContainerModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(Spacing.md)
+            .padding(Spacing.sm)
             .background {
                 RoundedRectangle(cornerRadius: Radii.md, style: .continuous)
                     .fill(colorScheme == .dark ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.surfaceElevated))

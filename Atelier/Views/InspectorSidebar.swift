@@ -21,25 +21,35 @@ struct InspectorSidebar: View {
             Divider()
 
             ScrollView {
-                Text(event.resultOutput.isEmpty ? event.resultSummary : event.resultOutput)
-                    .font(.conversationCode)
-                    .foregroundStyle(.contentPrimary)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                resultView(for: event)
                     .padding(Spacing.md)
             }
         }
     }
 
     private func header(for event: ToolUseEvent) -> some View {
-        HStack(spacing: Spacing.xs) {
-            Image(systemName: iconName(for: event))
-                .foregroundStyle(.contentSecondary)
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: event.iconName)
+                    .foregroundStyle(.contentSecondary)
 
-            Text(displayName(for: event))
-                .font(.cardBody)
+                Text(event.fileName ?? event.displayName)
+                    .font(.cardBody)
 
-            if !event.inputSummary.isEmpty {
+                Spacer()
+
+                Text(event.displayName)
+                    .font(.metadata)
+                    .foregroundStyle(.contentTertiary)
+            }
+
+            if let dir = event.fileDirectory {
+                Text(dir)
+                    .font(.metadata)
+                    .foregroundStyle(.contentTertiary)
+                    .lineLimit(1)
+                    .truncationMode(.head)
+            } else if !event.inputSummary.isEmpty, !event.isFileOperation {
                 Text(event.inputSummary)
                     .font(.conversationCode)
                     .foregroundStyle(.contentSecondary)
@@ -49,40 +59,27 @@ struct InspectorSidebar: View {
         }
     }
 
+    @ViewBuilder
+    private func resultView(for event: ToolUseEvent) -> some View {
+        if event.isFileOperation && event.fileType == .markdown {
+            MarkdownContent(source: event.fileContent)
+        } else {
+            let content = event.isFileOperation
+                ? event.fileContent
+                : (event.resultOutput.isEmpty ? event.resultSummary : event.resultOutput)
+            Text(content)
+                .font(.conversationCode)
+                .foregroundStyle(.contentPrimary)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     private var emptyState: some View {
         ContentUnavailableView {
             Label("No Selection", systemImage: "sidebar.right")
         } description: {
             Text("Select a tool card to inspect its output")
-        }
-    }
-
-    private func displayName(for event: ToolUseEvent) -> String {
-        switch event.name {
-        case "Bash": "Terminal Command"
-        case "Read": "Read File"
-        case "Write": "Write File"
-        case "Edit": "Edit File"
-        case "Glob": "Search Files"
-        case "Grep": "Search Content"
-        case "WebFetch": "Fetch Web Page"
-        case "WebSearch": "Web Search"
-        case "Agent": "Sub-agent"
-        default: event.name
-        }
-    }
-
-    private func iconName(for event: ToolUseEvent) -> String {
-        switch event.name {
-        case "Read": "doc.text"
-        case "Write": "doc.badge.plus"
-        case "Edit": "pencil"
-        case "Bash": "terminal"
-        case "Glob": "magnifyingglass"
-        case "Grep": "text.magnifyingglass"
-        case "WebFetch", "WebSearch": "globe"
-        case "Agent": "person.2"
-        default: "wrench"
         }
     }
 }

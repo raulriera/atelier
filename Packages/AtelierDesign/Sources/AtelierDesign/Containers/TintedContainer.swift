@@ -20,8 +20,8 @@ struct TintedContainerModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
             .foregroundStyle(.white)
             .background(
                 LinearGradient(

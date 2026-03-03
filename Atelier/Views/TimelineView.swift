@@ -9,7 +9,7 @@ struct TimelineView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: Spacing.md) {
+            LazyVStack(alignment: .leading, spacing: Spacing.sm) {
                 ForEach(session.items.reversed()) { item in
                     TimelineItemView(
                         item: item,
@@ -59,7 +59,11 @@ private struct TimelineItemView: View {
         case .system(let event):
             SystemEventCell(event: event)
         case .toolUse(let event):
-            ToolUseCell(event: event, isSelected: event.id == selectedToolID, onSelect: onSelectTool)
+            if event.isFileOperation {
+                FileCard(event: event, isSelected: event.id == selectedToolID, onSelect: onSelectTool)
+            } else {
+                ToolUseCell(event: event, isSelected: event.id == selectedToolID, onSelect: onSelectTool)
+            }
         }
     }
 }

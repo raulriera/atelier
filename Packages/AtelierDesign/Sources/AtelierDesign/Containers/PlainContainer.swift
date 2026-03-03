@@ -21,8 +21,8 @@ struct PlainContainerModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
             .foregroundStyle(.contentPrimary)
             .background(.surfaceElevated, in: bubbleShape)
     }
