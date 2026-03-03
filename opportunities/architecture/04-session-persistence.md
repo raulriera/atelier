@@ -76,23 +76,18 @@ Use macOS **Background Tasks framework**, `NSProcessInfo` activity assertions, a
 
 ## Current Implementation Status
 
-> ⚠️ **The current implementation uses global primitives that don't support the multi-project model.**
-
 What's been built:
-- `DiskSessionPersistence` saves/loads sessions as JSON files in `~/Library/Application Support/Atelier/sessions/`
-- `Session.save(to:)` and auto-restore of most recent session on launch
+- Per-project `DiskSessionPersistence` scoped to `{baseDirectory}/projects/{projectID}/sessions/`
+- Two-file storage: lightweight main file (`{sessionId}.json`) with cached summaries, heavy sidecar (`{sessionId}-payloads.json`) with full tool `inputJSON` and `resultOutput`
+- On launch, only the main file is deserialized. The sidecar is loaded once in the background and tool payloads are populated on demand when inspecting a specific tool
+- `Session.save(to:)` and auto-restore of most recent session per project
 - Sessions survive app closure and relaunch
+- Lossy decoding: corrupted individual timeline items are skipped rather than losing the entire session
+- Interrupted sessions are flagged and show a system message on restore
 
-What's wrong:
-- **Global persistence:** A single `DiskSessionPersistence` instance is shared across all windows. `loadMostRecent()` returns the same session regardless of which project window is asking.
-- **No project scoping:** Sessions aren't tied to a project folder. Opening two project windows overwrites the same "most recent" slot.
-- **No per-project storage:** Session files live in a flat global directory, not organized by project.
+### Known issues
 
-What needs to change for multi-project support:
-- Session persistence must be scoped per-project (e.g., `~/Library/.../sessions/{projectID}/`)
-- Each window must receive its own `SessionPersistence` instance bound to its project
-- `loadMostRecent()` should be per-project, not global
-- Depends on 3.1 Project Workspace establishing the `Project` model first
+- **Loading indicator on app launch.** `ProjectWindow` shows a `ProgressView()` while the project is materializing (`projectStore.materialize` → `fileAccessStore.load()` → `fileAccessStore.grant(url:)`). The `ConversationWindow` and its session restore don't begin until all of that completes. Fix: set `project` immediately after `materialize` and let `fileAccessStore` load in the background, since the conversation doesn't depend on file access being ready.
 
 ---
 
