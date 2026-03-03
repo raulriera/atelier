@@ -51,7 +51,7 @@ Every action should feel physically rewarding. Visual feedback confirms user int
 
 Colors are exposed as `ShapeStyle` extensions, not a parallel namespace. This integrates natively with `.foregroundStyle()`, `.background()`, and `.fill()`.
 
-Custom surface colors live in the `AtelierColors` asset catalog (light/dark variants). ShapeStyle conformances wrap them for type safety.
+Custom surface colors live in the `AtelierColors` asset catalog. Every color must provide four variants: light, dark, light + increased contrast, dark + increased contrast. The increased contrast variants must provide significantly higher visual differentiation — not just a minor tweak. This is required by the [HIG](https://developer.apple.com/design/human-interface-guidelines/color) for Liquid Glass adaptivity and the Increase Contrast accessibility setting. ShapeStyle conformances wrap them for type safety.
 
 **Surfaces** (backgrounds):
 
@@ -71,13 +71,13 @@ Custom surface colors live in the `AtelierColors` asset catalog (light/dark vari
 | `.contentTertiary` | Placeholders, disabled text |
 | `.contentAccent` | Interactive elements, links |
 
-**Status**:
+**Status** — never rely on color alone ([HIG](https://developer.apple.com/design/human-interface-guidelines/accessibility)). Every status indicator must pair its color with a distinct icon or text label so the state is perceivable without color vision.
 
-| Token | Usage |
-|-------|-------|
-| `.statusSuccess` | Completed actions, positive states |
-| `.statusWarning` | Caution states, budget alerts |
-| `.statusError` | Failed actions, destructive states |
+| Token | Usage | Required pairing |
+|-------|-------|-----------------|
+| `.statusSuccess` | Completed actions, positive states | Checkmark icon or "Done" label |
+| `.statusWarning` | Caution states, budget alerts | Warning triangle icon or descriptive label |
+| `.statusError` | Failed actions, destructive states | X-circle icon or error description |
 
 **Usage:**
 ```swift
@@ -88,7 +88,7 @@ Custom surface colors live in the `AtelierColors` asset catalog (light/dark vari
 
 ### Typography — Font extensions
 
-Extend `Font` directly with semantic roles. System text styles, Dynamic Type, VoiceOver — all free.
+Extend `Font` directly with semantic roles mapped to system text styles. macOS does not support Dynamic Type — text does not scale with a system setting. However, using system text styles ensures correct weight, size, and tracking, and prepares for a potential iPadOS/visionOS port where Dynamic Type applies.
 
 | Token | Base | Usage |
 |-------|------|-------|
@@ -247,6 +247,60 @@ Styled divider between conversation sections.
 ```swift
 SectionDivider()
 ```
+
+---
+
+## Layout
+
+The conversation timeline must look great from the narrowest useful window to full-screen ultrawide. The HIG says: *"Support arbitrary window sizes. Allow people to resize their window to the width and height that works for them, and adjust your content accordingly."*
+
+### Reading width
+
+Unbounded text lines are hard to read. The timeline content (messages, cards, system events) has a maximum reading width that keeps line lengths comfortable.
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `Layout.readingWidth` | 720pt | Maximum width for timeline content |
+| `Layout.minimumWindowWidth` | 420pt | Minimum usable window width |
+| `Layout.minimumWindowHeight` | 480pt | Minimum usable window height |
+
+The timeline is always horizontally centered in the available space. At narrow widths it fills the window with horizontal padding; beyond `readingWidth` it stops growing and whitespace appears on the sides.
+
+```
+┌──────────────────────────────────────────────┐
+│ toolbar (fills width)                        │
+├──────────────────────────────────────────────┤
+│         ┌──────────────────┐                 │
+│         │  timeline        │                 │
+│         │  (≤ readingWidth) │                 │
+│         │  centered        │                 │
+│         └──────────────────┘                 │
+├──────────────────────────────────────────────┤
+│         ┌──────────────────┐                 │
+│         │  compose field   │                 │
+│         └──────────────────┘                 │
+└──────────────────────────────────────────────┘
+```
+
+### Cards
+
+Cards (`cardContainer()`) fill the timeline width up to `readingWidth`. They never float narrower than their content and never stretch beyond the reading column.
+
+### Inspector
+
+The inspector panel uses SwiftUI's `.inspector()` modifier — a system-provided split view that handles resizing, collapse, and safe area automatically. It compresses the timeline in-place; it does not overlay content.
+
+- Default width: 280pt
+- Collapsible via `⌥⌘I` or toolbar button
+- At narrow window widths (< ~700pt), the inspector should auto-collapse or present as a sheet to avoid crushing the timeline below usable width
+
+### Full-screen behavior
+
+Full-screen on large displays exaggerates the whitespace flanking the reading column. This is correct — the reading width stays fixed. The toolbar and compose field stretch to fill; the content does not. This mirrors how apps like Mail and Notes handle wide layouts.
+
+### Minimum window size
+
+Set via `.defaultSize()` and `.windowResizability()` in the scene declaration. The window should never shrink below `minimumWindowWidth × minimumWindowHeight` — below that, the compose field and timeline become unusable.
 
 ---
 

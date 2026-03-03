@@ -72,18 +72,20 @@ The window starts simple and reveals complexity as the user's needs grow:
 
 ### Phase 3 — Inspector Panel
 
-- Optional right panel (progressive disclosure — hidden by default, toggled via `⌘I` or toolbar button)
+- Optional right panel (progressive disclosure — hidden by default, toggled via `⌥⌘I` or toolbar button)
 - Shows project context: active context files, file tree, token usage, session metadata
 - Does not affect the conversation layout — it's supplementary, not primary
 
 ### Phase 4 — Keyboard Navigation
 
+Standard macOS shortcuts — never override system-defined bindings (see [HIG Keyboards](https://developer.apple.com/design/human-interface-guidelines/keyboards)).
+
 - `⌘N` new window
 - `⌘O` open project
 - `⌘W` close window
+- `⌘,` settings
 - `⌘`` ` switch windows
-- `⌘I` toggle inspector
-- `⌘[` / `⌘]` back/forward through session history
+- `⌥⌘I` toggle inspector (⌘I is reserved for Italic)
 - `↑` to edit last message
 
 ## Dependencies
