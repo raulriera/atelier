@@ -43,7 +43,7 @@ struct FolderAccessCard: View {
                     }
                 }
             }
-            .buttonStyle(.inline)
+            .buttonStyle(.glass)
         }
     }
 

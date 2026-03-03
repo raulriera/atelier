@@ -106,11 +106,11 @@ public struct ComposeField: View {
             } label: {
                 Image(systemName: showsStopButton ? "stop.circle.fill" : "arrow.up.circle.fill")
                     .font(.title)
-                    .symbolRenderingMode(.hierarchical)
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, showsStopButton ? AnyShapeStyle(.statusError) : AnyShapeStyle(.contentAccent))
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(showsStopButton ? AnyShapeStyle(.statusError) : AnyShapeStyle(.contentAccent))
             .opacity(isStreaming || hasText ? 1 : 0.3)
             .animation(Motion.morph, value: isStreaming)
             .animation(Motion.morph, value: hasText)

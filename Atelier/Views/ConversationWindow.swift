@@ -33,37 +33,6 @@ struct ConversationWindow: View {
                         showInspector = true
                     }
                 })
-                // WORKAROUND: NavigationStack (required for .inspector() to compress
-                // content in-place) animates safeAreaInset content on first layout.
-                // Keeping ComposeField always in the layout (stable safe area from
-                // frame 1) and fading opacity avoids the position animation. Revisit.
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    ComposeField(
-                        text: $draft,
-                        isStreaming: session.isStreaming,
-                        onSubmit: { sendMessage() },
-                        onStop: { stopGeneration() }
-                    )
-                    .disabled(!cliAvailable)
-                    .frame(maxWidth: Layout.readingWidth)
-                    .padding(Spacing.md)
-                    .opacity(showComposeField ? 1 : 0)
-                    .animation(Motion.appear, value: showComposeField)
-                }
-                .overlay(alignment: .bottom) {
-                    Rectangle()
-                        .fill(.bar)
-                        .frame(height: Spacing.xxl)
-                        .ignoresSafeArea(edges: .bottom)
-                        .mask {
-                            LinearGradient(
-                                colors: [.clear, .black],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        }
-                        .allowsHitTesting(false)
-                }
                 .overlay(alignment: .top) {
                     Rectangle()
                         .fill(.bar)
@@ -81,6 +50,37 @@ struct ConversationWindow: View {
                         }
                         .ignoresSafeArea(edges: .top)
                         .allowsHitTesting(false)
+                }
+                // WORKAROUND: NavigationStack (required for .inspector() to compress
+                // content in-place) animates safeAreaInset content on first layout.
+                // Keeping ComposeField always in the layout (stable safe area from
+                // frame 1) and fading opacity avoids the position animation. Revisit.
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    ComposeField(
+                        text: $draft,
+                        isStreaming: session.isStreaming,
+                        onSubmit: { sendMessage() },
+                        onStop: { stopGeneration() }
+                    )
+                    .disabled(!cliAvailable)
+                    .frame(maxWidth: Layout.readingWidth)
+                    .padding(Spacing.md)
+                    .background {
+                        // Fade gradient behind (not on top of) compose field so
+                        // text and button render at full brightness.
+                        Rectangle()
+                            .fill(.bar)
+                            .mask {
+                                LinearGradient(
+                                    colors: [.clear, .black],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            }
+                            .ignoresSafeArea(edges: .bottom)
+                    }
+                    .opacity(showComposeField ? 1 : 0)
+                    .animation(Motion.appear, value: showComposeField)
                 }
             // WORKAROUND: SwiftUI .inspector() on macOS expands the window instead of
             // compressing content in-place (unlike AppKit NSSplitViewController which

@@ -60,10 +60,11 @@ public struct ContentTertiary: ShapeStyle {
     }
 }
 
-/// Interactive elements, links.
+/// Interactive elements, links. Resolves to the system accent color
+/// so it respects the user's macOS accent color setting.
 public struct ContentAccent: ShapeStyle {
     public func resolve(in environment: EnvironmentValues) -> some ShapeStyle {
-        Color("contentAccent", bundle: .module)
+        Color.accentColor
     }
 }
 

@@ -69,7 +69,7 @@ Custom surface colors live in the `AtelierColors` asset catalog. Every color mus
 | `.contentPrimary` | Main text, headings |
 | `.contentSecondary` | Captions, metadata, timestamps |
 | `.contentTertiary` | Placeholders, disabled text |
-| `.contentAccent` | Interactive elements, links |
+| `.contentAccent` | Interactive elements, links (system accent color) |
 
 **Status** — never rely on color alone ([HIG](https://developer.apple.com/design/human-interface-guidelines/accessibility)). Every status indicator must pair its color with a distinct icon or text label so the state is perceivable without color vision.
 
@@ -186,16 +186,19 @@ Motion is where "one thing breathing" becomes real. Every timeline element has a
 
 ### ButtonStyle
 
-| Style | API | Usage |
-|-------|-----|-------|
-| `.primary` | `PrimaryButtonStyle` | Main actions: Send, Approve |
-| `.ghost` | `GhostButtonStyle` | Secondary actions: Cancel, Dismiss |
-| `.inline` | `InlineButtonStyle` | Compact actions inside cards |
+macOS 26 system Liquid Glass button styles. No custom `ButtonStyle` conformances needed — the system handles sizing, background, and interaction effects.
+
+| Style | Usage |
+|-------|-------|
+| `.glassProminent` | Primary actions: Send, Approve |
+| `.glass(.clear)` | Secondary actions: Cancel, Dismiss |
+| `.glass` | In-card actions: Add Folder, View Diff |
+| `.plain` | Icon-only buttons (no glass chrome) |
 
 ```swift
-Button("Send") { }.buttonStyle(.primary)
-Button("Cancel") { }.buttonStyle(.ghost)
-Button("View Diff") { }.buttonStyle(.inline)
+Button("Send") { }.buttonStyle(.glassProminent)
+Button("Cancel") { }.buttonStyle(.glass(.clear))
+Button("View Diff") { }.buttonStyle(.glass)
 ```
 
 ### LabelStyle

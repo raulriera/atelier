@@ -38,9 +38,9 @@ struct DesignSystemPreview: View {
                                 .font(.cardBody)
                                 .foregroundStyle(.contentSecondary)
                             HStack(spacing: Spacing.sm) {
-                                Button("Approve") {}.buttonStyle(.primary)
-                                Button("View Diff") {}.buttonStyle(.inline)
-                                Button("Reject") {}.buttonStyle(.ghost)
+                                Button("Approve") {}.buttonStyle(.glassProminent)
+                                Button("View Diff") {}.buttonStyle(.glass)
+                                Button("Reject") {}.buttonStyle(.glass(.clear))
                             }
                         }
                         .cardContainer()
@@ -80,9 +80,9 @@ struct DesignSystemPreview: View {
 
                 section("Buttons") {
                     HStack(spacing: Spacing.md) {
-                        Button("Send") {}.buttonStyle(.primary)
-                        Button("Cancel") {}.buttonStyle(.ghost)
-                        Button("View Diff") {}.buttonStyle(.inline)
+                        Button("Send") {}.buttonStyle(.glassProminent)
+                        Button("Cancel") {}.buttonStyle(.glass(.clear))
+                        Button("View Diff") {}.buttonStyle(.glass)
                     }
                 }
 
@@ -103,7 +103,7 @@ struct DesignSystemPreview: View {
                                 showCard.toggle()
                             }
                         }
-                        .buttonStyle(.inline)
+                        .buttonStyle(.glass)
 
                         if showCard {
                             VStack(alignment: .leading, spacing: Spacing.xs) {
