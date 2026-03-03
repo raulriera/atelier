@@ -10,11 +10,14 @@ struct TimelineView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: Spacing.md) {
-                ForEach(session.items.indices.reversed(), id: \.self) { index in
-                    let item = session.items[index]
-                    itemView(for: item)
-                        .id(item.id)
-                        .scaleEffect(x: 1, y: -1)
+                ForEach(session.items.reversed()) { item in
+                    TimelineItemView(
+                        item: item,
+                        session: session,
+                        selectedToolID: selectedToolID,
+                        onSelectTool: onSelectTool
+                    )
+                    .scaleEffect(x: 1, y: -1)
                 }
 
                 if session.items.isEmpty {
@@ -27,18 +30,32 @@ struct TimelineView: View {
         }
         .scaleEffect(x: 1, y: -1)
     }
+}
 
-    @ViewBuilder
-    private func itemView(for item: TimelineItem) -> some View {
+/// Separate view per timeline item so @Observable tracking is scoped:
+/// only the incomplete assistant message tracks streaming properties.
+/// Completed messages, user messages, system events, and tool cards
+/// never re-evaluate when streaming text changes.
+private struct TimelineItemView: View {
+    let item: TimelineItem
+    let session: Session
+    let selectedToolID: String?
+    let onSelectTool: ((ToolUseEvent) -> Void)?
+
+    var body: some View {
         switch item.content {
         case .userMessage(let msg):
             UserMessageCell(message: msg)
         case .assistantMessage(let msg):
-            AssistantMessageCell(
-                message: msg,
-                streamingText: session.isStreaming && !msg.isComplete ? session.activeAssistantText : nil,
-                isThinking: session.isStreaming && !msg.isComplete && session.isThinking
-            )
+            if msg.isComplete {
+                AssistantMessageCell(message: msg, streamingText: nil)
+            } else {
+                AssistantMessageCell(
+                    message: msg,
+                    streamingText: session.isStreaming ? session.activeAssistantText : nil,
+                    isThinking: session.isStreaming && session.isThinking
+                )
+            }
         case .system(let event):
             SystemEventCell(event: event)
         case .toolUse(let event):

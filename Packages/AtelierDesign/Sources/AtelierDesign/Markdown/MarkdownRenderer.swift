@@ -3,7 +3,22 @@ import Markdown
 
 /// Parses a markdown string into an array of `MarkdownBlock` values.
 public struct MarkdownRenderer {
+    private final class Entry {
+        let blocks: [MarkdownBlock]
+        init(_ blocks: [MarkdownBlock]) { self.blocks = blocks }
+    }
+
+    // NSCache is thread-safe but lacks Sendable conformance in the ObjC header.
+    private nonisolated(unsafe) static let cache: NSCache<NSString, Entry> = {
+        let cache = NSCache<NSString, Entry>()
+        cache.countLimit = 256
+        return cache
+    }()
+
     public static func parse(_ source: String) -> [MarkdownBlock] {
+        let key = source as NSString
+        if let cached = cache.object(forKey: key) { return cached.blocks }
+
         let document = Document(parsing: source)
         var blocks: [MarkdownBlock] = []
 
@@ -13,7 +28,13 @@ public struct MarkdownRenderer {
             blocks.append(block)
         }
 
+        cache.setObject(Entry(blocks), forKey: key)
         return blocks
+    }
+
+    /// Removes all cached parse results.
+    public static func clearCache() {
+        cache.removeAllObjects()
     }
 
     private static func convert(_ markup: any BlockMarkup) -> MarkdownBlock? {
