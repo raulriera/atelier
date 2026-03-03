@@ -45,6 +45,7 @@ struct ConversationWindow: View {
                         onStop: { stopGeneration() }
                     )
                     .disabled(!cliAvailable)
+                    .frame(maxWidth: Layout.readingWidth)
                     .padding(Spacing.md)
                     .opacity(showComposeField ? 1 : 0)
                     .animation(Motion.appear, value: showComposeField)
@@ -90,7 +91,7 @@ struct ConversationWindow: View {
                     .inspectorColumnWidth(min: 260, ideal: 320, max: 480)
             }
         }
-        .frame(minWidth: 600, minHeight: 500)
+        .frame(minWidth: Layout.minimumWindowWidth, minHeight: Layout.minimumWindowHeight)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .toolbar {
             ToolbarItem(placement: .automatic) {

@@ -25,7 +25,9 @@ struct TimelineView: View {
                         .scaleEffect(x: 1, y: -1)
                 }
             }
+            .frame(maxWidth: Layout.readingWidth)
             .padding(.horizontal, Spacing.md)
+            .frame(maxWidth: .infinity)
             .padding(.bottom, Spacing.md)
         }
         .scaleEffect(x: 1, y: -1)
