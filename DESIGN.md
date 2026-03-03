@@ -327,7 +327,7 @@ When adding new tokens for future milestones:
 2. **Typography** — add to `Font+Atelier.swift`. Map to system text styles
 3. **Spacing** — rarely needs extension. The 7-value scale covers most cases
 4. **Motion** — add to `Motion.swift`. Document enter/settle/exit pattern
-5. **Styles** — one file per style. Conform to the appropriate protocol (`ButtonStyle`, `LabelStyle`, `ToggleStyle`)
+5. **Styles** — prefer system styles (`.glass`, `.glassProminent`). Only add custom conformances (`LabelStyle`, `ToggleStyle`) when no system style fits
 6. **Containers** — one file per container modifier. Document intended usage
 
 Every new token must be documented in this file before use in views.

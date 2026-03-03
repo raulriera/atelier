@@ -38,7 +38,7 @@ Ship the core experience first: open the app, talk to Claude, get a response. Co
 | 1.1 | Application Shell | New | ✅ Done | [→](opportunities/architecture/01-application-shell.md) |
 | 1.2 | Conversation & Data Model | New | ✅ Done | [→](opportunities/architecture/06-conversation-model.md) |
 | 1.3 | Window & Conversation | New | ✅ Done | [→](opportunities/experience/01-window-conversation.md) |
-| 1.P | **Polish:** Reading width (720pt max), minimum window size, scroll edge effect | HIG | 🔲 Not started | — |
+| 1.P | **Polish:** ~~Reading width (720pt max), minimum window size, scroll edge effect~~ | HIG | ✅ Done | — |
 
 ---
 
@@ -81,7 +81,7 @@ The features that make Atelier smart — embedded Claude Code, approval gates, c
 | 4.2 | Approval & Review Flow | New | 🔲 Not started | [→](opportunities/context/04-approval-review-flow.md) |
 | 4.3 | Token Usage Visibility | New | 🔲 Not started | [→](opportunities/hub/05-token-usage-visibility.md) |
 | 4.4 | Prompt Injection Defense | New | 🔲 Not started | [→](opportunities/security/03-prompt-injection-defense.md) |
-| 4.P | **Polish:** Evaluate system Liquid Glass button styles for approval actions | HIG | 🔲 Not started | — |
+| 4.P | **Polish:** ~~Evaluate system Liquid Glass button styles for approval actions~~ | HIG | ✅ Done | — |
 
 ---
 
