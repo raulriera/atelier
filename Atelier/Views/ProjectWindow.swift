@@ -3,11 +3,20 @@ import AtelierKit
 import AtelierSecurity
 
 struct ProjectWindow: View {
-    let projectID: UUID
     let projectStore: ProjectStore
 
     @State private var project: Project?
     @State private var loadError: String?
+
+    init(projectID: UUID, projectStore: ProjectStore) {
+        self.projectStore = projectStore
+        do {
+            let loaded = try projectStore.materialize(projectID)
+            self._project = State(initialValue: loaded)
+        } catch {
+            self._loadError = State(initialValue: error.localizedDescription)
+        }
+    }
 
     var body: some View {
         Group {
@@ -23,24 +32,16 @@ struct ProjectWindow: View {
                     systemImage: "folder.badge.questionmark",
                     description: Text(loadError)
                 )
-            } else {
-                ProgressView()
             }
         }
-        .navigationTitle(project?.displayName ?? "Loading")
+        .navigationTitle(project?.displayName ?? "")
         .task {
-            do {
-                let loaded = try projectStore.materialize(projectID)
-                await loaded.fileAccessStore.load()
+            guard let project else { return }
+            await project.fileAccessStore.load()
 
-                if let rootURL = loaded.rootURL,
-                   !loaded.fileAccessStore.entries.contains(where: { $0.url == rootURL }) {
-                    await loaded.fileAccessStore.grant(url: rootURL)
-                }
-
-                project = loaded
-            } catch {
-                loadError = error.localizedDescription
+            if let rootURL = project.rootURL,
+               !project.fileAccessStore.entries.contains(where: { $0.url == rootURL }) {
+                await project.fileAccessStore.grant(url: rootURL)
             }
         }
     }
