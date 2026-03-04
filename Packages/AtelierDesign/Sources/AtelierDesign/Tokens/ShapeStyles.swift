@@ -107,14 +107,10 @@ public enum AIGlow {
     ]
 
     /// Angular gradient for circular/ring glows.
-    public static var angular: AngularGradient {
-        AngularGradient(colors: colors, center: .center)
-    }
+    public static let angular = AngularGradient(colors: colors, center: .center)
 
     /// Linear gradient for borders and accents.
-    public static var linear: LinearGradient {
-        LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
+    public static let linear = LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
 }
 
 // MARK: - ShapeStyle Extensions

@@ -37,38 +37,16 @@ struct FileCard: View {
                 onSelect?(event)
             }
         } label: {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                HStack(spacing: Spacing.xs) {
-                    Image(systemName: event.iconName)
-                        .foregroundStyle(.contentSecondary)
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: event.iconName)
+                    .foregroundStyle(.contentTertiary)
+                    .font(.caption)
 
-                    Text(event.fileName ?? event.inputSummary)
-                        .font(.cardBody)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-
-                    Spacer()
-
-                    if event.status == .running {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else if isWriteOnly {
-                        if isTappable {
-                            Image(systemName: "finder")
-                                .foregroundStyle(.contentTertiary)
-                        }
-                    } else {
-                        Text(operationLabel)
-                            .font(.metadata)
-                            .foregroundStyle(.contentTertiary)
-
-                        if isTappable {
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(.contentTertiary)
-                                .font(.caption)
-                        }
-                    }
-                }
+                Text(event.fileName ?? event.inputSummary)
+                    .font(.metadata)
+                    .foregroundStyle(.contentSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
 
                 if let dir = event.fileDirectory {
                     Text(dir)
@@ -77,15 +55,41 @@ struct FileCard: View {
                         .lineLimit(1)
                         .truncationMode(.head)
                 }
+
+                Spacer()
+
+                if event.status == .running {
+                    ProgressView()
+                        .controlSize(.mini)
+                } else if isWriteOnly {
+                    if isTappable {
+                        Image(systemName: "finder")
+                            .foregroundStyle(.contentTertiary)
+                            .font(.caption2)
+                    }
+                } else {
+                    if isTappable {
+                        Text(operationLabel)
+                            .font(.metadata)
+                            .foregroundStyle(.contentTertiary)
+
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.contentTertiary)
+                            .font(.caption2)
+                    }
+                }
             }
-            .cardContainer()
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!isTappable)
-        .overlay {
-            RoundedRectangle(cornerRadius: Radii.md, style: .continuous)
-                .strokeBorder(.contentAccent, lineWidth: 1.5)
-                .opacity(isSelected ? 1 : 0)
+        .background {
+            if isSelected {
+                RoundedRectangle(cornerRadius: Radii.sm, style: .continuous)
+                    .fill(.contentSecondary.opacity(0.1))
+            }
         }
         .animation(Motion.morph, value: isSelected)
         .transition(Motion.cardReveal)
@@ -93,7 +97,7 @@ struct FileCard: View {
 }
 
 #Preview("File Cards") {
-    VStack(spacing: Spacing.sm) {
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
         FileCard(event: ToolUseEvent(
             id: "1",
             name: "Read",

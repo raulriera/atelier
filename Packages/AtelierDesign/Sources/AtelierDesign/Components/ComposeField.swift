@@ -20,7 +20,7 @@ public struct ComposeField: View {
     let onStop: (() -> Void)?
 
     @FocusState private var isFocused: Bool
-    @State private var glowPhase: CGFloat = 0
+    @Environment(\.controlActiveState) private var controlActiveState
     @State private var fieldHeight: CGFloat = 48
 
     public init(
@@ -56,12 +56,10 @@ public struct ComposeField: View {
         max(cornerRadius - Spacing.xs, 0)
     }
 
-    private var rainbowGradient: AngularGradient {
-        AngularGradient(
-            colors: AIGlow.colors,
-            center: .center,
-            angle: .degrees(glowPhase)
-        )
+    /// Show the rainbow glow only when the field is focused AND the window is key.
+    /// Background windows keep their focus state but skip the gradient rendering.
+    private var showsGlow: Bool {
+        isFocused && controlActiveState == .key
     }
 
     public var body: some View {
@@ -123,31 +121,33 @@ public struct ComposeField: View {
             .ultraThinMaterial,
             in: .rect(cornerRadius: cornerRadius, style: .continuous)
         )
-        // Rainbow border
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(rainbowGradient, lineWidth: 1.5)
-                .opacity(isFocused ? 0.6 : 0)
-                .animation(Motion.morph, value: isFocused)
-        )
-        // Outer glow on focus
-        .background {
-            RoundedRectangle(cornerRadius: cornerRadius + 4, style: .continuous)
-                .fill(rainbowGradient)
-                .blur(radius: 12)
-                .opacity(isFocused ? 0.2 : 0)
-                .padding(-4)
-                .animation(Motion.morph, value: isFocused)
+        // Static rainbow border
+        .overlay {
+            if showsGlow {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(AIGlow.angular, lineWidth: 1.5)
+                    .opacity(0.6)
+                    .transition(.opacity)
+            }
         }
+        // Static outer glow
+        .background {
+            if showsGlow {
+                RoundedRectangle(cornerRadius: cornerRadius + 4, style: .continuous)
+                    .fill(AIGlow.angular)
+                    .blur(radius: 12)
+                    .opacity(0.2)
+                    .padding(-4)
+                    .transition(.opacity)
+            }
+        }
+        .animation(Motion.morph, value: showsGlow)
         .animation(Motion.morph, value: cornerRadius)
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height in
             fieldHeight = height
         }
         .onAppear {
             isFocused = true
-            withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
-                glowPhase = 360
-            }
         }
     }
 }
