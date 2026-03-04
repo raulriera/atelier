@@ -13,11 +13,13 @@ public final class Project: Identifiable {
     public private(set) var detectedKind: ProjectKind
     public let sessionPersistence: SessionPersistence
     public let fileAccessStore: FileAccessStore
+    public let capabilityStore: CapabilityStore
 
     public init(
         metadata: ProjectMetadata,
         sessionPersistence: SessionPersistence,
-        fileAccessStore: FileAccessStore
+        fileAccessStore: FileAccessStore,
+        capabilityStore: CapabilityStore
     ) {
         self.id = metadata.id
         self.rootURL = metadata.rootURL
@@ -25,6 +27,7 @@ public final class Project: Identifiable {
         self.detectedKind = metadata.detectedKind
         self.sessionPersistence = sessionPersistence
         self.fileAccessStore = fileAccessStore
+        self.capabilityStore = capabilityStore
     }
 
     /// Produces a snapshot of the current state as serializable metadata.

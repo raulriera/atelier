@@ -15,7 +15,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
         sessionId: String? = nil,
         workingDirectory: URL? = nil,
         appendSystemPrompt: String? = nil,
-        approvalSocketPath: String? = nil
+        approvalSocketPath: String? = nil,
+        enabledCapabilities: [MCPServerConfig] = []
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         let path = cliPath
         let alias = model.cliAlias
@@ -24,10 +25,10 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
         return AsyncThrowingStream { continuation in
             let task = Task.detached {
-                // Write temp MCP config if approval is enabled
+                // Write temp MCP config if approval or capabilities are enabled
                 var mcpConfigPath: String?
                 if let socketPath = approvalSocketPath {
-                    mcpConfigPath = Self.writeMCPConfig(socketPath: socketPath)
+                    mcpConfigPath = Self.writeMCPConfig(socketPath: socketPath, capabilities: enabledCapabilities, workingDirectory: cwd.path)
                 }
                 defer {
                     if let configPath = mcpConfigPath {
@@ -41,7 +42,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
                     process.arguments = Self.buildArguments(
                         message: message, modelAlias: alias, sessionId: sessionId,
                         appendSystemPrompt: appendSystemPrompt,
-                        mcpConfigPath: mcpConfigPath
+                        mcpConfigPath: mcpConfigPath,
+                        capabilityConfigs: enabledCapabilities
                     )
 
                     // Use the project's root directory so the CLI can see project files,
@@ -60,13 +62,12 @@ public final class CLIEngine: ConversationEngine, Sendable {
                     let handle = stdout.fileHandleForReading
                     var activeToolBlocks: [Int: String] = [:]
                     var receivedResult = false
+                    let decoder = JSONDecoder()
 
                     for try await line in handle.bytes.lines {
                         if Task.isCancelled { break }
 
                         guard let data = line.data(using: .utf8) else { continue }
-
-                        let decoder = JSONDecoder()
 
                         // Peek at the type field
                         guard let envelope = try? decoder.decode(CLIMessage.self, from: data) else {
@@ -214,7 +215,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
         modelAlias: String,
         sessionId: String?,
         appendSystemPrompt: String? = nil,
-        mcpConfigPath: String? = nil
+        mcpConfigPath: String? = nil,
+        capabilityConfigs: [MCPServerConfig] = []
     ) -> [String] {
         var args = [
             "-p",
@@ -238,6 +240,12 @@ public final class CLIEngine: ConversationEngine, Sendable {
             for tool in silentTools {
                 args += ["--allowedTools", tool]
             }
+            // Auto-approve tools from enabled capabilities
+            for config in capabilityConfigs {
+                for tool in config.autoApproveTools {
+                    args += ["--allowedTools", "mcp__\(config.serverName)__\(tool)"]
+                }
+            }
         }
 
         // End-of-options marker so the positional prompt is never
@@ -247,33 +255,55 @@ public final class CLIEngine: ConversationEngine, Sendable {
         return args
     }
 
-    /// Locates the bundled MCP approval helper binary.
-    static var approvalHelperPath: String? {
+    /// Locates a bundled helper binary in `Contents/Helpers/`.
+    static func bundledHelperPath(named name: String) -> String? {
         let helperURL = Bundle.main.bundleURL
-            .appendingPathComponent("Contents/Helpers/atelier-approval-mcp")
+            .appendingPathComponent("Contents/Helpers/\(name)")
         return FileManager.default.isExecutableFile(atPath: helperURL.path)
             ? helperURL.path
             : nil
     }
 
-    /// Writes a temporary MCP config JSON file that points the CLI to our approval helper.
-    private static func writeMCPConfig(socketPath: String) -> String? {
+    /// Locates the bundled MCP approval helper binary.
+    static var approvalHelperPath: String? {
+        bundledHelperPath(named: "atelier-approval-mcp")
+    }
+
+    /// Writes a temporary MCP config JSON file that points the CLI to our approval helper
+    /// and any enabled capability servers.
+    static func writeMCPConfig(socketPath: String, capabilities: [MCPServerConfig] = [], workingDirectory: String? = nil) -> String? {
         guard let helperPath = approvalHelperPath else {
             logger.warning("Approval helper binary not found in app bundle")
             return nil
         }
 
-        let configPath = "/tmp/atelier-mcp-\(UUID().uuidString).json"
-        let config: [String: Any] = [
-            "mcpServers": [
-                "atelier": [
-                    "command": helperPath,
-                    "env": [
-                        "ATELIER_APPROVAL_SOCKET": socketPath
-                    ]
+        var servers: [String: Any] = [
+            "atelier": [
+                "command": helperPath,
+                "env": [
+                    "ATELIER_APPROVAL_SOCKET": socketPath
                 ]
             ]
         ]
+
+        for cap in capabilities {
+            var env = cap.env
+            if let cwd = workingDirectory {
+                env["ATELIER_WORKING_DIRECTORY"] = cwd
+            }
+            var entry: [String: Any] = ["command": cap.command]
+            if !cap.args.isEmpty {
+                entry["args"] = cap.args
+            }
+            if !env.isEmpty {
+                entry["env"] = env
+            }
+            servers[cap.serverName] = entry
+        }
+
+        let configPath = FileManager.default.temporaryDirectory
+            .appendingPathComponent("atelier-mcp-\(UUID().uuidString).json").path
+        let config: [String: Any] = ["mcpServers": servers]
 
         guard let data = try? JSONSerialization.data(withJSONObject: config),
               FileManager.default.createFile(atPath: configPath, contents: data) else {

@@ -4,6 +4,7 @@ import AtelierKit
 
 struct ConversationWindow: View {
     @Bindable var fileAccessStore: FileAccessStore
+    @Bindable var capabilityStore: CapabilityStore
     var sessionPersistence: SessionPersistence
     var workingDirectory: URL?
     @State private var session = Session()
@@ -12,6 +13,7 @@ struct ConversationWindow: View {
     @State private var streamingTask: Task<Void, Never>?
     @State private var cliAvailable = true
     @State private var showingFolderAccess = false
+    @State private var showingCapabilities = false
     @State private var showingContextFiles = false
     @State private var activeContextFiles: [ContextFile] = []
     @State private var showInspector = false
@@ -122,6 +124,19 @@ struct ConversationWindow: View {
                 .help("Folder Access")
                 .popover(isPresented: $showingFolderAccess) {
                     FolderAccessCard(fileAccessStore: fileAccessStore)
+                        .padding(Spacing.sm)
+                }
+            }
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showingCapabilities.toggle()
+                } label: {
+                    Label("Capabilities", systemImage: "puzzlepiece.extension")
+                }
+                .badge(capabilityStore.enabledIDs.count)
+                .help("Capabilities")
+                .popover(isPresented: $showingCapabilities) {
+                    CapabilitiesCard(capabilityStore: capabilityStore)
                         .padding(Spacing.sm)
                 }
             }
@@ -270,12 +285,18 @@ struct ConversationWindow: View {
         }
 
         // Discover context files fresh on every send so edits take effect immediately.
-        var injectedPrompt: String?
+        var promptParts: [String] = []
         if let cwd = workingDirectory {
             let discovered = ContextFileLoader.discover(from: cwd)
             activeContextFiles = discovered
-            injectedPrompt = ContextFileLoader.contentForInjection(from: discovered)
+            if let content = ContextFileLoader.contentForInjection(from: discovered) {
+                promptParts.append(content)
+            }
         }
+        if let capFragment = capabilityStore.systemPromptFragment() {
+            promptParts.append(capFragment)
+        }
+        let injectedPrompt = promptParts.isEmpty ? nil : promptParts.joined(separator: "\n\n")
 
         startStreaming(message: text, appendSystemPrompt: injectedPrompt)
     }
@@ -283,7 +304,8 @@ struct ConversationWindow: View {
     private func startStreaming(message: String, appendSystemPrompt: String? = nil) {
         streamingTask = Task {
             let socketPath = await approvalServer?.socketPath
-            let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath)
+            let capConfigs = capabilityStore.enabledServerConfigs()
+            let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath, enabledCapabilities: capConfigs)
             do {
                 for try await event in stream {
                     switch event {

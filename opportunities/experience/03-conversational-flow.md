@@ -52,7 +52,7 @@ There are no modes. There's one conversation that adapts to what's happening.
 - ✅ **Scrolling performance** — visible items window + cached properties for efficient timeline rendering
 - ✅ **File card** — compact representation of a file read/write, expandable to show content
 - ✅ **Diff view** — track-changes view in inspector for Edit operations (strikethrough removed, highlighted added)
-- 🔲 **Todo list** — parse `TaskCreate`/`TaskUpdate` tool events and render as an inline task list with status icons (pending, in-progress, completed) instead of generic tool cards. Claude uses these during multi-step plans.
+- ✅ **Todo list** — `TaskCreate`/`TaskUpdate` tool events rendered as a persistent overlay (`TaskListOverlay`) with status icons (pending, in-progress, completed). Cards display task subject, description, and active spinner text.
 - 🔲 **Ask user card** — `AskUserQuestion` tool calls need interactive rendering: show the question, options as clickable buttons, and send the selection back to the CLI. Requires a response channel (MCP-based, like approvals). Currently the CLI handles this via terminal stdin, which Atelier can't reach.
 - 🔲 **Plan review** — `EnterPlanMode` / `ExitPlanMode` tool calls. Claude writes a plan file and asks for approval before implementing. Render the plan as a reviewable card with approve/reject actions. Same MCP response channel as ask user and approvals.
 - 🔲 **Progress indicator** — shows what Claude is doing, estimated time, cancellation

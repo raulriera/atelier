@@ -186,10 +186,14 @@ public final class ProjectStore {
             store: bookmarkStore
         )
 
+        let capabilitiesURL = projectDir.appendingPathComponent("capabilities.json")
+        let capabilityStore = CapabilityStore(persistenceURL: capabilitiesURL)
+
         return Project(
             metadata: metadata,
             sessionPersistence: sessionPersistence,
-            fileAccessStore: fileAccessStore
+            fileAccessStore: fileAccessStore,
+            capabilityStore: capabilityStore
         )
     }
 

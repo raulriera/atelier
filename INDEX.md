@@ -23,7 +23,7 @@ Build order. Each milestone produces something usable and testable. Earlier mile
 | **M0** | Conversation | Native window, API connection, basic conversation working |
 | **M1** | Safe foundation | Sandboxed execution, file sharing, network isolation, permissions, credentials |
 | **M2** | The product | Project model, context files, session persistence, conversational flow |
-| **M3** | Intelligence | Embedded Code terminal, approval flow, token visibility, prompt injection defense |
+| **M3** | Intelligence | Embedded Code terminal, approval flow, token visibility, capabilities, prompt injection defense |
 | **M4** | Native power | System services, menu bar, notifications, Shortcuts, **scheduled tasks & templates** |
 | **M5** | Growth & polish | Onboarding, Spotlight, drag-drop, and everything else |
 
@@ -74,14 +74,15 @@ With a working conversation (M0) and a safe sandbox (M1), this is where Atelier 
 
 ## M3 — Intelligence
 
-The features that make Atelier smart — embedded Claude Code, approval gates, cost awareness, and prompt injection defense.
+The features that make Atelier smart — embedded Claude Code, approval gates, cost awareness, capabilities (built-in MCP servers, on-demand activation), and prompt injection defense.
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 4.1 | Claude Code Integration | New | 🔲 Not started | [→](opportunities/hub/01-claude-code-integration.md) |
-| 4.2 | Approval & Review Flow | New | 🔲 Not started | [→](opportunities/context/04-approval-review-flow.md) |
-| 4.3 | Token Usage Visibility | New | 🔲 Not started | [→](opportunities/hub/05-token-usage-visibility.md) |
-| 4.4 | Prompt Injection Defense | New | 🔲 Not started | [→](opportunities/security/03-prompt-injection-defense.md) |
+| 4.1 | Claude Code Integration | New | 🔨 In progress | [→](opportunities/hub/01-claude-code-integration.md) |
+| 4.2 | Approval & Review Flow | New | ✅ Done | [→](opportunities/context/04-approval-review-flow.md) |
+| 4.3 | Token Usage Visibility | New | ✅ Done | [→](opportunities/hub/05-token-usage-visibility.md) |
+| 4.4 | Capabilities | New | 🔲 Not started | [→](opportunities/hub/03-plugin-management.md) |
+| 4.5 | Prompt Injection Defense | New | 🔲 Not started | [→](opportunities/security/03-prompt-injection-defense.md) |
 | 4.P | **Polish:** ~~Evaluate system Liquid Glass button styles for approval actions~~ | HIG | ✅ Done | — |
 
 ---
@@ -109,7 +110,7 @@ Expand the product surface. Chat integration, onboarding, workflows, and all the
 |---|-----------|------|--------|------|
 | 6.1 | Onboarding & Setup | New | 🔲 Not started | [→](opportunities/experience/04-onboarding.md) |
 | 6.2 | File System Events | New | 🔲 Not started | [→](opportunities/macos/08-file-system-events.md) |
-| 6.3 | Capabilities | Improvement | 🔲 Not started | [→](opportunities/hub/03-plugin-management.md) |
+| ~~6.3~~ | ~~Capabilities~~ | — | — | Moved to M3 (4.4) |
 | 6.4 | Capability Health | Improvement | 🔲 Not started | [→](opportunities/hub/04-mcp-connector-health.md) |
 | 6.5 | Multi-Agent Orchestration | Improvement | 🔲 Not started | [→](opportunities/context/03-multi-agent-orchestration.md) |
 | 6.6 | Spotlight & System Search | New | 🔲 Not started | [→](opportunities/macos/02-spotlight-search.md) |

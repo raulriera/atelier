@@ -23,6 +23,7 @@ struct ProjectWindow: View {
             if let project {
                 ConversationWindow(
                     fileAccessStore: project.fileAccessStore,
+                    capabilityStore: project.capabilityStore,
                     sessionPersistence: project.sessionPersistence,
                     workingDirectory: project.rootURL
                 )
@@ -38,6 +39,7 @@ struct ProjectWindow: View {
         .task {
             guard let project else { return }
             await project.fileAccessStore.load()
+            project.capabilityStore.load()
 
             if let rootURL = project.rootURL,
                !project.fileAccessStore.entries.contains(where: { $0.url == rootURL }) {
