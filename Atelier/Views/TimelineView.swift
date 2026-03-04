@@ -9,15 +9,16 @@ struct TimelineView: View {
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
 
     var body: some View {
-        let items = session.items
-        let tails = computeTails(for: items)
+        let items = session.visibleItems
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(items.reversed().enumerated()), id: \.element.id) { reversedIndex, item in
                     let originalIndex = items.count - 1 - reversedIndex
-                    let showsTail = tails[item.id] ?? true
-                    let bottomPadding = spacingAfter(index: originalIndex, in: items)
+                    let currentSender = item.content.groupableSender
+                    let nextSender = items.indices.contains(originalIndex + 1) ? items[originalIndex + 1].content.groupableSender : nil
+                    let showsTail = currentSender == nil || nextSender != currentSender
+                    let bottomPadding: CGFloat = if let currentSender, currentSender == nextSender { Spacing.xxs } else { originalIndex < items.count - 1 ? Spacing.sm : 0 }
 
                     TimelineItemView(
                         item: item,
@@ -31,7 +32,14 @@ struct TimelineView: View {
                     .scaleEffect(x: 1, y: -1)
                 }
 
-                if items.isEmpty {
+                // Auto-load earlier messages when scrolling to the top
+                if session.hasOlderItems {
+                    Color.clear
+                        .frame(height: 1)
+                        .onAppear { session.loadOlderItems() }
+                }
+
+                if items.isEmpty && !session.hasOlderItems {
                     WelcomeMessage()
                         .scaleEffect(x: 1, y: -1)
                 }
@@ -44,44 +52,6 @@ struct TimelineView: View {
         .scaleEffect(x: 1, y: -1)
     }
 
-    // MARK: - Bubble Grouping
-
-    /// Returns a dictionary mapping each item's ID to whether it should
-    /// show the speech-bubble tail. Only the last message in a consecutive
-    /// same-sender group shows the tail.
-    private func computeTails(for items: [TimelineItem]) -> [UUID: Bool] {
-        var result: [UUID: Bool] = [:]
-
-        for (index, item) in items.enumerated() {
-            guard let sender = item.content.groupableSender else {
-                result[item.id] = true
-                continue
-            }
-
-            let nextSender = items.indices.contains(index + 1)
-                ? items[index + 1].content.groupableSender
-                : nil
-
-            // Show tail only if this is the last message from this sender
-            result[item.id] = (nextSender != sender)
-        }
-
-        return result
-    }
-
-    /// Returns the bottom padding for the item at `index`.
-    /// Tight spacing within a group, normal spacing between groups.
-    private func spacingAfter(index: Int, in items: [TimelineItem]) -> CGFloat {
-        guard items.indices.contains(index + 1) else { return 0 }
-
-        let current = items[index].content.groupableSender
-        let next = items[index + 1].content.groupableSender
-
-        if let current, current == next {
-            return Spacing.xxs  // 4pt — tight within group
-        }
-        return Spacing.sm  // 12pt — between groups
-    }
 }
 
 // MARK: - Groupable Sender

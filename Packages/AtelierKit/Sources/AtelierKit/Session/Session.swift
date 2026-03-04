@@ -20,6 +20,40 @@ public final class Session {
     /// Used by `clearPendingMessages` to cancel the active message when the user stops.
     private var activeUserItemID: UUID?
 
+    // MARK: - Visible Items Window
+
+    private static let visibleWindowSize = 200
+    private static let loadBatchSize = 50
+
+    /// Index into `items` where the visible window starts.
+    public private(set) var visibleStartIndex: Int = 0
+
+    /// The tail of `items` visible in the timeline. Bounded to the last ~200 items.
+    public var visibleItems: [TimelineItem] {
+        Array(items[visibleStartIndex...])
+    }
+
+    /// Whether there are older items beyond the visible window.
+    public var hasOlderItems: Bool {
+        visibleStartIndex > 0
+    }
+
+    /// Loads an older batch of items into the visible window.
+    @MainActor
+    public func loadOlderItems() {
+        guard visibleStartIndex > 0 else { return }
+        visibleStartIndex = max(0, visibleStartIndex - Self.loadBatchSize)
+    }
+
+    /// Appends an item and trims the visible window if it has grown too large.
+    private func appendItem(_ item: TimelineItem) {
+        items.append(item)
+        let visibleCount = items.count - visibleStartIndex
+        if visibleCount > Self.visibleWindowSize + Self.loadBatchSize {
+            visibleStartIndex = items.count - Self.visibleWindowSize
+        }
+    }
+
     public init() {}
 
     /// Creates a snapshot of the current session and saves it to persistence.
@@ -61,14 +95,22 @@ public final class Session {
         session.items = snapshot.items.compactMap { item in
             guard isPersistable(item) else { return nil }
 
-            // A tool that was still running when the app quit is stale
-            if case .toolUse(var event) = item.content, event.status == .running {
+            // A tool that was still running when the app quit is stale;
+            // also cache input properties for all tool events on restore.
+            if case .toolUse(var event) = item.content {
                 var cleaned = item
-                event.status = .completed
+                if event.status == .running {
+                    event.status = .completed
+                }
+                event.cacheInputProperties()
                 cleaned.content = .toolUse(event)
                 return cleaned
             }
             return item
+        }
+        // Set the visible window for large restored sessions
+        if session.items.count > visibleWindowSize {
+            session.visibleStartIndex = session.items.count - visibleWindowSize
         }
         // pendingMessages are not restored — the corresponding pendingItemIDs
         // aren't persisted, so dequeuePendingMessage() would crash. Pending
@@ -116,13 +158,14 @@ public final class Session {
         cancelledItemIDs = []
         activeToolIndices = [:]
         hasToolUseSinceLastText = false
+        visibleStartIndex = 0
     }
 
     @MainActor
     public func appendUserMessage(_ text: String) {
         let item = TimelineItem(content: .userMessage(UserMessage(text: text)))
         activeUserItemID = item.id
-        items.append(item)
+        appendItem(item)
     }
 
     /// Queues a message to be sent after the current response completes.
@@ -134,7 +177,7 @@ public final class Session {
         let item = TimelineItem(content: .userMessage(UserMessage(text: text)))
         pendingMessages.append(text)
         pendingItemIDs.append(item.id)
-        items.append(item)
+        appendItem(item)
     }
 
     /// Removes and returns the next queued message, or nil if the queue is empty.
@@ -171,7 +214,7 @@ public final class Session {
         activeItemID = item.id
         activeAssistantText = ""
         isStreaming = true
-        items.append(item)
+        appendItem(item)
     }
 
     @MainActor
@@ -233,7 +276,7 @@ public final class Session {
 
         let event = ToolUseEvent(id: id, name: name)
         let item = TimelineItem(content: .toolUse(event))
-        items.append(item)
+        appendItem(item)
         activeToolIndices[id] = items.count - 1
         hasToolUseSinceLastText = true
     }
@@ -263,6 +306,7 @@ public final class Session {
         guard let index = activeToolIndices[id],
               case .toolUse(var event) = items[index].content else { return }
         event.status = .completed
+        event.cacheInputProperties()
         items[index].content = .toolUse(event)
         activeToolIndices.removeValue(forKey: id)
     }
@@ -273,7 +317,7 @@ public final class Session {
     public func beginApproval(id: String, toolName: String, inputJSON: String) {
         let event = ApprovalEvent(id: id, toolName: toolName, inputJSON: inputJSON)
         let item = TimelineItem(content: .approval(event))
-        items.append(item)
+        appendItem(item)
     }
 
     @MainActor
@@ -310,6 +354,7 @@ public final class Session {
         event.resultOutput = resultOutput
         event.cachedInputSummary = ""
         event.cachedResultSummary = ""
+        event.cacheInputProperties()
         items[index].content = .toolUse(event)
     }
 
@@ -342,6 +387,7 @@ public final class Session {
         for (_, index) in activeToolIndices {
             if case .toolUse(var event) = items[index].content {
                 event.status = .completed
+                event.cacheInputProperties()
                 items[index].content = .toolUse(event)
             }
         }
@@ -351,7 +397,7 @@ public final class Session {
     @MainActor
     public func appendSystemEvent(_ event: SystemEvent) {
         let item = TimelineItem(content: .system(event))
-        items.append(item)
+        appendItem(item)
     }
 
     @MainActor

@@ -1,7 +1,7 @@
 import Foundation
 
 /// A renderable block parsed from markdown source.
-public enum MarkdownBlock: Sendable, Equatable {
+public enum MarkdownBlock: Sendable, Equatable, Hashable {
     case paragraph(AttributedString)
     case heading(level: Int, AttributedString)
     case codeBlock(language: String?, code: String)

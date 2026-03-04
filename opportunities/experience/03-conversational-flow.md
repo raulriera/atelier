@@ -52,6 +52,7 @@ There are no modes. There's one conversation that adapts to what's happening.
 - 🔲 **Scrolling performance** — timeline scrolling needs profiling and optimization (LazyVStack recycling, view diffing cost)
 - ✅ **File card** — compact representation of a file read/write, expandable to show content
 - ✅ **Diff view** — track-changes view in inspector for Edit operations (strikethrough removed, highlighted added)
+- 🔲 **Todo list** — inline task list rendered in the conversation timeline, showing tasks with status icons (pending, in-progress, completed) as Claude works through multi-step plans
 - 🔲 **Progress indicator** — shows what Claude is doing, estimated time, cancellation
 - 🔲 **Approval gate** — inline request with context, one-click approve, Touch ID for high-risk (blocked on M3 — hub/02-approval-flow.md)
 - 🔲 **Result card** — summary of completed work with expandable details (blocked on M3 — hub/01-claude-code-integration.md)

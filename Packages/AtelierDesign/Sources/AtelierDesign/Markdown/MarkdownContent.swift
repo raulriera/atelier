@@ -24,7 +24,7 @@ public struct MarkdownContent: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+            ForEach(blocks, id: \.self) { block in
                 blockView(for: block)
             }
         }

@@ -6,6 +6,10 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case completed
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case id, name, inputJSON, status, resultOutput, cachedInputSummary, cachedResultSummary
+    }
+
     public let id: String
     public var name: String
     public var inputJSON: String
@@ -13,6 +17,15 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
     public var resultOutput: String
     public var cachedInputSummary: String
     public var cachedResultSummary: String
+
+    // Cached derived properties — excluded from Codable, recomputed via cacheInputProperties().
+    private struct CachedInput: Sendable {
+        var filePath: String?
+        var inputSummaryValue: String?
+        var editOldString: String?
+        var editNewString: String?
+    }
+    private var _cached: CachedInput?
 
     public init(
         id: String,
@@ -43,6 +56,34 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         cachedResultSummary = try container.decodeIfPresent(String.self, forKey: .cachedResultSummary) ?? ""
     }
 
+    /// Extracts the primary input value from a parsed JSON dictionary based on tool name.
+    private static func summaryValue(for name: String, from dict: [String: Any]) -> String? {
+        switch name {
+        case "Read", "Write", "Edit": dict["file_path"] as? String
+        case "Bash": dict["command"] as? String
+        case "Glob": dict["pattern"] as? String
+        case "Grep": dict["pattern"] as? String
+        default: dict.values.first.flatMap { $0 as? String }
+        }
+    }
+
+    /// Parses `inputJSON` once and stores derived values for fast access from view bodies.
+    /// Call this after inputJSON is finalized (tool completion, payload population, restore).
+    public mutating func cacheInputProperties() {
+        guard let data = inputJSON.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            _cached = CachedInput()
+            return
+        }
+
+        _cached = CachedInput(
+            filePath: dict["file_path"] as? String,
+            inputSummaryValue: Self.summaryValue(for: name, from: dict),
+            editOldString: (name == "Edit") ? dict["old_string"] as? String : nil,
+            editNewString: (name == "Edit") ? dict["new_string"] as? String : nil
+        )
+    }
+
     /// Whether this tool has result output available — either loaded or cached in the sidecar.
     public var hasResultOutput: Bool {
         !resultOutput.isEmpty || !cachedResultSummary.isEmpty
@@ -68,7 +109,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         return String(joined.prefix(117)) + "..."
     }
 
-    /// Parses `inputJSON` into a dictionary. Shared by `inputSummary` and `filePath`.
+    /// Parses `inputJSON` into a dictionary. Only used as fallback when cache isn't populated.
     private var parsedInput: [String: Any]? {
         guard let data = inputJSON.data(using: .utf8) else { return nil }
         return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -76,19 +117,13 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
 
     public var inputSummary: String {
         if !cachedInputSummary.isEmpty { return cachedInputSummary }
-        guard let dict = parsedInput else { return "" }
 
-        let value: String? = switch name {
-        case "Read", "Write", "Edit":
-            dict["file_path"] as? String
-        case "Bash":
-            dict["command"] as? String
-        case "Glob":
-            dict["pattern"] as? String
-        case "Grep":
-            dict["pattern"] as? String
-        default:
-            dict.values.first.flatMap { $0 as? String }
+        let value: String?
+        if let cached = _cached {
+            value = cached.inputSummaryValue
+        } else {
+            guard let dict = parsedInput else { return "" }
+            value = Self.summaryValue(for: name, from: dict)
         }
 
         guard let value, !value.isEmpty else { return "" }
@@ -108,9 +143,11 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
 
     /// The file path extracted from `inputJSON`, falling back to `cachedInputSummary`.
     public var filePath: String? {
-        if let dict = parsedInput,
-           let path = dict["file_path"] as? String,
-           !path.isEmpty {
+        if let cached = _cached {
+            if let path = cached.filePath, !path.isEmpty { return path }
+        } else if let dict = parsedInput,
+                  let path = dict["file_path"] as? String,
+                  !path.isEmpty {
             return path
         }
         let summary = cachedInputSummary
@@ -171,14 +208,16 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
 
     /// The original text from an Edit tool's `old_string` parameter.
     public var editOldString: String? {
-        guard name == "Edit", let dict = parsedInput else { return nil }
-        return dict["old_string"] as? String
+        guard name == "Edit" else { return nil }
+        if let cached = _cached { return cached.editOldString }
+        return parsedInput?["old_string"] as? String
     }
 
     /// The replacement text from an Edit tool's `new_string` parameter.
     public var editNewString: String? {
-        guard name == "Edit", let dict = parsedInput else { return nil }
-        return dict["new_string"] as? String
+        guard name == "Edit" else { return nil }
+        if let cached = _cached { return cached.editNewString }
+        return parsedInput?["new_string"] as? String
     }
 
     // MARK: - Display metadata
