@@ -8,7 +8,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 34 |
+| **Total opportunities** | 35 |
 | **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -67,6 +67,7 @@ With a working conversation (M0) and a safe sandbox (M1), this is where Atelier 
 | 3.2 | Project Context Files | New | ✅ Done | [→](opportunities/context/01-project-context-files.md) |
 | 3.3 | Session Persistence | New | ✅ Done | [→](opportunities/architecture/04-session-persistence.md) |
 | 3.4 | Conversational Flow | New | 🔨 In progress | [→](opportunities/experience/03-conversational-flow.md) |
+| 3.5 | Living Context | New | 🔲 Not started | [→](opportunities/context/05-living-context.md) |
 | 3.P | **Polish:** ~~Status icon pairings~~ | HIG | ✅ Done | — |
 
 ---
@@ -167,6 +168,7 @@ Project context files, templates, multi-agent visibility, approval flow.
 | [02-task-templates-workflows.md](opportunities/context/02-task-templates-workflows.md) | M4 |
 | [03-multi-agent-orchestration.md](opportunities/context/03-multi-agent-orchestration.md) | M5 |
 | [04-approval-review-flow.md](opportunities/context/04-approval-review-flow.md) | M3 |
+| [05-living-context.md](opportunities/context/05-living-context.md) | M2 |
 
 ### Hub (`opportunities/hub/`)
 Code integration, capabilities, capability health, token usage.
@@ -228,7 +230,8 @@ atelier/
     │   ├── 01-project-context-files.md
     │   ├── 02-task-templates-workflows.md
     │   ├── 03-multi-agent-orchestration.md
-    │   └── 04-approval-review-flow.md
+    │   ├── 04-approval-review-flow.md
+    │   └── 05-living-context.md
     ├── hub/
     │   ├── 01-claude-code-integration.md
     │   ├── 03-plugin-management.md
