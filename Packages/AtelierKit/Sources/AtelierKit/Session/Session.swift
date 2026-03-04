@@ -20,6 +20,49 @@ public final class Session {
     /// Used by `clearPendingMessages` to cancel the active message when the user stops.
     private var activeUserItemID: UUID?
 
+    // MARK: - Task State
+
+    private var cachedTaskEntries: [TaskEntry] = []
+    private var cachedHasActiveTasks: Bool = false
+    private var taskCacheVersion: UInt = 0
+    private var taskCacheValidVersion: UInt = .max
+
+    /// Bumps the task cache version so the next access rebuilds.
+    private func invalidateTaskCache() {
+        taskCacheVersion &+= 1
+    }
+
+    private func rebuildTaskCacheIfNeeded() {
+        guard taskCacheVersion != taskCacheValidVersion else { return }
+        let allTaskEvents = items.compactMap { item -> ToolUseEvent? in
+            guard case .toolUse(let event) = item.content, event.isTaskOperation else { return nil }
+            return event
+        }
+        cachedTaskEntries = TaskEntry.buildList(from: allTaskEvents)
+        cachedHasActiveTasks = cachedTaskEntries.contains { $0.status != .completed }
+        taskCacheValidVersion = taskCacheVersion
+    }
+
+    /// Aggregated task entries derived from all task tool events in the conversation.
+    public var taskEntries: [TaskEntry] {
+        rebuildTaskCacheIfNeeded()
+        return cachedTaskEntries
+    }
+
+    /// Whether there are active (non-completed) tasks.
+    public var hasActiveTasks: Bool {
+        rebuildTaskCacheIfNeeded()
+        return cachedHasActiveTasks
+    }
+
+    /// Visible items with task operations filtered out, for the timeline.
+    public var visibleTimelineItems: [TimelineItem] {
+        visibleItems.filter { item in
+            guard case .toolUse(let event) = item.content else { return true }
+            return !event.isTaskOperation
+        }
+    }
+
     // MARK: - Visible Items Window
 
     private static let visibleWindowSize = 200
@@ -48,6 +91,7 @@ public final class Session {
     /// Appends an item and trims the visible window if it has grown too large.
     private func appendItem(_ item: TimelineItem) {
         items.append(item)
+        invalidateTaskCache()
         let visibleCount = items.count - visibleStartIndex
         if visibleCount > Self.visibleWindowSize + Self.loadBatchSize {
             visibleStartIndex = items.count - Self.visibleWindowSize
@@ -159,6 +203,10 @@ public final class Session {
         activeToolIndices = [:]
         hasToolUseSinceLastText = false
         visibleStartIndex = 0
+        cachedTaskEntries = []
+        cachedHasActiveTasks = false
+        taskCacheVersion = 0
+        taskCacheValidVersion = .max
     }
 
     @MainActor
@@ -287,6 +335,7 @@ public final class Session {
               case .toolUse(var event) = items[index].content else { return }
         event.inputJSON += json
         items[index].content = .toolUse(event)
+        invalidateTaskCache()
     }
 
     @MainActor
@@ -299,6 +348,7 @@ public final class Session {
         }), case .toolUse(var event) = items[index].content else { return }
         event.resultOutput += output
         items[index].content = .toolUse(event)
+        invalidateTaskCache()
     }
 
     @MainActor
@@ -309,6 +359,7 @@ public final class Session {
         event.cacheInputProperties()
         items[index].content = .toolUse(event)
         activeToolIndices.removeValue(forKey: id)
+        invalidateTaskCache()
     }
 
     // MARK: - Tool Approval
@@ -356,6 +407,7 @@ public final class Session {
         event.cachedResultSummary = ""
         event.cacheInputProperties()
         items[index].content = .toolUse(event)
+        invalidateTaskCache()
     }
 
     // MARK: - Private Helpers

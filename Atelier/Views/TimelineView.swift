@@ -9,7 +9,7 @@ struct TimelineView: View {
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
 
     var body: some View {
-        let items = session.visibleItems
+        let items = session.visibleTimelineItems
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
@@ -51,7 +51,6 @@ struct TimelineView: View {
         }
         .scaleEffect(x: 1, y: -1)
     }
-
 }
 
 // MARK: - Groupable Sender

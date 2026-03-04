@@ -24,6 +24,9 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         var inputSummaryValue: String?
         var editOldString: String?
         var editNewString: String?
+        var taskSubject: String?
+        var taskStatus: String?
+        var taskId: String?
     }
     private var _cached: CachedInput?
 
@@ -76,11 +79,16 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
             return
         }
 
+        let isTask = Self.taskToolNames.contains(name)
+
         _cached = CachedInput(
             filePath: dict["file_path"] as? String,
             inputSummaryValue: Self.summaryValue(for: name, from: dict),
             editOldString: (name == "Edit") ? dict["old_string"] as? String : nil,
-            editNewString: (name == "Edit") ? dict["new_string"] as? String : nil
+            editNewString: (name == "Edit") ? dict["new_string"] as? String : nil,
+            taskSubject: isTask ? dict["subject"] as? String : nil,
+            taskStatus: isTask ? dict["status"] as? String : nil,
+            taskId: isTask ? dict["taskId"] as? String : nil
         )
     }
 
@@ -220,6 +228,50 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         return parsedInput?["new_string"] as? String
     }
 
+    // MARK: - Task operations
+
+    private static let taskToolNames: Set<String> = [
+        "TaskCreate", "TaskUpdate", "TaskList", "TaskGet",
+        "TodoWrite", "TodoRead",
+    ]
+
+    /// Whether this tool is a task operation.
+    public var isTaskOperation: Bool {
+        Self.taskToolNames.contains(name)
+    }
+
+    /// The task subject extracted from `inputJSON`.
+    public var taskSubject: String? {
+        guard isTaskOperation else { return nil }
+        if let cached = _cached { return cached.taskSubject }
+        return parsedInput?["subject"] as? String
+    }
+
+    /// The task status extracted from `inputJSON` (TaskUpdate's `status` field).
+    public var taskStatus: String? {
+        guard isTaskOperation else { return nil }
+        if let cached = _cached { return cached.taskStatus }
+        return parsedInput?["status"] as? String
+    }
+
+    /// The task ID extracted from `inputJSON` (TaskUpdate/TaskGet's `taskId` field).
+    public var taskId: String? {
+        guard isTaskOperation else { return nil }
+        if let cached = _cached { return cached.taskId }
+        return parsedInput?["taskId"] as? String
+    }
+
+    /// Parsed todo items from a `TodoWrite` event, cached after first access.
+    ///
+    /// TodoWrite sends the full list each time:
+    /// `{"todos": [{"id":"1","content":"...","status":"in_progress"}, ...]}`
+    public var todoItems: [TodoItem]? {
+        guard name == "TodoWrite" else { return nil }
+        guard let dict = parsedInput,
+              let todos = dict["todos"] as? [[String: Any]] else { return nil }
+        return todos.compactMap { TodoItem(dict: $0) }
+    }
+
     // MARK: - Display metadata
 
     /// User-friendly display name for the tool.
@@ -234,6 +286,10 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case "WebFetch": "Fetch Web Page"
         case "WebSearch": "Web Search"
         case "Agent": "Sub-agent"
+        case "TaskCreate", "TodoWrite": "Tasks"
+        case "TaskUpdate": "Update Task"
+        case "TaskList", "TodoRead": "Tasks"
+        case "TaskGet": "Get Task"
         default: name
         }
     }
@@ -249,6 +305,9 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case "Grep": "text.magnifyingglass"
         case "WebFetch", "WebSearch": "globe"
         case "Agent": "person.2"
+        case "TaskCreate", "TodoWrite": "checklist"
+        case "TaskUpdate": "checklist.checked"
+        case "TaskList", "TaskGet", "TodoRead": "list.bullet"
         default: "wrench"
         }
     }

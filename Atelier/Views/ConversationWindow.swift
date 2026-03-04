@@ -56,6 +56,10 @@ struct ConversationWindow: View {
                         .ignoresSafeArea(edges: .top)
                         .allowsHitTesting(false)
                 }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    TaskListOverlay(session: session)
+                        .padding(.bottom, Spacing.xs)
+                }
                 // WORKAROUND: NavigationStack (required for .inspector() to compress
                 // content in-place) animates safeAreaInset content on first layout.
                 // Keeping ComposeField always in the layout (stable safe area from
@@ -137,6 +141,16 @@ struct ConversationWindow: View {
             ToolbarItem(placement: .automatic) {
                 ModelPickerView(selection: $selectedModel)
             }
+            #if DEBUG
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    injectDebugTasks()
+                } label: {
+                    Label("Debug Tasks", systemImage: "checklist")
+                }
+                .help("Inject fake task events for debugging")
+            }
+            #endif
             ToolbarItem(placement: .automatic) {
                 Button {
                     showInspector.toggle()
@@ -396,6 +410,23 @@ struct ConversationWindow: View {
             }
         }
     }
+
+    #if DEBUG
+    @State private var debugTaskStep = 0
+
+    private func injectDebugTasks() {
+        debugTaskStep += 1
+        let steps = TaskPreviewFixtures.todoSteps
+        let index = min(debugTaskStep, steps.count) - 1
+        let step = steps[index]
+
+        withAnimation(Motion.appear) {
+            session.beginToolUse(id: step.id, name: "TodoWrite")
+            session.applyToolInputDelta(id: step.id, json: step.json)
+            session.completeToolUse(id: step.id)
+        }
+    }
+    #endif
 
     private func startNewConversation() {
         streamingTask?.cancel()
