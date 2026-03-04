@@ -58,23 +58,25 @@ struct ProjectStoreTests {
         #expect(metadata.detectedKind == .unknown)
     }
 
-    @Test @MainActor func allProjectsSortedByLastOpenedAt() async throws {
+    @Test @MainActor func allProjectsSortedByLastOpenedAt() throws {
         let base = try makeTempDirectory()
         defer { cleanup(base) }
 
         let store = makeStore(baseDirectory: base)
 
-        let older = try store.createProject(rootURL: nil)
-        try await Task.sleep(for: .milliseconds(10))
-        let newer = try store.createProject(rootURL: nil)
+        let olderMeta = ProjectMetadata(displayName: "Older", lastOpenedAt: Date(timeIntervalSince1970: 1000))
+        store.storeMetadata(olderMeta)
+
+        let newerMeta = ProjectMetadata(displayName: "Newer", lastOpenedAt: Date(timeIntervalSince1970: 2000))
+        store.storeMetadata(newerMeta)
 
         let all = store.allProjects()
         try #require(all.count == 2)
-        #expect(all[0].id == newer.id)
-        #expect(all[1].id == older.id)
+        #expect(all[0].id == newerMeta.id)
+        #expect(all[1].id == olderMeta.id)
     }
 
-    @Test @MainActor func touchUpdatesLastOpenedAt() async throws {
+    @Test @MainActor func touchUpdatesLastOpenedAt() throws {
         let base = try makeTempDirectory()
         defer { cleanup(base) }
 
@@ -82,7 +84,6 @@ struct ProjectStoreTests {
         let metadata = try store.createProject(rootURL: nil)
         let originalDate = metadata.lastOpenedAt
 
-        try await Task.sleep(for: .milliseconds(10))
         try store.touch(metadata.id)
 
         let updated = try #require(store.project(for: metadata.id))
@@ -153,13 +154,12 @@ struct ProjectStoreTests {
 
     // MARK: - nextUnclaimedProject (window restoration fallback)
 
-    @Test @MainActor func nextUnclaimedProjectReturnsDifferentProjectEachCall() async throws {
+    @Test @MainActor func nextUnclaimedProjectReturnsDifferentProjectEachCall() throws {
         let base = try makeTempDirectory()
         defer { cleanup(base) }
 
         let store = makeStore(baseDirectory: base)
         let older = try store.createProject(rootURL: nil)
-        try await Task.sleep(for: .milliseconds(10))
         let newer = try store.createProject(rootURL: nil)
 
         let first = try store.nextUnclaimedProject()
@@ -187,20 +187,22 @@ struct ProjectStoreTests {
         #expect(store.allProjects().count == 2)
     }
 
-    @Test @MainActor func nextUnclaimedProjectPrefersRealProjectsOverScratchpads() async throws {
+    @Test @MainActor func nextUnclaimedProjectPrefersRealProjectsOverScratchpads() throws {
         let base = try makeTempDirectory()
         defer { cleanup(base) }
 
         let store = makeStore(baseDirectory: base)
 
-        // Create a scratchpad (nil root) — most recent
         let projectRoot = base.appendingPathComponent("RealProject", isDirectory: true)
         try FileManager.default.createDirectory(at: projectRoot, withIntermediateDirectories: true)
 
         let realProject = try store.createProject(rootURL: projectRoot)
-        try await Task.sleep(for: .milliseconds(10))
-        // Scratchpad created AFTER real project — would be "more recent"
-        _ = try store.createProject(rootURL: nil)
+        // Scratchpad is "more recent" by lastOpenedAt
+        let scratchpad = ProjectMetadata(
+            displayName: "Untitled",
+            lastOpenedAt: Date(timeIntervalSinceNow: 100)
+        )
+        store.storeMetadata(scratchpad)
 
         // Should pick the real project first despite the scratchpad being newer
         let first = try store.nextUnclaimedProject()
@@ -208,7 +210,7 @@ struct ProjectStoreTests {
         #expect(first.rootURL == projectRoot)
     }
 
-    @Test @MainActor func nextUnclaimedProjectDoesNotUpdateLastOpenedAt() async throws {
+    @Test @MainActor func nextUnclaimedProjectDoesNotUpdateLastOpenedAt() throws {
         let base = try makeTempDirectory()
         defer { cleanup(base) }
 
@@ -216,7 +218,6 @@ struct ProjectStoreTests {
         let metadata = try store.createProject(rootURL: nil)
         let originalDate = metadata.lastOpenedAt
 
-        try await Task.sleep(for: .milliseconds(10))
         let restored = try store.nextUnclaimedProject()
 
         #expect(restored.id == metadata.id)

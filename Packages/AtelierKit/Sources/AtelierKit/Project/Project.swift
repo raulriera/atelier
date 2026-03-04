@@ -5,6 +5,7 @@ import Foundation
 /// Holds scoped dependencies for session persistence and file access.
 /// Created by ``ProjectStore/materialize(_:)`` — does not create its own
 /// dependencies, keeping it testable with in-memory implementations.
+@MainActor
 @Observable
 public final class Project: Identifiable {
     public let id: UUID

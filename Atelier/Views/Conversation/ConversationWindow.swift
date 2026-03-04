@@ -104,51 +104,16 @@ struct ConversationWindow: View {
         .frame(minWidth: Layout.minimumWindowWidth, minHeight: Layout.minimumWindowHeight)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    startNewConversation()
-                } label: {
-                    Label("New Conversation", systemImage: "plus.message")
-                }
-                .keyboardShortcut("t", modifiers: [.command, .shift])
-                .disabled(session.isStreaming)
-            }
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    showingCapabilities.toggle()
-                } label: {
-                    Label("Capabilities", systemImage: "puzzlepiece.extension")
-                }
-                .help("Capabilities")
-                .popover(isPresented: $showingCapabilities) {
-                    CapabilitiesCard(capabilityStore: capabilityStore)
-                        .padding(Spacing.sm)
-                }
-            }
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    showingContextFiles.toggle()
-                } label: {
-                    Label("Context Files", systemImage: "doc.text")
-                }
-                .help("Context Files")
-                .popover(isPresented: $showingContextFiles) {
-                    ContextFilesCard(files: activeContextFiles)
-                        .padding(Spacing.sm)
-                }
-            }
-            ToolbarItem(placement: .automatic) {
-                ModelPickerView(selection: $selectedModel)
-            }
-
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    showInspector.toggle()
-                } label: {
-                    Label("Inspector", systemImage: "sidebar.right")
-                }
-                .help("Toggle Inspector")
-            }
+            ConversationToolbar(
+                isStreaming: session.isStreaming,
+                showingCapabilities: $showingCapabilities,
+                showingContextFiles: $showingContextFiles,
+                showInspector: $showInspector,
+                selectedModel: $selectedModel,
+                capabilityStore: capabilityStore,
+                activeContextFiles: activeContextFiles,
+                onNewConversation: startNewConversation
+            )
         }
         .onKeyPress(.escape) {
             guard session.isStreaming else { return .ignored }
@@ -292,49 +257,7 @@ struct ConversationWindow: View {
             let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath, enabledCapabilities: capConfigs)
             do {
                 for try await event in stream {
-                    switch event {
-                    case .sessionStarted(let id):
-                        session.sessionId = id
-                    case .textDelta(let chunk):
-                        session.applyDelta(chunk)
-                    case .thinkingStarted:
-                        session.beginThinking()
-                    case .thinkingDelta(let chunk):
-                        session.applyThinkingDelta(chunk)
-                    case .toolUseStarted(let id, let name):
-                        session.beginToolUse(id: id, name: name)
-                    case .toolInputDelta(let id, let json):
-                        session.applyToolInputDelta(id: id, json: json)
-                    case .toolUseFinished(let id):
-                        session.completeToolUse(id: id)
-                    case .toolResultReceived(let id, let output):
-                        session.applyToolResult(id: id, output: output)
-                    case .messageComplete(let usage):
-                        session.completeAssistantMessage(usage: usage)
-
-                        if controlActiveState != .key {
-                            unreadCount += 1
-                            NSApp.requestUserAttention(.informationalRequest)
-                            NSApp.dockTile.badgeLabel = "\(unreadCount)"
-                        }
-
-                        // Dispatch queued message before saving — the save
-                        // suspends the main actor, which could let user input
-                        // bypass the queue while isStreaming is false.
-                        if let queued = session.dequeuePendingMessage() {
-                            withAnimation(Motion.appear) {
-                                session.beginAssistantMessage()
-                            }
-                            startStreaming(message: queued)
-                            return
-                        }
-
-                        try? await session.save(to: sessionPersistence)
-                        triggerDistillation()
-                    case .error(let engineError):
-                        session.handleError(engineError)
-                        try? await session.save(to: sessionPersistence)
-                    }
+                    handleStreamEvent(event)
                 }
                 // If stream ends without messageComplete (e.g. empty response)
                 if session.isStreaming {
@@ -350,6 +273,58 @@ struct ConversationWindow: View {
                 }
             }
         }
+    }
+
+    private func handleStreamEvent(_ event: StreamEvent) {
+        switch event {
+        case .sessionStarted(let id):
+            session.sessionId = id
+        case .textDelta(let chunk):
+            session.applyDelta(chunk)
+        case .thinkingStarted:
+            session.beginThinking()
+        case .thinkingDelta(let chunk):
+            session.applyThinkingDelta(chunk)
+        case .toolUseStarted(let id, let name):
+            session.beginToolUse(id: id, name: name)
+        case .toolInputDelta(let id, let json):
+            session.applyToolInputDelta(id: id, json: json)
+        case .toolUseFinished(let id):
+            session.completeToolUse(id: id)
+        case .toolResultReceived(let id, let output):
+            session.applyToolResult(id: id, output: output)
+        case .messageComplete(let usage):
+            handleMessageComplete(usage: usage)
+        case .error(let engineError):
+            session.handleError(engineError)
+            Task { try? await session.save(to: sessionPersistence) }
+        }
+    }
+
+    private func handleMessageComplete(usage: TokenUsage) {
+        session.completeAssistantMessage(usage: usage)
+
+        if controlActiveState != .key {
+            unreadCount += 1
+            NSApp.requestUserAttention(.informationalRequest)
+            NSApp.dockTile.badgeLabel = "\(unreadCount)"
+        }
+
+        // Dispatch queued message before saving — the save
+        // suspends the main actor, which could let user input
+        // bypass the queue while isStreaming is false.
+        if let queued = session.dequeuePendingMessage() {
+            withAnimation(Motion.appear) {
+                session.beginAssistantMessage()
+            }
+            startStreaming(message: queued)
+            return
+        }
+
+        Task {
+            try? await session.save(to: sessionPersistence)
+        }
+        triggerDistillation()
     }
 
     private func stopGeneration() {
