@@ -88,6 +88,25 @@ Save to ~/Reports/ with the date in the filename
 
 Templates are just markdown files in `.atelier/templates/`. Human-readable, editable, shareable, versionable via git. They're the recipe. Scheduling is the oven timer.
 
+### Relationship to Claude Code Skills
+
+Claude Code ships a skill system (`.claude/skills/SKILL.md`) with YAML frontmatter supporting argument substitution (`$ARGUMENTS`), tool restrictions (`allowed-tools`), model selection, and user invocation via `/skill-name`. Templates are conceptually the same — a reusable instruction set with optional parameters. For developer projects, Atelier templates should be interoperable with the skill format, so a template written for Atelier can also run via `claude -p` with `/template-name` from the CLI.
+
+For non-developer users, the template format stays simple markdown with optional frontmatter. The skill-compatible frontmatter is a power-user layer that surfaces only when needed.
+
+### Headless execution for scheduled tasks
+
+When a scheduled task fires, Atelier doesn't need to spin up a full conversation UI. Claude Code's headless mode (`claude -p`) runs a prompt non-interactively with structured JSON output (`--output-format json`). A `launchd` agent that runs:
+
+```bash
+claude -p --system-prompt-file .atelier/context.md \
+  "$(cat .atelier/templates/weekly-report.md)" \
+  --output-format json \
+  --max-turns 20
+```
+
+...handles most scheduled tasks without waking the app. The app only needs to launch for tasks that require user interaction (approval gates, ask-user prompts). This simplifies the background execution architecture — `launchd` + `claude -p` handles the common case, `BGTaskScheduler` + full app handles the interactive case.
+
 ### Who uses scheduled tasks?
 
 | User | Schedule | What runs |

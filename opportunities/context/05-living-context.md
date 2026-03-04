@@ -211,10 +211,30 @@ This keeps memory files lean without losing information entirely. Archived entri
 
 Atelier wraps the Claude CLI. The living context system works through:
 
-1. **System prompt injection** — context files are loaded and passed via `--append-system-prompt`, ordered for cache efficiency
-2. **Post-compaction hook** — when the CLI signals compaction, Atelier triggers distillation. Anthropic's API provides `pause_after_compaction` specifically for re-injecting context after compaction — purpose-built for this use case
+1. **System prompt injection** — context files are loaded and passed via `--append-system-prompt` (keeps the CLI's default tool instructions intact) or `--system-prompt-file` (loads from a file, cleaner for multi-file memory). Ordered for cache efficiency.
+2. **`SessionStart` hook (compact matcher)** — Claude Code fires a `SessionStart` hook with `"matcher": "compact"` specifically after context compaction. Anything the hook writes to stdout becomes context in the fresh window. This is the purpose-built mechanism for post-compaction distillation — no need to detect compaction events separately.
 3. **Context file management** — Atelier reads/writes `.atelier/memory/` files using the host filesystem (not through the CLI)
 4. **Manifest-based discovery** — Claude receives a manifest of available memory files and reads them on demand via tools, not pre-loaded
+
+```json
+{
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "compact",
+      "hooks": [{
+        "type": "command",
+        "command": "~/.atelier/hooks/inject-context.sh"
+      }]
+    }]
+  }
+}
+```
+
+The hook script reads `.atelier/memory/` files and writes the essentials (`context.md`, `preferences.md`, manifest) to stdout. The CLI receives this as fresh context automatically.
+
+### Coexistence with Claude Code's auto-memory
+
+Claude Code has its own auto-memory system (`~/.claude/projects/*/memory/MEMORY.md`). For developer projects that use both Atelier and the CLI directly, these two memory systems could conflict — both writing preferences, both trying to be authoritative. Atelier's memory files (`.atelier/memory/`) are project-scoped and multi-file; Claude Code's are user-scoped and single-file. The resolution: Atelier's context files take precedence when present (they're loaded via system prompt), and Claude Code's auto-memory is additive. A `SessionStart` hook can merge or suppress the CLI's auto-memory when Atelier's richer context is available.
 
 The CLI doesn't need to know about living context. It just receives a system prompt that happens to be very good because Atelier maintains it.
 

@@ -45,6 +45,25 @@ The inspector panel (`⌘I`) can show:
 
 This is progressive disclosure — hidden by default, available for those who care.
 
+### User-defined agents (power users)
+
+Claude Code supports custom agent definitions (`.claude/agents/AGENT.md`) with frontmatter controlling model, tools, permissions, memory, and isolation. For knowledge-work projects, this enables user-created specialists:
+
+```yaml
+---
+name: proofreader
+description: "Review documents for grammar, tone, and style"
+tools: "Read,Grep,Glob"
+model: haiku
+---
+Review the document for passive voice, clichés, and inconsistent tone.
+Flag issues with line references. Do not modify files.
+```
+
+Atelier can surface these as named assistants within the orchestration UI — "Claude is using your proofreader to review the draft" — without building a separate agent management system. The agent definitions live in the project folder, are editable markdown, and work with the CLI directly.
+
+The `SubagentStart` and `SubagentStop` hooks provide the event stream needed for the progress cards below — each fires when an agent spawns or completes, giving Atelier the timing and metadata to render nested progress without polling.
+
 ## Implementation
 
 ### Phase 1 — Nested Progress Cards

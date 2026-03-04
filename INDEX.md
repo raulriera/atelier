@@ -8,7 +8,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 36 |
+| **Total opportunities** | 37 |
 | **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -54,6 +54,7 @@ Stand up the sandbox and lock it down. Get the container running, file sharing w
 | 2.4 | File Access Permissions | Improvement | 🔲 Not started | [→](opportunities/security/02-file-access-permissions.md) |
 | 2.5 | File Deletion Safety | New | 🔲 Not started | [→](opportunities/security/06-file-deletion-safety.md) |
 | 2.6 | Credential Storage | Improvement | 🔲 Not started | [→](opportunities/security/04-credential-storage.md) |
+| 2.7 | CLI Filesystem Boundary | New | 🔲 Not started | [→](opportunities/security/07-cli-filesystem-boundary.md) |
 
 ---
 
@@ -150,6 +151,7 @@ Network isolation, file permissions, prompt injection, credentials, audit, delet
 | [04-credential-storage.md](opportunities/security/04-credential-storage.md) | M1 |
 | [05-audit-compliance.md](opportunities/security/05-audit-compliance.md) | M5 |
 | [06-file-deletion-safety.md](opportunities/security/06-file-deletion-safety.md) | M1 |
+| [07-cli-filesystem-boundary.md](opportunities/security/07-cli-filesystem-boundary.md) | M1 |
 
 ### Experience (`opportunities/experience/`)
 The product UX — window & conversation, project model, conversational flow, onboarding.
@@ -223,7 +225,8 @@ atelier/
     │   ├── 03-prompt-injection-defense.md
     │   ├── 04-credential-storage.md
     │   ├── 05-audit-compliance.md
-    │   └── 06-file-deletion-safety.md
+    │   ├── 06-file-deletion-safety.md
+    │   └── 07-cli-filesystem-boundary.md
     ├── experience/
     │   ├── 01-window-conversation.md
     │   ├── 02-project-workspace.md

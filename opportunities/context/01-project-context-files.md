@@ -80,6 +80,7 @@ Frontmatter is optional. A context file can be as simple as a single sentence.
 - When a user opens a folder, Atelier looks for context files: `CLAUDE.md`, `COWORK.md`, or `.atelier/context.md`
 - Walks up the directory tree (like `.gitignore`) — parent context is inherited, child context overrides
 - Multiple context files merge: parent provides defaults, child provides specifics
+- Claude Code also supports `.claude/rules/` directories with path-scoped rule files (rules that only apply when editing files matching a glob pattern). For developer projects, Atelier should discover and load these alongside context files so CLI and GUI behavior stays consistent
 
 ### Who writes context files?
 

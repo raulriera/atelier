@@ -15,7 +15,22 @@ No audit logs, no Compliance API integration, no Data Exports. Anthropic's own d
 
 ### Implementation Strategy
 
-- **Structured audit log:** Every significant action is logged via `os_log` with structured metadata: timestamp, session ID, action type, file paths involved, model used, token count, approval status, and user identity.
+- **Event capture via CLI hooks:** Claude Code's `PostToolUse` hook fires after every tool execution with structured JSON (tool name, input, output, timing, session ID) on stdin. A hook script writes each event to the audit log. This captures every file read, write, bash command, and MCP tool call without modifying the conversation model or intercepting at the app layer. A `PreToolUse` hook can additionally log attempted actions that were blocked by permission rules.
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "hooks": [{
+        "type": "command",
+        "command": "~/.atelier/hooks/audit-log.sh"
+      }]
+    }]
+  }
+}
+```
+
+- **Structured audit log:** Every significant action is logged via `os_log` with structured metadata: timestamp, session ID, action type, file paths involved, model used, token count, approval status, and user identity. The hook-captured events are the primary source; `os_log` provides the macOS-native query interface.
 - **Local audit database:** Mirror events to an encrypted SQLite database (`SQLCipher`) for offline querying, reporting, and compliance exports.
 - **Export formats:** One-click export to CSV, JSON, or SIEM-compatible formats (CEF, LEEF). Schedule automated exports to a designated folder or network share.
 - **Compliance dashboard:** A dedicated SwiftUI view showing: all file access events (who read/wrote what, when), all external API calls (which connector, what data sent), approval history (who approved what, via what method), and token usage per session/user.

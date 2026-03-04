@@ -73,6 +73,41 @@ Every approval decision (approved, rejected, timed-out) is logged:
 - Stored as JSONL in the project's `.atelier/` folder (consistent with our file-based storage model)
 - Inspectable, portable, no database
 
+## CLI integration: hooks vs MCP
+
+The current implementation uses a custom MCP server (`atelier-approval-mcp.swift`) for the approval IPC channel. However, Claude Code's `PermissionRequest` hook is purpose-built for this exact use case — it fires when the CLI is about to show a permission dialog and accepts `allow`/`deny` decisions as structured JSON output:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PermissionRequest",
+    "decision": {
+      "behavior": "allow",
+      "updatedInput": { }
+    }
+  }
+}
+```
+
+A `PermissionRequest` hook script connecting to the app's Unix socket would replace the MCP server for approvals entirely. The hook receives tool name, input JSON, and permission suggestions via stdin — everything the `ApprovalCard` needs to render. The app responds, the hook writes the decision to stdout, and the CLI proceeds.
+
+This is simpler than a full JSON-RPC server and doesn't require managing MCP server lifecycle. The MCP server binary should be reserved for response-channel tools (ask-user, plan-review) where the model needs to receive arbitrary data back — not just allow/deny.
+
+### Permission granularity via CLI rules
+
+Claude Code supports glob-pattern permission rules that are more granular than our tier system:
+
+```json
+{
+  "permissions": {
+    "allow": ["Read", "Edit(.atelier/memory/**)"],
+    "deny": ["Bash(rm -rf *)"]
+  }
+}
+```
+
+The adaptive tier system (Phase 4) should generate these rules. When the user always approves file creation silently, Atelier writes `"allow": ["Write(~/Reports/*)"]` to the project's `.claude/settings.local.json`. This gives per-path, per-tool control — "modify anything in `.atelier/memory/` silently, but confirm everything else" — rather than coarse categories like `file_modify: confirm`.
+
 ## Implementation
 
 ### Phase 1 — Inline Approval Cards
