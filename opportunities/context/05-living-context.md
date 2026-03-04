@@ -220,20 +220,29 @@ The CLI doesn't need to know about living context. It just receives a system pro
 
 ## Implementation
 
-### Phase 1 — Post-Compaction Distillation
+### Phase 1 — Session-Boundary Distillation ✅
 
-- Detect compaction events from the CLI stream
-- After compaction, instruct Claude to review the session and identify new learnings
-- Write learnings to appropriate `.atelier/memory/` files
-- Re-inject updated context files into the fresh context window
-- Start with a single `memory.md` file, split into multiple files in Phase 2
+Single `learnings.md` file, injected into the system prompt via `--append-system-prompt`. This is acceptable because one small file doesn't waste the context window — the "Smart loading" optimization matters when there are many files.
 
-### Phase 2 — Multi-File Memory
+**What's built:**
+- `MemoryStore` — reads/writes `.atelier/memory/learnings.md` on disk
+- `ConversationSummarizer` — converts timeline items to plain-text summary
+- `DistillationEngine` — spawns background haiku CLI process to extract learnings
+- `ContextFileLoader` — discovers memory files at project root, injects with `<project-memory>` wrapper
+- Session-boundary trigger in `ConversationWindow` — fires after response completion when idle
+
+**What's deferred to Phase 2:**
+- Compaction-event distillation (CLI doesn't expose compaction events yet — using session-boundary as a proxy)
+- Manifest-based discovery (see "Smart loading" section — not needed until multiple memory files exist)
+- Attention-aware ordering and KV-cache optimization
+
+### Phase 2 — Multi-File Memory + Smart Loading
 
 - Categorize learnings by type (preferences, decisions, patterns, vocabulary, corrections)
 - Write to separate files per category
 - Implement merge logic: new entries augment existing ones, contradictions replace old entries
 - Add file size monitoring — split a file when it exceeds ~100 lines
+- **Switch from injection to manifest-based discovery** — always load `context.md` + `preferences.md`, everything else via one-line manifest read on demand (see "Smart loading" section)
 
 ### Phase 3 — Project Fingerprinting
 

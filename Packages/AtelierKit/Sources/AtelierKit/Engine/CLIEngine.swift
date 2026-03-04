@@ -6,7 +6,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
     private let cliPath: String
 
     public init(cliPath: String? = nil) {
-        self.cliPath = cliPath ?? Self.findCLI()
+        self.cliPath = cliPath ?? CLIDiscovery.findCLI()
     }
 
     public func send(
@@ -283,48 +283,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
         return configPath
     }
 
-    // MARK: - CLI Discovery
-
-    /// Returns the real user home directory, bypassing sandbox container redirection.
-    private static var realHomeDirectory: String {
-        if let pw = getpwuid(getuid()) {
-            return String(cString: pw.pointee.pw_dir)
-        }
-        return NSHomeDirectory()
-    }
-
-    private static func findCLI() -> String {
-        let home = realHomeDirectory
-
-        let candidates = [
-            "\(home)/.local/bin/claude",
-            "\(home)/.claude/bin/claude",
-            "/opt/homebrew/bin/claude",
-            "/usr/local/bin/claude",
-        ]
-
-        for path in candidates {
-            if FileManager.default.isExecutableFile(atPath: path) {
-                return path
-            }
-        }
-
-        // Fall back to PATH lookup
-        let whichProcess = Process()
-        whichProcess.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        whichProcess.arguments = ["claude"]
-        let pipe = Pipe()
-        whichProcess.standardOutput = pipe
-        try? whichProcess.run()
-        whichProcess.waitUntilExit()
-        let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-        return output.isEmpty ? "claude" : output
-    }
-
     public static var isAvailable: Bool {
-        let path = findCLI()
-        return FileManager.default.isExecutableFile(atPath: path)
+        CLIDiscovery.isAvailable
     }
 }

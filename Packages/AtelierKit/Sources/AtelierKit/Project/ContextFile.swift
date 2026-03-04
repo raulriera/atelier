@@ -10,6 +10,8 @@ public struct ContextFile: Sendable, Equatable, Identifiable {
         /// `COWORK.md`, `.atelier/context.md` — Atelier reads the content and injects it
         /// via `--append-system-prompt`.
         case atelierInjected
+        /// `.atelier/memory/*.md` — auto-managed learnings injected with a read-only header.
+        case atelierMemory
     }
 
     public var id: URL { url }

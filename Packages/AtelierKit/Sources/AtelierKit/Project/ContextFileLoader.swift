@@ -13,12 +13,14 @@ public enum ContextFileLoader {
     /// Discovers context files from `projectRoot` up to the user's home directory.
     ///
     /// Returns results in child-first order (project root files appear before parent files).
+    /// Memory files (`.atelier/memory/*.md`) are only scanned at the project root itself.
     public static func discover(from projectRoot: URL) -> [ContextFile] {
         let manager = FileManager.default
         let home = homeDirectory
 
         var results: [ContextFile] = []
         var directory = projectRoot.standardized
+        var isProjectRoot = true
 
         while true {
             for candidate in candidates {
@@ -30,6 +32,12 @@ public enum ContextFileLoader {
                         source: candidate.source
                     ))
                 }
+            }
+
+            // Scan .atelier/memory/*.md only at the project root.
+            if isProjectRoot {
+                results += discoverMemoryFiles(in: directory, manager: manager)
+                isProjectRoot = false
             }
 
             // Stop at the home directory or filesystem root.
@@ -48,17 +56,64 @@ public enum ContextFileLoader {
         return results
     }
 
-    /// Reads all `.atelierInjected` files and concatenates their content.
+    /// Scans `.atelier/memory/` for markdown files to inject as context.
+    private static func discoverMemoryFiles(
+        in directory: URL,
+        manager: FileManager
+    ) -> [ContextFile] {
+        let memoryDir = directory
+            .appendingPathComponent(".atelier", isDirectory: true)
+            .appendingPathComponent("memory", isDirectory: true)
+
+        guard manager.fileExists(atPath: memoryDir.path) else { return [] }
+
+        guard let contents = try? manager.contentsOfDirectory(
+            at: memoryDir,
+            includingPropertiesForKeys: nil
+        ) else { return [] }
+
+        return contents
+            .filter { $0.pathExtension == "md" }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .map { url in
+                // contentsOfDirectory resolves symlinks (e.g. /var → /private/var);
+                // rebuild via the known parent so paths stay consistent.
+                let consistent = memoryDir.appendingPathComponent(url.lastPathComponent)
+                return ContextFile(
+                    url: consistent,
+                    filename: url.lastPathComponent,
+                    source: .atelierMemory
+                )
+            }
+    }
+
+    /// Reads all injectable files and concatenates their content.
     ///
-    /// Returns `nil` when there are no injected files or all are empty,
+    /// Returns `nil` when there are no injectable files or all are empty,
     /// so callers can skip the `--append-system-prompt` flag entirely.
+    ///
+    /// Memory files are wrapped with an instruction telling the agent
+    /// they are auto-managed and should not be edited directly.
     public static func contentForInjection(from files: [ContextFile]) -> String? {
         let parts = files
-            .filter { $0.source == .atelierInjected }
+            .filter { $0.source == .atelierInjected || $0.source == .atelierMemory }
             .compactMap { file -> String? in
                 guard let content = try? String(contentsOf: file.url, encoding: .utf8),
                       !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 else { return nil }
+
+                if file.source == .atelierMemory {
+                    return """
+                    <project-memory>
+                    The following learnings are automatically managed by the app. \
+                    Do NOT read, edit, or write these files with tools. \
+                    They update automatically after each conversation.
+
+                    \(content)
+                    </project-memory>
+                    """
+                }
+
                 return content
             }
 
@@ -66,11 +121,7 @@ public enum ContextFileLoader {
         return parts.joined(separator: "\n\n---\n\n")
     }
 
-    /// The real user home directory, bypassing sandbox container redirection.
     private static var homeDirectory: String {
-        if let pw = getpwuid(getuid()) {
-            return String(cString: pw.pointee.pw_dir)
-        }
-        return NSHomeDirectory()
+        CLIDiscovery.realHomeDirectory
     }
 }

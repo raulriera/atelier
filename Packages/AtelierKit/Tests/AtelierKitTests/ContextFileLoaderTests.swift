@@ -161,6 +161,94 @@ struct ContextFileLoaderTests {
         #expect(content.contains("---"))
     }
 
+    // MARK: - Memory files
+
+    @Test func discoverFindsMemoryFilesAtProjectRoot() throws {
+        let dir = try makeTempDir()
+        defer { cleanup(dir) }
+
+        let memoryDir = dir
+            .appendingPathComponent(".atelier")
+            .appendingPathComponent("memory")
+        try manager.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+        try "## Preferences".write(
+            to: memoryDir.appendingPathComponent("learnings.md"),
+            atomically: true, encoding: .utf8
+        )
+
+        let results = ContextFileLoader.discover(from: dir)
+        let localResults = results.filter { $0.url.path.hasPrefix(dir.path) }
+        #expect(localResults.count == 1)
+        #expect(localResults[0].filename == "learnings.md")
+        #expect(localResults[0].source == .atelierMemory)
+    }
+
+    @Test func memoryFilesNotScannedInParentDirectories() throws {
+        let parent = try makeTempDir()
+        defer { cleanup(parent) }
+
+        let child = parent.appendingPathComponent("subproject")
+        try manager.createDirectory(at: child, withIntermediateDirectories: true)
+
+        // Put memory files in the parent (not the child project root)
+        let memoryDir = parent
+            .appendingPathComponent(".atelier")
+            .appendingPathComponent("memory")
+        try manager.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+        try "## Parent learnings".write(
+            to: memoryDir.appendingPathComponent("learnings.md"),
+            atomically: true, encoding: .utf8
+        )
+
+        let results = ContextFileLoader.discover(from: child)
+        let memoryResults = results.filter { $0.url.path.contains("memory") }
+        #expect(memoryResults.isEmpty)
+    }
+
+    @Test func memoryFilesIgnoresNonMarkdown() throws {
+        let dir = try makeTempDir()
+        defer { cleanup(dir) }
+
+        let memoryDir = dir
+            .appendingPathComponent(".atelier")
+            .appendingPathComponent("memory")
+        try manager.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+        try "learnings".write(
+            to: memoryDir.appendingPathComponent("learnings.md"),
+            atomically: true, encoding: .utf8
+        )
+        try "not markdown".write(
+            to: memoryDir.appendingPathComponent("notes.txt"),
+            atomically: true, encoding: .utf8
+        )
+
+        let results = ContextFileLoader.discover(from: dir)
+        let localResults = results.filter { $0.url.path.hasPrefix(dir.path) }
+        #expect(localResults.count == 1)
+        #expect(localResults[0].filename == "learnings.md")
+    }
+
+    @Test func memoryFilesIncludedInInjection() throws {
+        let dir = try makeTempDir()
+        defer { cleanup(dir) }
+
+        let memoryDir = dir
+            .appendingPathComponent(".atelier")
+            .appendingPathComponent("memory")
+        try manager.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+        try "## Preferences\n- Use bullet lists".write(
+            to: memoryDir.appendingPathComponent("learnings.md"),
+            atomically: true, encoding: .utf8
+        )
+
+        let files = ContextFileLoader.discover(from: dir)
+        let localFiles = files.filter { $0.url.path.hasPrefix(dir.path) }
+        let content = try #require(ContextFileLoader.contentForInjection(from: localFiles))
+        #expect(content.contains("Use bullet lists"))
+        #expect(content.contains("<project-memory>"))
+        #expect(content.contains("Do NOT read, edit, or write"))
+    }
+
     @Test func contentForInjectionReturnsNilForEmptyContent() throws {
         let dir = try makeTempDir()
         defer { cleanup(dir) }
