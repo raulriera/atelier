@@ -49,12 +49,14 @@ There are no modes. There's one conversation that adapts to what's happening.
 - ✅ **System events** — error and session-started events rendered inline
 - ✅ **Tool use cards** — inline cards for each tool invocation (Read, Write, Edit, Bash, etc.) with input summary, status, and result preview
 - ✅ **Inspector sidebar** — right-side panel (`.inspector()`) showing full tool output, togglable via toolbar, compresses content in-place
-- 🔲 **Scrolling performance** — timeline scrolling needs profiling and optimization (LazyVStack recycling, view diffing cost)
+- ✅ **Scrolling performance** — visible items window + cached properties for efficient timeline rendering
 - ✅ **File card** — compact representation of a file read/write, expandable to show content
 - ✅ **Diff view** — track-changes view in inspector for Edit operations (strikethrough removed, highlighted added)
-- 🔲 **Todo list** — inline task list rendered in the conversation timeline, showing tasks with status icons (pending, in-progress, completed) as Claude works through multi-step plans
+- 🔲 **Todo list** — parse `TaskCreate`/`TaskUpdate` tool events and render as an inline task list with status icons (pending, in-progress, completed) instead of generic tool cards. Claude uses these during multi-step plans.
+- 🔲 **Ask user card** — `AskUserQuestion` tool calls need interactive rendering: show the question, options as clickable buttons, and send the selection back to the CLI. Requires a response channel (MCP-based, like approvals). Currently the CLI handles this via terminal stdin, which Atelier can't reach.
+- 🔲 **Plan review** — `EnterPlanMode` / `ExitPlanMode` tool calls. Claude writes a plan file and asks for approval before implementing. Render the plan as a reviewable card with approve/reject actions. Same MCP response channel as ask user and approvals.
 - 🔲 **Progress indicator** — shows what Claude is doing, estimated time, cancellation
-- 🔲 **Approval gate** — inline request with context, one-click approve, Touch ID for high-risk (blocked on M3 — hub/02-approval-flow.md)
+- ✅ **Approval gate** — inline approval cards with approve/deny, compact resolved state, wired through MCP
 - 🔲 **Result card** — summary of completed work with expandable details (blocked on M3 — hub/01-claude-code-integration.md)
 - Each type must render fast — pre-computed layouts, minimal view recomputation
 
