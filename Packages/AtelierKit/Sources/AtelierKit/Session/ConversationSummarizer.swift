@@ -43,7 +43,7 @@ public enum ConversationSummarizer {
                     lines.append(line)
                 }
 
-            case .system, .approval:
+            case .system, .approval, .askUser:
                 continue
             }
         }

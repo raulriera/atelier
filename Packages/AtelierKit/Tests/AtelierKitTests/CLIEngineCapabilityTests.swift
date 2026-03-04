@@ -77,7 +77,9 @@ struct CLIEngineCapabilityTests {
         for tool in CLIEngine.silentTools {
             #expect(allowedTools.contains(tool))
         }
-        #expect(!allowedTools.contains(where: { $0.hasPrefix("mcp__") }))
+        // Only our built-in ask_user MCP tool should be present, no capability tools
+        let capabilityTools = allowedTools.filter { $0.hasPrefix("mcp__") && $0 != "mcp__atelier__ask_user" }
+        #expect(capabilityTools.isEmpty)
     }
 
     @Test("writeMCPConfig produces valid JSON with capability entries")

@@ -240,6 +240,10 @@ public final class CLIEngine: ConversationEngine, Sendable {
             for tool in silentTools {
                 args += ["--allowedTools", tool]
             }
+            // Auto-approve our MCP ask_user tool
+            args += ["--allowedTools", "mcp__atelier__ask_user"]
+            // Block the built-in AskUserQuestion (relies on stdin we don't pipe)
+            args += ["--disallowedTools", "AskUserQuestion"]
             // Auto-approve tools from enabled capabilities
             for config in capabilityConfigs {
                 for tool in config.autoApproveTools {

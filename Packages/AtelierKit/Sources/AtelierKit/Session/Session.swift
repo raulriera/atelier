@@ -55,11 +55,11 @@ public final class Session {
         return cachedHasActiveTasks
     }
 
-    /// Visible items with task operations filtered out, for the timeline.
+    /// Visible items with task and ask-user tool operations filtered out, for the timeline.
     public var visibleTimelineItems: [TimelineItem] {
         visibleItems.filter { item in
             guard case .toolUse(let event) = item.content else { return true }
-            return !event.isTaskOperation
+            return !event.isTaskOperation && !event.isAskUserOperation
         }
     }
 
@@ -179,6 +179,10 @@ public final class Session {
 
         case .approval(let event):
             // Only persist resolved approvals — pending ones are transient
+            return event.status != .pending
+
+        case .askUser(let event):
+            // Only persist answered ask-user events — pending ones are transient
             return event.status != .pending
 
         case .userMessage:
@@ -386,6 +390,29 @@ public final class Session {
         }
         event.decidedAt = Date()
         items[index].content = .approval(event)
+    }
+
+    // MARK: - Ask User
+
+    @MainActor
+    public func beginAskUser(id: String, question: String, options: [AskUserEvent.Option]) {
+        let event = AskUserEvent(id: id, question: question, options: options)
+        let item = TimelineItem(content: .askUser(event))
+        appendItem(item)
+    }
+
+    @MainActor
+    public func resolveAskUser(id: String, selectedIndex: Int, customText: String? = nil) {
+        guard let index = items.lastIndex(where: {
+            if case .askUser(let event) = $0.content { return event.id == id }
+            return false
+        }), case .askUser(var event) = items[index].content else { return }
+
+        event.selectedIndex = selectedIndex
+        event.customText = customText
+        event.status = .answered
+        event.answeredAt = Date()
+        items[index].content = .askUser(event)
     }
 
     // MARK: - Tool Payload Population

@@ -7,6 +7,7 @@ struct TimelineView: View {
     var selectedToolID: String?
     var onSelectTool: ((ToolUseEvent) -> Void)?
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
+    var onAskUserResponse: ((String, Int, String?) -> Void)?
 
     var body: some View {
         let items = session.visibleTimelineItems
@@ -26,6 +27,7 @@ struct TimelineView: View {
                         selectedToolID: selectedToolID,
                         onSelectTool: onSelectTool,
                         onApprovalDecision: onApprovalDecision,
+                        onAskUserResponse: onAskUserResponse,
                         showsTail: showsTail
                     )
                     .padding(.bottom, bottomPadding)
@@ -63,7 +65,7 @@ private extension TimelineContent {
         switch self {
         case .userMessage: "user"
         case .assistantMessage: "assistant"
-        case .system, .toolUse, .approval: nil
+        case .system, .toolUse, .approval, .askUser: nil
         }
     }
 }
@@ -78,6 +80,7 @@ private struct TimelineItemView: View {
     let selectedToolID: String?
     let onSelectTool: ((ToolUseEvent) -> Void)?
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
+    var onAskUserResponse: ((String, Int, String?) -> Void)?
     var showsTail: Bool = true
 
     var body: some View {
@@ -105,6 +108,8 @@ private struct TimelineItemView: View {
             }
         case .approval(let event):
             ApprovalCard(event: event, onDecision: onApprovalDecision)
+        case .askUser(let event):
+            AskUserCard(event: event, onResponse: onAskUserResponse)
         }
     }
 }

@@ -23,6 +23,7 @@ struct ConversationWindow: View {
     @State private var unreadCount = 0
     @State private var approvalServer: ApprovalServer?
     @State private var approvalObserverTask: Task<Void, Never>?
+    @State private var askUserObserverTask: Task<Void, Never>?
     @State private var distillationTask: Task<Void, Never>?
 
     private let engine: CLIEngine = CLIEngine()
@@ -38,6 +39,8 @@ struct ConversationWindow: View {
                     }
                 }, onApprovalDecision: { id, decision in
                     handleApprovalDecision(id: id, decision: decision)
+                }, onAskUserResponse: { id, selectedIndex, customText in
+                    handleAskUserResponse(id: id, selectedIndex: selectedIndex, customText: customText)
                 })
                 .overlay(alignment: .top) {
                     Rectangle()
@@ -153,6 +156,22 @@ struct ConversationWindow: View {
                 }
             }
 
+            // Observe incoming ask-user requests
+            askUserObserverTask = Task {
+                for await request in await server.askUserRequests {
+                    let options = request.options.map {
+                        AskUserEvent.Option(label: $0.label, description: $0.description)
+                    }
+                    withAnimation(Motion.appear) {
+                        session.beginAskUser(
+                            id: request.id,
+                            question: request.question,
+                            options: options
+                        )
+                    }
+                }
+            }
+
             // WORKAROUND continued: NavigationStack animates safeAreaInset content
             // on first layout. Wait for that to settle, then reveal ComposeField.
             // The scoped .animation(_:value:) on ComposeField handles the fade —
@@ -202,6 +221,8 @@ struct ConversationWindow: View {
             // Clean up approval server
             approvalObserverTask?.cancel()
             approvalObserverTask = nil
+            askUserObserverTask?.cancel()
+            askUserObserverTask = nil
             if let server = approvalServer {
                 Task { await server.denyAllPending(); await server.stop() }
             }
@@ -346,6 +367,25 @@ struct ConversationWindow: View {
         }
     }
 
+    private func handleAskUserResponse(id: String, selectedIndex: Int, customText: String? = nil) {
+        withAnimation(Motion.morph) {
+            session.resolveAskUser(id: id, selectedIndex: selectedIndex, customText: customText)
+        }
+        // Look up the label from the resolved event
+        let selectedLabel: String
+        if let item = session.items.last(where: {
+            if case .askUser(let e) = $0.content { return e.id == id }
+            return false
+        }), case .askUser(let event) = item.content {
+            selectedLabel = event.selectedLabel ?? "Unknown"
+        } else {
+            selectedLabel = "Unknown"
+        }
+        if let server = approvalServer {
+            Task { await server.respondAskUser(requestId: id, selectedIndex: selectedIndex, selectedLabel: selectedLabel) }
+        }
+    }
+
     /// Minimum meaningful items before distillation is worth running.
     private static let minimumItemsForDistillation = 4
 
@@ -360,7 +400,7 @@ struct ConversationWindow: View {
             case .userMessage, .assistantMessage, .toolUse:
                 meaningfulCount += 1
                 if meaningfulCount >= Self.minimumItemsForDistillation { break }
-            case .system, .approval:
+            case .system, .approval, .askUser:
                 continue
             }
         }

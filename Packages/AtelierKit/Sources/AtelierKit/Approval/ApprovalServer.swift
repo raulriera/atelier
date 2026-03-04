@@ -15,10 +15,15 @@ public actor ApprovalServer {
     private var serverFD: Int32 = -1
     private var acceptSource: DispatchSourceRead?
     private var continuations: [String: CheckedContinuation<ApprovalDecision, Never>] = [:]
+    private var askUserContinuations: [String: CheckedContinuation<AskUserIPCResponse, Never>] = [:]
     private var requestContinuation: AsyncStream<ApprovalRequest>.Continuation?
+    private var askUserRequestContinuation: AsyncStream<AskUserIPCRequest>.Continuation?
 
     /// Publishes incoming approval requests as they arrive from the MCP binary.
     public let requests: AsyncStream<ApprovalRequest>
+
+    /// Publishes incoming ask-user requests as they arrive from the MCP binary.
+    public let askUserRequests: AsyncStream<AskUserIPCRequest>
 
     public init() {
         let path = "/tmp/atelier-approval-\(UUID().uuidString).sock"
@@ -27,6 +32,10 @@ public actor ApprovalServer {
         var continuation: AsyncStream<ApprovalRequest>.Continuation!
         self.requests = AsyncStream { continuation = $0 }
         self.requestContinuation = continuation
+
+        var askContinuation: AsyncStream<AskUserIPCRequest>.Continuation!
+        self.askUserRequests = AsyncStream { askContinuation = $0 }
+        self.askUserRequestContinuation = askContinuation
     }
 
     /// Creates the Unix socket, binds, and begins accepting connections.
@@ -106,6 +115,8 @@ public actor ApprovalServer {
 
         requestContinuation?.finish()
         requestContinuation = nil
+        askUserRequestContinuation?.finish()
+        askUserRequestContinuation = nil
 
         Self.logger.info("Stopped")
     }
@@ -116,12 +127,24 @@ public actor ApprovalServer {
         continuation.resume(returning: decision)
     }
 
-    /// Denies all pending approvals — used during app shutdown.
+    /// Resumes the continuation for the given ask-user request with the user's selection.
+    public func respondAskUser(requestId: String, selectedIndex: Int, selectedLabel: String) {
+        guard let continuation = askUserContinuations.removeValue(forKey: requestId) else { return }
+        continuation.resume(returning: AskUserIPCResponse(selectedIndex: selectedIndex, selectedLabel: selectedLabel))
+    }
+
+    /// Denies all pending approvals and dismisses pending ask-user requests — used during app shutdown.
     public func denyAllPending() {
         let pending = continuations
         continuations.removeAll()
         for (_, continuation) in pending {
             continuation.resume(returning: .deny(reason: "App closed"))
+        }
+
+        let pendingAskUser = askUserContinuations
+        askUserContinuations.removeAll()
+        for (_, continuation) in pendingAskUser {
+            continuation.resume(returning: AskUserIPCResponse(selectedIndex: -1, selectedLabel: "Dismissed"))
         }
     }
 
@@ -138,9 +161,26 @@ public actor ApprovalServer {
         }
 
         // Read one JSON line
-        guard let requestData = readLine(from: fd),
-              let request = try? JSONDecoder().decode(ApprovalRequest.self, from: requestData) else {
-            Self.logger.warning("Failed to read approval request from connection")
+        guard let requestData = readLine(from: fd) else {
+            Self.logger.warning("Failed to read request from connection")
+            return
+        }
+
+        let decoder = JSONDecoder()
+
+        // Peek at requestType to determine which flow to use
+        let envelope = try? decoder.decode(IPCRequestEnvelope.self, from: requestData)
+
+        if envelope?.requestType == "ask_user" {
+            await handleAskUserConnection(fd: fd, data: requestData, decoder: decoder)
+        } else {
+            await handleApprovalConnection(fd: fd, data: requestData, decoder: decoder)
+        }
+    }
+
+    private func handleApprovalConnection(fd: Int32, data: Data, decoder: JSONDecoder) async {
+        guard let request = try? decoder.decode(ApprovalRequest.self, from: data) else {
+            Self.logger.warning("Failed to decode approval request from connection")
             return
         }
 
@@ -163,6 +203,29 @@ public actor ApprovalServer {
             response = ApprovalResponse(behavior: "deny", message: reason)
         }
 
+        sendResponse(fd: fd, response)
+    }
+
+    private func handleAskUserConnection(fd: Int32, data: Data, decoder: JSONDecoder) async {
+        guard let request = try? decoder.decode(AskUserIPCRequest.self, from: data) else {
+            Self.logger.warning("Failed to decode ask-user request from connection")
+            return
+        }
+
+        Self.logger.debug("Received ask-user request: \(request.id, privacy: .public)")
+
+        // Publish request to the UI
+        askUserRequestContinuation?.yield(request)
+
+        // Wait for user selection
+        let response = await withCheckedContinuation { (continuation: CheckedContinuation<AskUserIPCResponse, Never>) in
+            askUserContinuations[request.id] = continuation
+        }
+
+        sendResponse(fd: fd, response)
+    }
+
+    private func sendResponse<T: Encodable>(fd: Int32, _ response: T) {
         if let responseData = try? JSONEncoder().encode(response) {
             var data = responseData
             data.append(contentsOf: "\n".utf8)

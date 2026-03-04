@@ -101,6 +101,25 @@ struct ApprovalIPCResponse: Codable {
     let message: String?
 }
 
+// MARK: - Ask User IPC types
+
+struct AskUserIPCOption: Codable {
+    let label: String
+    let description: String?
+}
+
+struct AskUserIPCRequest: Codable {
+    let requestType: String  // "ask_user"
+    let id: String
+    let question: String
+    let options: [AskUserIPCOption]
+}
+
+struct AskUserIPCResponse: Codable {
+    let selectedIndex: Int
+    let selectedLabel: String
+}
+
 func connectToSocket(path: String) -> Int32? {
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else { return nil }
@@ -157,6 +176,32 @@ func sendAndReceive(socketPath: String, request: ApprovalIPCRequest) -> Approval
 
     guard !responseData.isEmpty else { return nil }
     return try? JSONDecoder().decode(ApprovalIPCResponse.self, from: responseData)
+}
+
+func sendAndReceiveAskUser(socketPath: String, request: AskUserIPCRequest) -> AskUserIPCResponse? {
+    guard let fd = connectToSocket(path: socketPath) else { return nil }
+    defer { close(fd) }
+
+    guard var data = try? JSONEncoder().encode(request) else { return nil }
+    data.append(contentsOf: "\n".utf8)
+
+    let sent = data.withUnsafeBytes { buffer in
+        send(fd, buffer.baseAddress!, buffer.count, 0)
+    }
+    guard sent == data.count else { return nil }
+
+    // Read response line
+    var responseData = Data()
+    var byte: UInt8 = 0
+    while true {
+        let n = recv(fd, &byte, 1, 0)
+        guard n > 0 else { break }
+        if byte == UInt8(ascii: "\n") { break }
+        responseData.append(byte)
+    }
+
+    guard !responseData.isEmpty else { return nil }
+    return try? JSONDecoder().decode(AskUserIPCResponse.self, from: responseData)
 }
 
 // MARK: - MCP request handling
@@ -216,6 +261,38 @@ func handleToolsList(id: AnyCodableValue?) {
                     ]),
                     "required": .array([.string("tool_name"), .string("input")])
                 ])
+            ]),
+            .dict([
+                "name": .string("ask_user"),
+                "description": .string("Ask the user a question with multiple options"),
+                "inputSchema": .dict([
+                    "type": .string("object"),
+                    "properties": .dict([
+                        "question": .dict([
+                            "type": .string("string"),
+                            "description": .string("The question to ask the user")
+                        ]),
+                        "options": .dict([
+                            "type": .string("array"),
+                            "description": .string("The available choices"),
+                            "items": .dict([
+                                "type": .string("object"),
+                                "properties": .dict([
+                                    "label": .dict([
+                                        "type": .string("string"),
+                                        "description": .string("Display text for this option")
+                                    ]),
+                                    "description": .dict([
+                                        "type": .string("string"),
+                                        "description": .string("Explanation of this option")
+                                    ])
+                                ]),
+                                "required": .array([.string("label")])
+                            ])
+                        ])
+                    ]),
+                    "required": .array([.string("question"), .string("options")])
+                ])
             ])
         ])
     ]))
@@ -231,9 +308,24 @@ func jsonString(from value: AnyCodableValue) -> String {
 
 func handleToolsCall(id: AnyCodableValue?, params: AnyCodableValue?, socketPath: String) {
     guard let dict = params?.dictValue,
-          let args = dict["arguments"]?.dictValue,
-          let toolName = args["tool_name"]?.stringValue else {
+          let toolNameValue = dict["name"]?.stringValue ?? dict["arguments"]?.dictValue?["tool_name"]?.stringValue else {
         respondError(id: id, code: -32602, message: "Invalid parameters")
+        return
+    }
+
+    let args = dict["arguments"]?.dictValue ?? [:]
+
+    switch toolNameValue {
+    case "ask_user":
+        handleAskUserCall(id: id, args: args, socketPath: socketPath)
+    default:
+        handleApproveCall(id: id, args: args, socketPath: socketPath)
+    }
+}
+
+func handleApproveCall(id: AnyCodableValue?, args: [String: AnyCodableValue], socketPath: String) {
+    guard let toolName = args["tool_name"]?.stringValue else {
+        respondError(id: id, code: -32602, message: "Missing tool_name")
         return
     }
 
@@ -277,6 +369,59 @@ func handleToolsCall(id: AnyCodableValue?, params: AnyCodableValue?, socketPath:
     } else {
         resultText = "{\"behavior\":\"deny\",\"message\":\"Failed to encode response\"}"
     }
+
+    respond(id: id, result: .dict([
+        "content": .array([
+            .dict([
+                "type": .string("text"),
+                "text": .string(resultText)
+            ])
+        ])
+    ]))
+}
+
+func handleAskUserCall(id: AnyCodableValue?, args: [String: AnyCodableValue], socketPath: String) {
+    guard let question = args["question"]?.stringValue else {
+        respondError(id: id, code: -32602, message: "Missing question")
+        return
+    }
+
+    // Parse options array
+    var options: [AskUserIPCOption] = []
+    if case .array(let optionValues) = args["options"] {
+        for optValue in optionValues {
+            if let optDict = optValue.dictValue,
+               let label = optDict["label"]?.stringValue {
+                let desc = optDict["description"]?.stringValue
+                options.append(AskUserIPCOption(label: label, description: desc))
+            }
+        }
+    }
+
+    guard !options.isEmpty else {
+        respondError(id: id, code: -32602, message: "Options array is empty")
+        return
+    }
+
+    let requestId = UUID().uuidString
+    let ipcRequest = AskUserIPCRequest(
+        requestType: "ask_user",
+        id: requestId,
+        question: question,
+        options: options
+    )
+
+    FileHandle.standardError.write(Data("ask_user: asking \"\(question)\" with \(options.count) options\n".utf8))
+
+    guard let ipcResponse = sendAndReceiveAskUser(socketPath: socketPath, request: ipcRequest) else {
+        FileHandle.standardError.write(Data("ask_user: socket communication failed\n".utf8))
+        respondError(id: id, code: -32603, message: "Failed to communicate with Atelier app")
+        return
+    }
+
+    FileHandle.standardError.write(Data("ask_user: user selected \"\(ipcResponse.selectedLabel)\"\n".utf8))
+
+    let resultText = ipcResponse.selectedLabel
 
     respond(id: id, result: .dict([
         "content": .array([

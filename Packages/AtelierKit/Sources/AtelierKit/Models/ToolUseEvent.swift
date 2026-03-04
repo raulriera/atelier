@@ -228,6 +228,18 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         return parsedInput?["new_string"] as? String
     }
 
+    // MARK: - Ask-user operations
+
+    private static let askUserToolNames: Set<String> = [
+        "mcp__atelier__ask_user",
+        "AskUserQuestion",
+    ]
+
+    /// Whether this tool is an ask-user operation rendered by AskUserCard.
+    public var isAskUserOperation: Bool {
+        Self.askUserToolNames.contains(name)
+    }
+
     // MARK: - Task operations
 
     private static let taskToolNames: Set<String> = [

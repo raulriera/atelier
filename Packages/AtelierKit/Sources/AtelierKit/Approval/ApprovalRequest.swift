@@ -18,3 +18,29 @@ struct ApprovalResponse: Sendable, Codable {
     let behavior: String
     let message: String?
 }
+
+// MARK: - Ask User IPC
+
+/// IPC message from the MCP server binary requesting a user choice.
+public struct AskUserIPCRequest: Sendable, Codable {
+    public struct Option: Sendable, Codable {
+        public let label: String
+        public let description: String?
+    }
+
+    public let requestType: String  // "ask_user"
+    public let id: String
+    public let question: String
+    public let options: [Option]
+}
+
+/// IPC response returning the user's selection.
+struct AskUserIPCResponse: Sendable, Codable {
+    let selectedIndex: Int
+    let selectedLabel: String
+}
+
+/// Wrapper to peek at the `requestType` field before full decoding.
+struct IPCRequestEnvelope: Codable {
+    let requestType: String?
+}
