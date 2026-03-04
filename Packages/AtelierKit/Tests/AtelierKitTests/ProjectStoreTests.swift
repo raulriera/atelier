@@ -69,7 +69,7 @@ struct ProjectStoreTests {
         let newer = try store.createProject(rootURL: nil)
 
         let all = store.allProjects()
-        #expect(all.count == 2)
+        try #require(all.count == 2)
         #expect(all[0].id == newer.id)
         #expect(all[1].id == older.id)
     }
@@ -151,54 +151,9 @@ struct ProjectStoreTests {
         #expect(found == nil)
     }
 
-    @Test @MainActor func openOrCreateReturnsExistingProject() async throws {
-        let base = try makeTempDirectory()
-        defer { cleanup(base) }
+    // MARK: - nextUnclaimedProject (window restoration fallback)
 
-        let store = makeStore(baseDirectory: base)
-        let original = try store.createProject(rootURL: nil)
-
-        // Simulate what happens on every app launch when state restoration fails:
-        // openOrCreateProject should return the existing project, not create a new one
-        let returned = try store.openOrCreateProject()
-
-        #expect(returned.id == original.id)
-        #expect(store.allProjects().count == 1)
-    }
-
-    @Test @MainActor func openOrCreateReturnsMostRecentProject() async throws {
-        let base = try makeTempDirectory()
-        defer { cleanup(base) }
-
-        let store = makeStore(baseDirectory: base)
-        _ = try store.createProject(rootURL: nil)
-        try await Task.sleep(for: .milliseconds(10))
-        let newer = try store.createProject(rootURL: nil)
-
-        let returned = try store.openOrCreateProject()
-
-        #expect(returned.id == newer.id)
-        // Should not have created a third project
-        #expect(store.allProjects().count == 2)
-    }
-
-    @Test @MainActor func openOrCreateCreatesScratchpadWhenEmpty() throws {
-        let base = try makeTempDirectory()
-        defer { cleanup(base) }
-
-        let store = makeStore(baseDirectory: base)
-
-        #expect(store.allProjects().isEmpty)
-
-        let created = try store.openOrCreateProject()
-
-        #expect(created.displayName == "Untitled")
-        #expect(store.allProjects().count == 1)
-    }
-
-    // MARK: - nextRestoredProject (window restoration)
-
-    @Test @MainActor func nextRestoredProjectReturnsDifferentProjectEachCall() async throws {
+    @Test @MainActor func nextUnclaimedProjectReturnsDifferentProjectEachCall() async throws {
         let base = try makeTempDirectory()
         defer { cleanup(base) }
 
@@ -207,19 +162,53 @@ struct ProjectStoreTests {
         try await Task.sleep(for: .milliseconds(10))
         let newer = try store.createProject(rootURL: nil)
 
-        // Simulates two restored windows calling defaultValue: back-to-back
-        let first = try store.nextRestoredProject()
-        let second = try store.nextRestoredProject()
+        let first = try store.nextUnclaimedProject()
+        let second = try store.nextUnclaimedProject()
 
-        #expect(first.id == newer.id)
-        #expect(second.id == older.id)
         #expect(first.id != second.id)
-        // No extra projects created
+        // Both existing projects claimed, no new ones created
+        #expect(Set([first.id, second.id]) == Set([older.id, newer.id]))
         #expect(store.allProjects().count == 2)
     }
 
-    @Test("nextRestoredProject does not update lastOpenedAt")
-    @MainActor func nextRestoredProjectDoesNotTouch() async throws {
+    @Test @MainActor func nextUnclaimedProjectCreatesScratchpadWhenAllClaimed() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+        let only = try store.createProject(rootURL: nil)
+
+        let first = try store.nextUnclaimedProject()
+        #expect(first.id == only.id)
+
+        // All claimed — should create a new one
+        let second = try store.nextUnclaimedProject()
+        #expect(second.id != only.id)
+        #expect(store.allProjects().count == 2)
+    }
+
+    @Test @MainActor func nextUnclaimedProjectPrefersRealProjectsOverScratchpads() async throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+
+        // Create a scratchpad (nil root) — most recent
+        let projectRoot = base.appendingPathComponent("RealProject", isDirectory: true)
+        try FileManager.default.createDirectory(at: projectRoot, withIntermediateDirectories: true)
+
+        let realProject = try store.createProject(rootURL: projectRoot)
+        try await Task.sleep(for: .milliseconds(10))
+        // Scratchpad created AFTER real project — would be "more recent"
+        _ = try store.createProject(rootURL: nil)
+
+        // Should pick the real project first despite the scratchpad being newer
+        let first = try store.nextUnclaimedProject()
+        #expect(first.id == realProject.id)
+        #expect(first.rootURL == projectRoot)
+    }
+
+    @Test @MainActor func nextUnclaimedProjectDoesNotUpdateLastOpenedAt() async throws {
         let base = try makeTempDirectory()
         defer { cleanup(base) }
 
@@ -228,22 +217,52 @@ struct ProjectStoreTests {
         let originalDate = metadata.lastOpenedAt
 
         try await Task.sleep(for: .milliseconds(10))
-        let restored = try store.nextRestoredProject()
+        let restored = try store.nextUnclaimedProject()
 
         #expect(restored.id == metadata.id)
         let current = try #require(store.project(for: metadata.id))
         #expect(current.lastOpenedAt == originalDate)
     }
 
-    @Test @MainActor func nextRestoredProjectCreatesScratchpadWhenEmpty() throws {
+    @Test @MainActor func nextUnclaimedProjectCreatesWhenEmpty() throws {
         let base = try makeTempDirectory()
         defer { cleanup(base) }
 
         let store = makeStore(baseDirectory: base)
-        let result = try store.nextRestoredProject()
+        #expect(store.allProjects().isEmpty)
 
+        let result = try store.nextUnclaimedProject()
         #expect(result.displayName == "Untitled")
         #expect(store.allProjects().count == 1)
+    }
+
+    // MARK: - updateProjectRoot
+
+    @Test @MainActor func updateProjectRootUpdatesMetadataAndPersists() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+        let metadata = try store.createProject(rootURL: nil)
+
+        #expect(metadata.rootURL == nil)
+        #expect(metadata.displayName == "Untitled")
+
+        let projectRoot = base.appendingPathComponent("MyProject", isDirectory: true)
+        try FileManager.default.createDirectory(at: projectRoot, withIntermediateDirectories: true)
+
+        try store.updateProjectRoot(metadata.id, rootURL: projectRoot)
+
+        let updated = try #require(store.project(for: metadata.id))
+        #expect(updated.rootURL == projectRoot)
+        #expect(updated.displayName == "MyProject")
+
+        // Verify persisted
+        let store2 = makeStore(baseDirectory: base)
+        try store2.load()
+        let reloaded = try #require(store2.project(for: metadata.id))
+        #expect(reloaded.rootURL == projectRoot)
+        #expect(reloaded.displayName == "MyProject")
     }
 
     @Test @MainActor func registryRoundTripsThroughSaveAndLoad() throws {

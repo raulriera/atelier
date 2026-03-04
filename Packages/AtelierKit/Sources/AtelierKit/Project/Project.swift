@@ -30,6 +30,13 @@ public final class Project: Identifiable {
         self.capabilityStore = capabilityStore
     }
 
+    /// Updates the project root, triggering SwiftUI re-evaluation via @Observable.
+    public func updateRoot(url: URL) {
+        rootURL = url
+        displayName = url.lastPathComponent
+        detectedKind = ProjectDetector.detect(at: url)
+    }
+
     /// Produces a snapshot of the current state as serializable metadata.
     public func metadata(rootBookmarkData: Data? = nil) -> ProjectMetadata {
         ProjectMetadata(

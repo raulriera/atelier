@@ -23,9 +23,9 @@ public final class ProjectStore {
     private let baseDirectory: URL
     private let bookmarkCreator: BookmarkCreator
 
-    /// Tracks project IDs already assigned during window restoration.
-    /// Used by `nextRestoredProject()` to give each restored window a unique project.
-    private var restoredIDs: Set<UUID> = []
+    /// Tracks project IDs already claimed during window restoration this launch.
+    /// Ensures each restored window gets a unique existing project.
+    private var claimedIDs: Set<UUID> = []
 
     public init(baseDirectory: URL, bookmarkCreator: BookmarkCreator = SystemBookmarkCreator()) {
         self.baseDirectory = baseDirectory
@@ -81,33 +81,22 @@ public final class ProjectStore {
         registry.values.first { $0.rootURL?.standardizedFileURL == rootURL.standardizedFileURL }
     }
 
-    /// Returns the most recently opened project, or creates a scratchpad if none exist.
+    /// Returns the next unclaimed project for a restored window.
     ///
-    /// Use this on launch when state restoration provides no project ID.
-    /// Avoids creating duplicate scratchpads on every launch.
-    public func openOrCreateProject() throws -> ProjectMetadata {
-        if let mostRecent = allProjects().first {
-            try touch(mostRecent.id)
-            return mostRecent
-        }
-        return try createProject(rootURL: nil)
-    }
-
-    /// Returns the next project for a restored window, unique from previous calls.
+    /// Prefers projects with a root URL (real projects) over nil-root scratchpads,
+    /// then falls back to scratchpads, then creates a new one. Each call returns
+    /// a different project so multiple restored windows get unique projects.
     ///
-    /// Each call returns a different project (most recent first). When all
-    /// projects have been assigned, creates a scratchpad.
-    ///
-    /// Does NOT update `lastOpenedAt` — restoration should preserve the
-    /// existing ordering so repeated launches are stable.
-    public func nextRestoredProject() throws -> ProjectMetadata {
-        let projects = allProjects()
-        if let available = projects.first(where: { !restoredIDs.contains($0.id) }) {
-            restoredIDs.insert(available.id)
-            return available
+    /// Does not update `lastOpenedAt` — restoration preserves existing ordering.
+    public func nextUnclaimedProject() throws -> ProjectMetadata {
+        let unclaimed = allProjects().filter { !claimedIDs.contains($0.id) }
+        let pick = unclaimed.first(where: { $0.rootURL != nil }) ?? unclaimed.first
+        if let pick {
+            claimedIDs.insert(pick.id)
+            return pick
         }
         let created = try createProject(rootURL: nil)
-        restoredIDs.insert(created.id)
+        claimedIDs.insert(created.id)
         return created
     }
 
@@ -145,6 +134,16 @@ public final class ProjectStore {
     public func touch(_ id: UUID) throws {
         guard var metadata = registry[id] else { return }
         metadata.lastOpenedAt = Date()
+        registry[id] = metadata
+        try save()
+    }
+
+    /// Updates the root URL, display name, and detected kind for an existing project.
+    public func updateProjectRoot(_ id: UUID, rootURL: URL) throws {
+        guard var metadata = registry[id] else { return }
+        metadata.rootURL = rootURL
+        metadata.displayName = rootURL.lastPathComponent
+        metadata.detectedKind = ProjectDetector.detect(at: rootURL)
         registry[id] = metadata
         try save()
     }

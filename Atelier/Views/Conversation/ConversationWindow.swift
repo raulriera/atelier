@@ -12,7 +12,6 @@ struct ConversationWindow: View {
     @State private var selectedModel: ModelConfiguration = .default
     @State private var streamingTask: Task<Void, Never>?
     @State private var cliAvailable = true
-    @State private var showingFolderAccess = false
     @State private var showingCapabilities = false
     @State private var showingContextFiles = false
     @State private var activeContextFiles: [ContextFile] = []
@@ -116,24 +115,10 @@ struct ConversationWindow: View {
             }
             ToolbarItem(placement: .automatic) {
                 Button {
-                    showingFolderAccess.toggle()
-                } label: {
-                    Label("Folder Access", systemImage: "folder")
-                }
-                .badge(fileAccessStore.entries.count)
-                .help("Folder Access")
-                .popover(isPresented: $showingFolderAccess) {
-                    FolderAccessCard(fileAccessStore: fileAccessStore)
-                        .padding(Spacing.sm)
-                }
-            }
-            ToolbarItem(placement: .automatic) {
-                Button {
                     showingCapabilities.toggle()
                 } label: {
                     Label("Capabilities", systemImage: "puzzlepiece.extension")
                 }
-                .badge(capabilityStore.enabledIDs.count)
                 .help("Capabilities")
                 .popover(isPresented: $showingCapabilities) {
                     CapabilitiesCard(capabilityStore: capabilityStore)
@@ -146,7 +131,6 @@ struct ConversationWindow: View {
                 } label: {
                     Label("Context Files", systemImage: "doc.text")
                 }
-                .badge(activeContextFiles.count)
                 .help("Context Files")
                 .popover(isPresented: $showingContextFiles) {
                     ContextFilesCard(files: activeContextFiles)

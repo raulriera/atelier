@@ -21,12 +21,18 @@ struct ProjectWindow: View {
     var body: some View {
         Group {
             if let project {
-                ConversationWindow(
-                    fileAccessStore: project.fileAccessStore,
-                    capabilityStore: project.capabilityStore,
-                    sessionPersistence: project.sessionPersistence,
-                    workingDirectory: project.rootURL
-                )
+                if project.rootURL != nil {
+                    ConversationWindow(
+                        fileAccessStore: project.fileAccessStore,
+                        capabilityStore: project.capabilityStore,
+                        sessionPersistence: project.sessionPersistence,
+                        workingDirectory: project.rootURL
+                    )
+                } else {
+                    FolderSelectionView { url in
+                        selectFolder(url, for: project)
+                    }
+                }
             } else if let loadError {
                 ContentUnavailableView(
                     "Project Not Found",
@@ -36,8 +42,8 @@ struct ProjectWindow: View {
             }
         }
         .navigationTitle(project?.displayName ?? "")
-        .task {
-            guard let project else { return }
+        .task(id: project?.rootURL) {
+            guard let project, project.rootURL != nil else { return }
             await project.fileAccessStore.load()
             project.capabilityStore.load()
 
@@ -46,5 +52,16 @@ struct ProjectWindow: View {
                 await project.fileAccessStore.grant(url: rootURL)
             }
         }
+    }
+
+    private func selectFolder(_ url: URL, for project: Project) {
+        do {
+            try projectStore.updateProjectRoot(project.id, rootURL: url)
+            project.updateRoot(url: url)
+        } catch {
+            // Registry write failed — don't update in-memory state.
+            // The .task(id:) block won't fire, keeping everything consistent.
+        }
+        // File access grant happens in .task(id: project?.rootURL) when rootURL changes.
     }
 }

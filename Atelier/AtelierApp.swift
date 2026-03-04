@@ -26,7 +26,10 @@ struct AtelierApp: App {
         WindowGroup(for: UUID.self) { $projectID in
             ProjectWindow(projectID: projectID, projectStore: projectStore)
         } defaultValue: {
-            (try? projectStore.nextRestoredProject())?.id ?? UUID()
+            // macOS restores window count and geometry, but SwiftUI may not
+            // persist the UUID binding (e.g. after Xcode rebuilds). Fall back
+            // to existing projects so restored windows aren't empty.
+            (try? projectStore.nextUnclaimedProject())?.id ?? UUID()
         }
         .defaultSize(width: 600, height: 700)
         .commands {
