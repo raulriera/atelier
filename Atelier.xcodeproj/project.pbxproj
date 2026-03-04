@@ -156,6 +156,7 @@
 				4C0BEC942F52A19B00A608CC /* Sources */,
 				4C0BEC952F52A19B00A608CC /* Frameworks */,
 				4C0BEC962F52A19B00A608CC /* Resources */,
+				4C0BECF02F52B20000A608CC /* Compile Approval MCP Helper */,
 				4C0BECEA2F52B10000A608CC /* Embed XPC Services */,
 			);
 			buildRules = (
@@ -363,6 +364,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		4C0BECF02F52B20000A608CC /* Compile Approval MCP Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Helpers/atelier-approval-mcp.swift",
+			);
+			name = "Compile Approval MCP Helper";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Helpers/atelier-approval-mcp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-approval-mcp\" \"$SRCROOT/Helpers/atelier-approval-mcp.swift\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXTargetDependency section */
 		4C0BECA72F52A19B00A608CC /* PBXTargetDependency */ = {

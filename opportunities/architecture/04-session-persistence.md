@@ -85,10 +85,6 @@ What's been built:
 - Lossy decoding: corrupted individual timeline items are skipped rather than losing the entire session
 - Interrupted sessions are flagged and show a system message on restore
 
-### Known issues
-
-- **Loading indicator on app launch.** `ProjectWindow` shows a `ProgressView()` while the project is materializing (`projectStore.materialize` → `fileAccessStore.load()` → `fileAccessStore.grant(url:)`). The `ConversationWindow` and its session restore don't begin until all of that completes. Fix: set `project` immediately after `materialize` and let `fileAccessStore` load in the background, since the conversation doesn't depend on file access being ready.
-
 ---
 
 *Back to [Index](../../INDEX.md)*

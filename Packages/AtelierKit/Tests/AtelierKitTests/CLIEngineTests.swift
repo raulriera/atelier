@@ -76,6 +76,52 @@ struct CLIEngineTests {
         #expect(args[mIdx + 1] == "haiku")
     }
 
+    @Suite("Approval parameters")
+    struct ApprovalParameters {
+        @Test("MCP config path adds --mcp-config, --permission-prompt-tool, and --allowedTools flags")
+        func mcpConfigAddsFlags() throws {
+            let args = CLIEngine.buildArguments(
+                message: "hello", modelAlias: "opus", sessionId: nil,
+                mcpConfigPath: "/tmp/test-config.json"
+            )
+            let mcpIdx = try #require(
+                args.firstIndex(of: "--mcp-config"),
+                "--mcp-config flag missing"
+            )
+            #expect(args[mcpIdx + 1] == "/tmp/test-config.json")
+
+            #expect(args.contains("--permission-prompt-tool"))
+            let permIdx = try #require(args.firstIndex(of: "--permission-prompt-tool"))
+            #expect(args[permIdx + 1] == "mcp__atelier__approve")
+
+            #expect(args.contains("--allowedTools"))
+        }
+
+        @Test("Silent tools are pre-approved via --allowedTools")
+        func silentToolsPreApproved() {
+            let args = CLIEngine.buildArguments(
+                message: "hello", modelAlias: "opus", sessionId: nil,
+                mcpConfigPath: "/tmp/test-config.json"
+            )
+            for tool in CLIEngine.silentTools {
+                let indices = args.indices.filter { args[$0] == "--allowedTools" }
+                let toolFollows = indices.contains { args.indices.contains($0 + 1) && args[$0 + 1] == tool }
+                #expect(toolFollows, "Expected \(tool) to be listed after --allowedTools")
+            }
+        }
+
+        @Test("No MCP config omits all approval flags")
+        func noMcpConfigOmitsFlags() {
+            let args = CLIEngine.buildArguments(
+                message: "hello", modelAlias: "opus", sessionId: nil,
+                mcpConfigPath: nil
+            )
+            #expect(!args.contains("--mcp-config"))
+            #expect(!args.contains("--permission-prompt-tool"))
+            #expect(!args.contains("--allowedTools"))
+        }
+    }
+
     @Suite("Append system prompt")
     struct AppendSystemPrompt {
         @Test("Non-empty value adds --append-system-prompt flag")

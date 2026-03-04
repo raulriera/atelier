@@ -3,4 +3,5 @@ public enum TimelineContent: Sendable, Codable {
     case assistantMessage(AssistantMessage)
     case system(SystemEvent)
     case toolUse(ToolUseEvent)
+    case approval(ApprovalEvent)
 }

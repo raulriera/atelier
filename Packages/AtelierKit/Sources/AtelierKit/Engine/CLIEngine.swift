@@ -14,7 +14,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
         model: ModelConfiguration,
         sessionId: String? = nil,
         workingDirectory: URL? = nil,
-        appendSystemPrompt: String? = nil
+        appendSystemPrompt: String? = nil,
+        approvalSocketPath: String? = nil
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         let path = cliPath
         let alias = model.cliAlias
@@ -23,12 +24,24 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
         return AsyncThrowingStream { continuation in
             let task = Task.detached {
+                // Write temp MCP config if approval is enabled
+                var mcpConfigPath: String?
+                if let socketPath = approvalSocketPath {
+                    mcpConfigPath = Self.writeMCPConfig(socketPath: socketPath)
+                }
+                defer {
+                    if let configPath = mcpConfigPath {
+                        try? FileManager.default.removeItem(atPath: configPath)
+                    }
+                }
+
                 do {
                     let process = Process()
                     process.executableURL = URL(fileURLWithPath: path)
                     process.arguments = Self.buildArguments(
                         message: message, modelAlias: alias, sessionId: sessionId,
-                        appendSystemPrompt: appendSystemPrompt
+                        appendSystemPrompt: appendSystemPrompt,
+                        mcpConfigPath: mcpConfigPath
                     )
 
                     // Use the project's root directory so the CLI can see project files,
@@ -193,11 +206,15 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
     // MARK: - Argument Building
 
+    /// Tools that are pre-approved and never require user confirmation.
+    static let silentTools = ["Read", "Glob", "Grep", "WebSearch", "WebFetch", "Agent"]
+
     static func buildArguments(
         message: String,
         modelAlias: String,
         sessionId: String?,
-        appendSystemPrompt: String? = nil
+        appendSystemPrompt: String? = nil,
+        mcpConfigPath: String? = nil
     ) -> [String] {
         var args = [
             "-p",
@@ -215,11 +232,55 @@ public final class CLIEngine: ConversationEngine, Sendable {
             args += ["--append-system-prompt", prompt]
         }
 
+        if let configPath = mcpConfigPath {
+            args += ["--mcp-config", configPath]
+            args += ["--permission-prompt-tool", "mcp__atelier__approve"]
+            for tool in silentTools {
+                args += ["--allowedTools", tool]
+            }
+        }
+
         // End-of-options marker so the positional prompt is never
         // misinterpreted as a flag (e.g. "-7" or "--help").
         args += ["--", message]
 
         return args
+    }
+
+    /// Locates the bundled MCP approval helper binary.
+    static var approvalHelperPath: String? {
+        let helperURL = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/atelier-approval-mcp")
+        return FileManager.default.isExecutableFile(atPath: helperURL.path)
+            ? helperURL.path
+            : nil
+    }
+
+    /// Writes a temporary MCP config JSON file that points the CLI to our approval helper.
+    private static func writeMCPConfig(socketPath: String) -> String? {
+        guard let helperPath = approvalHelperPath else {
+            logger.warning("Approval helper binary not found in app bundle")
+            return nil
+        }
+
+        let configPath = "/tmp/atelier-mcp-\(UUID().uuidString).json"
+        let config: [String: Any] = [
+            "mcpServers": [
+                "atelier": [
+                    "command": helperPath,
+                    "env": [
+                        "ATELIER_APPROVAL_SOCKET": socketPath
+                    ]
+                ]
+            ]
+        ]
+
+        guard let data = try? JSONSerialization.data(withJSONObject: config),
+              FileManager.default.createFile(atPath: configPath, contents: data) else {
+            logger.warning("Failed to write MCP config to \(configPath, privacy: .public)")
+            return nil
+        }
+        return configPath
     }
 
     // MARK: - CLI Discovery

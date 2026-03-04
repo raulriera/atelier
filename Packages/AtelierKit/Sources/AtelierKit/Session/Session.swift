@@ -91,6 +91,10 @@ public final class Session {
         case .toolUse:
             return true
 
+        case .approval(let event):
+            // Only persist resolved approvals — pending ones are transient
+            return event.status != .pending
+
         case .userMessage:
             return true
         }
@@ -261,6 +265,32 @@ public final class Session {
         event.status = .completed
         items[index].content = .toolUse(event)
         activeToolIndices.removeValue(forKey: id)
+    }
+
+    // MARK: - Tool Approval
+
+    @MainActor
+    public func beginApproval(id: String, toolName: String, inputJSON: String) {
+        let event = ApprovalEvent(id: id, toolName: toolName, inputJSON: inputJSON)
+        let item = TimelineItem(content: .approval(event))
+        items.append(item)
+    }
+
+    @MainActor
+    public func resolveApproval(id: String, decision: ApprovalDecision) {
+        guard let index = items.lastIndex(where: {
+            if case .approval(let event) = $0.content { return event.id == id }
+            return false
+        }), case .approval(var event) = items[index].content else { return }
+
+        switch decision {
+        case .allow:
+            event.status = .approved
+        case .deny:
+            event.status = .denied
+        }
+        event.decidedAt = Date()
+        items[index].content = .approval(event)
     }
 
     // MARK: - Tool Payload Population

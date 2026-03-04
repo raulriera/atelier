@@ -26,6 +26,11 @@ extension TimelineContent {
         if case .toolUse(let evt) = self { return evt }
         return nil
     }
+
+    var approval: ApprovalEvent? {
+        if case .approval(let evt) = self { return evt }
+        return nil
+    }
 }
 
 // MARK: - Mock bookmark creator

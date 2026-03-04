@@ -14,6 +14,9 @@ struct StreamingIndicator: View {
                         .animation(Motion.streaming, value: phase)
                 }
             }
+            // Match the height of a single line of conversationBody text
+            // so the speech bubble doesn't collapse to just the dots.
+            .frame(minHeight: 20)
         }
     }
 }

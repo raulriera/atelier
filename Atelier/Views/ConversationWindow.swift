@@ -18,8 +18,10 @@ struct ConversationWindow: View {
     @State private var selectedToolEvent: ToolUseEvent?
     @State private var showComposeField = false
     @State private var toolPayloads: [String: ToolPayload] = [:]
-    @State private var isWindowActive = true
+    @Environment(\.controlActiveState) private var controlActiveState
     @State private var unreadCount = 0
+    @State private var approvalServer: ApprovalServer?
+    @State private var approvalObserverTask: Task<Void, Never>?
 
     private let engine: CLIEngine = CLIEngine()
 
@@ -32,6 +34,8 @@ struct ConversationWindow: View {
                         selectedToolEvent = event
                         showInspector = true
                     }
+                }, onApprovalDecision: { id, decision in
+                    handleApprovalDecision(id: id, decision: decision)
                 })
                 .overlay(alignment: .top) {
                     Rectangle()
@@ -159,6 +163,26 @@ struct ConversationWindow: View {
                     toolPayloads = (try? await sessionPersistence.loadToolPayloads(sessionId: id)) ?? [:]
                 }
             }
+
+            // Start approval server (guard against SwiftUI re-invoking .task)
+            guard approvalServer == nil else { return }
+            let server = ApprovalServer()
+            approvalServer = server
+            try? await server.start()
+
+            // Observe incoming approval requests
+            approvalObserverTask = Task {
+                for await request in await server.requests {
+                    withAnimation(Motion.appear) {
+                        session.beginApproval(
+                            id: request.id,
+                            toolName: request.toolName,
+                            inputJSON: request.inputJSON
+                        )
+                    }
+                }
+            }
+
             // WORKAROUND continued: NavigationStack animates safeAreaInset content
             // on first layout. Wait for that to settle, then reveal ComposeField.
             // The scoped .animation(_:value:) on ComposeField handles the fade —
@@ -202,14 +226,18 @@ struct ConversationWindow: View {
             if let captured = session.snapshot(wasInterrupted: wasStreaming) {
                 try? sessionPersistence.saveImmediately(captured)
             }
+            // Clean up approval server
+            approvalObserverTask?.cancel()
+            approvalObserverTask = nil
+            if let server = approvalServer {
+                Task { await server.denyAllPending(); await server.stop() }
+            }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
-            isWindowActive = true
-            unreadCount = 0
-            NSApp.dockTile.badgeLabel = nil
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
-            isWindowActive = false
+        .onChange(of: controlActiveState) { _, newState in
+            if newState == .key {
+                unreadCount = 0
+                NSApp.dockTile.badgeLabel = nil
+            }
         }
     }
 
@@ -245,7 +273,8 @@ struct ConversationWindow: View {
 
     private func startStreaming(message: String, appendSystemPrompt: String? = nil) {
         streamingTask = Task {
-            let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt)
+            let socketPath = await approvalServer?.socketPath
+            let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath)
             do {
                 for try await event in stream {
                     switch event {
@@ -268,7 +297,7 @@ struct ConversationWindow: View {
                     case .messageComplete(let usage):
                         session.completeAssistantMessage(usage: usage)
 
-                        if !isWindowActive {
+                        if controlActiveState != .key {
                             unreadCount += 1
                             NSApp.requestUserAttention(.informationalRequest)
                             NSApp.dockTile.badgeLabel = "\(unreadCount)"
@@ -314,6 +343,15 @@ struct ConversationWindow: View {
         session.completeAssistantMessage(usage: TokenUsage())
         Task {
             try? await session.save(to: sessionPersistence)
+        }
+    }
+
+    private func handleApprovalDecision(id: String, decision: ApprovalDecision) {
+        withAnimation(Motion.morph) {
+            session.resolveApproval(id: id, decision: decision)
+        }
+        if let server = approvalServer {
+            Task { await server.respond(requestId: id, decision: decision) }
         }
     }
 

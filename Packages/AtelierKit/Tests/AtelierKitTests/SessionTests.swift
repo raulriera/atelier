@@ -554,6 +554,119 @@ struct SessionTests {
         }
     }
 
+    @Suite("Tool approval")
+    struct ToolApproval {
+        @Test("Begin approval adds timeline item")
+        @MainActor func beginApprovalAddsTimelineItem() throws {
+            let session = Session()
+            session.beginApproval(id: "req-1", toolName: "Bash", inputJSON: "{\"command\":\"rm -rf /\"}")
+
+            #expect(session.items.count == 1)
+            let event = try #require(session.items[0].content.approval)
+            #expect(event.id == "req-1")
+            #expect(event.toolName == "Bash")
+            #expect(event.status == .pending)
+            #expect(event.decidedAt == nil)
+        }
+
+        @Test("Resolve approval with allow sets approved status")
+        @MainActor func resolveApprovalAllow() throws {
+            let session = Session()
+            session.beginApproval(id: "req-1", toolName: "Write", inputJSON: "{}")
+
+            session.resolveApproval(id: "req-1", decision: .allow)
+
+            let event = try #require(session.items[0].content.approval)
+            #expect(event.status == .approved)
+            #expect(event.decidedAt != nil)
+        }
+
+        @Test("Resolve approval with deny sets denied status")
+        @MainActor func resolveApprovalDeny() throws {
+            let session = Session()
+            session.beginApproval(id: "req-1", toolName: "Bash", inputJSON: "{}")
+
+            session.resolveApproval(id: "req-1", decision: .deny(reason: "No thanks"))
+
+            let event = try #require(session.items[0].content.approval)
+            #expect(event.status == .denied)
+            #expect(event.decidedAt != nil)
+        }
+
+        @Test("Resolve ignores unknown ID")
+        @MainActor func resolveIgnoresUnknownId() {
+            let session = Session()
+            session.beginApproval(id: "req-1", toolName: "Bash", inputJSON: "{}")
+
+            session.resolveApproval(id: "req-unknown", decision: .allow)
+
+            // Original remains pending
+            if case .approval(let event) = session.items[0].content {
+                #expect(event.status == .pending)
+            }
+        }
+
+        @Test("Pending approvals excluded from persistence snapshot")
+        @MainActor func pendingApprovalExcludedFromSnapshot() async throws {
+            let session = Session()
+            session.sessionId = "test"
+            session.beginApproval(id: "req-1", toolName: "Bash", inputJSON: "{}")
+
+            let persistence = InMemorySessionPersistence()
+            try await session.save(to: persistence)
+
+            let snapshot = try #require(await persistence.load(id: "test"))
+            #expect(snapshot.items.isEmpty)
+        }
+
+        @Test("Resolved approvals included in persistence snapshot")
+        @MainActor func resolvedApprovalIncludedInSnapshot() async throws {
+            let session = Session()
+            session.sessionId = "test"
+            session.beginApproval(id: "req-1", toolName: "Bash", inputJSON: "{}")
+            session.resolveApproval(id: "req-1", decision: .allow)
+
+            let persistence = InMemorySessionPersistence()
+            try await session.save(to: persistence)
+
+            let snapshot = try #require(await persistence.load(id: "test"))
+            #expect(snapshot.items.count == 1)
+            let event = try #require(snapshot.items[0].content.approval)
+            #expect(event.status == .approved)
+        }
+
+        @Test("Restore filters out pending approvals and preserves resolved ones")
+        @MainActor func restoreFiltersPendingApprovals() throws {
+            let items = [
+                TimelineItem(content: .approval(ApprovalEvent(id: "req-1", toolName: "Bash", status: .pending))),
+                TimelineItem(content: .approval(ApprovalEvent(id: "req-2", toolName: "Write", status: .approved, decidedAt: Date()))),
+            ]
+            let snapshot = SessionSnapshot(sessionId: "test", items: items)
+            let session = Session.restore(from: snapshot)
+
+            // Pending approval is filtered out by isPersistable
+            #expect(session.items.count == 1)
+
+            // Resolved approval survives
+            let event = try #require(session.items[0].content.approval)
+            #expect(event.status == .approved)
+        }
+
+        @Test("Multiple approvals tracked independently")
+        @MainActor func multipleApprovalsTrackedIndependently() throws {
+            let session = Session()
+            session.beginApproval(id: "req-1", toolName: "Write", inputJSON: "{}")
+            session.beginApproval(id: "req-2", toolName: "Bash", inputJSON: "{}")
+
+            session.resolveApproval(id: "req-2", decision: .allow)
+
+            let event1 = try #require(session.items[0].content.approval)
+            #expect(event1.status == .pending)
+            let event2 = try #require(session.items[1].content.approval)
+            #expect(event2.status == .approved)
+        }
+    }
+
     @Suite("Queue orchestration")
     struct QueueOrchestration {
         @Test("Normal conversation: send, stream, complete")
