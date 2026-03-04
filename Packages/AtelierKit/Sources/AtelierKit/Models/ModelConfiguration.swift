@@ -29,5 +29,5 @@ public struct ModelConfiguration: Sendable, Codable, Identifiable {
     )
 
     public static let allModels: [ModelConfiguration] = [.opus, .sonnet, .haiku]
-    public static let `default`: ModelConfiguration = .opus
+    public static let `default`: ModelConfiguration = .haiku
 }

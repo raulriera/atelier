@@ -7,8 +7,15 @@ struct FileCard: View {
     var isSelected: Bool = false
     var onSelect: ((ToolUseEvent) -> Void)?
 
+    /// Write cards reveal in Finder; Read/Edit cards open the inspector.
+    private var isWriteOnly: Bool {
+        event.name == "Write"
+    }
+
     private var isTappable: Bool {
-        event.status == .completed && event.hasResultOutput
+        guard event.status == .completed else { return false }
+        if isWriteOnly { return event.filePath != nil }
+        return event.hasResultOutput
     }
 
     private var operationLabel: String {
@@ -22,7 +29,13 @@ struct FileCard: View {
 
     var body: some View {
         Button {
-            onSelect?(event)
+            if isWriteOnly, let path = event.filePath {
+                NSWorkspace.shared.activateFileViewerSelecting(
+                    [URL(fileURLWithPath: path)]
+                )
+            } else {
+                onSelect?(event)
+            }
         } label: {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 HStack(spacing: Spacing.xs) {
@@ -39,6 +52,11 @@ struct FileCard: View {
                     if event.status == .running {
                         ProgressView()
                             .controlSize(.small)
+                    } else if isWriteOnly {
+                        if isTappable {
+                            Image(systemName: "finder")
+                                .foregroundStyle(.contentTertiary)
+                        }
                     } else {
                         Text(operationLabel)
                             .font(.metadata)
