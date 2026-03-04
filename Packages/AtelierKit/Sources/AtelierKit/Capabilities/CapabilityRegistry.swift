@@ -11,6 +11,9 @@ public enum CapabilityRegistry {
         if let iwork = iWorkCapability() {
             capabilities.append(iwork)
         }
+        if let safari = safariCapability() {
+            capabilities.append(safari)
+        }
         return capabilities
     }
 
@@ -46,5 +49,33 @@ public enum CapabilityRegistry {
     /// Locates the bundled iWork MCP helper binary.
     static var iWorkHelperPath: String? {
         CLIEngine.bundledHelperPath(named: "atelier-iwork-mcp")
+    }
+
+    /// The Safari capability for web browsing and tab management.
+    static func safariCapability() -> Capability? {
+        guard let helperPath = safariHelperPath else { return nil }
+        return Capability(
+            id: "safari",
+            name: "Safari",
+            description: "Browse the web, read page content, search, and manage tabs in Safari.",
+            iconSystemName: "safari",
+            serverConfig: MCPServerConfig(
+                command: helperPath,
+                serverName: "atelier-safari",
+                autoApproveTools: [
+                    "safari_open_url",
+                    "safari_list_tabs",
+                    "safari_get_tab_content",
+                    "safari_execute_javascript",
+                    "safari_search",
+                    "safari_close_tab",
+                ]
+            )
+        )
+    }
+
+    /// Locates the bundled Safari MCP helper binary.
+    static var safariHelperPath: String? {
+        CLIEngine.bundledHelperPath(named: "atelier-safari-mcp")
     }
 }

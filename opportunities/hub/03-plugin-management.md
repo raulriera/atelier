@@ -50,35 +50,70 @@ Just names. Not server URLs, not commands, not port numbers. Atelier resolves th
 
 For developers building custom tools, the deepest layer supports full MCP server configuration — but this is explicitly a power-user feature that nobody else ever sees.
 
-## Implementation
+## Current Implementation (MVP shipped)
 
-### Phase 1 — Built-in Capabilities
+The capabilities architecture is live with iWork as the first built-in capability:
 
-- File operations (read, write, create, delete, move) via host file system access
-- Project scanning (understand folder structure, detect file types)
-- These require no setup and are always available
+- **Capability models** — `Capability`, `MCPServerConfig`, `CapabilityRegistry` in `AtelierKit/Capabilities/`
+- **CapabilityStore** — per-project persistence of enabled capabilities (`capabilities.json`)
+- **CLIEngine integration** — merges capability MCP servers into the temp config, auto-approves enabled tools via `--allowedTools`
+- **System prompt injection** — Claude knows about available/enabled capabilities and can suggest enabling them
+- **UI** — toolbar popover with `CapabilitiesCard` / `CapabilityRow` (toggle per capability)
+- **iWork MCP helper** — `Helpers/atelier-iwork-mcp.swift`, compiled to `Contents/Helpers/atelier-iwork-mcp`, speaks JSON-RPC 2.0 over stdio, 12 tools across Keynote/Pages/Numbers via JXA
+- **Export defaults** — saves to project working directory when no path specified
 
-### Phase 2 — Capability Registry
+Pattern for adding new capabilities: add a new helper in `Helpers/`, register in `CapabilityRegistry`, add a build phase in the Xcode project.
 
-- A built-in registry mapping capability names to MCP server configurations
-- Ships with common capabilities: web search, image generation, etc.
-- Registry is updatable without an app update (fetched from a simple manifest)
+## Planned Built-in Capabilities
 
-### Phase 3 — On-Demand Activation
+### High Priority — Native Mac Differentiators
 
-- Claude detects when a capability would help and suggests it inline in the conversation
-- User approves with one click
-- App handles MCP server lifecycle: start, connect, health-check, restart on failure
-- OAuth flows for capabilities that need authentication (calendar, email, etc.)
-- Per-project capability state stored in project metadata
+| Capability | App | What it unlocks | Complexity |
+|-----------|-----|----------------|------------|
+| ✅ **iWork** | Keynote, Pages, Numbers | Create/edit presentations, documents, spreadsheets | Shipped |
+| 🔲 **Mail** | Mail.app | Draft, send, reply to emails. "Summarize this and email it to the team." | Medium — full JXA scripting support |
+| 🔲 **Reminders** | Reminders.app | Create tasks, lists, due dates. "Remind me to review the budget Friday." | Low — simple scripting dictionary |
+| 🔲 **Calendar** | Calendar.app | Create events, check availability. "Block 2 hours tomorrow for this project." | Low — EventKit or JXA |
+| 🔲 **Notes** | Notes.app | Read/write Apple Notes. "Save these meeting notes to my Work folder." | Medium — Notes scripting is limited but workable |
+| 🔲 **Preview / PDF** | Preview, PDFKit | Merge, split, annotate PDFs. "Combine these three PDFs into one." | Medium — may use PDFKit directly instead of JXA |
 
-### Phase 4 — Capability Health (Invisible)
+### Medium Priority — Productivity Multipliers
+
+| Capability | App | What it unlocks | Complexity |
+|-----------|-----|----------------|------------|
+| 🔲 **Safari** | Safari | Open URLs, read page content, bookmark. "Research competitors and save the links." | Medium — WebKit automation via JXA |
+| 🔲 **Finder** | Finder | Organize files, create folders, tag files. "Organize my Downloads by type." Smart folders. | Low — comprehensive scripting dictionary |
+| 🔲 **Shortcuts** | Shortcuts.app | Trigger any user-defined Shortcut. Meta-capability — unlocks everything the user has already automated. | Low — `shortcuts run` CLI |
+
+### Lower Priority — Delight
+
+| Capability | App | What it unlocks |
+|-----------|-----|----------------|
+| 🔲 **Music** | Music.app | "Play some focus music." Simple but charming. |
+| 🔲 **Maps** | Maps.app | Location lookup, directions export for travel planning docs. |
+
+## Implementation Phases
+
+### Phase 1 — Built-in Capabilities (current)
+
+- ✅ Capability registry and store architecture
+- ✅ iWork capability (Keynote, Pages, Numbers)
+- 🔲 Mail, Reminders, Calendar, Notes, Preview/PDF capabilities
+- 🔲 Finder, Safari, Shortcuts capabilities
+
+### Phase 2 — On-Demand Activation
+
+- ✅ Claude detects when a capability would help and suggests enabling it (via system prompt injection)
+- 🔲 One-click enable directly from the conversation (not just toolbar)
+- 🔲 OAuth flows for capabilities that need authentication (Google Calendar, etc.)
+
+### Phase 3 — Capability Health (Invisible)
 
 - Background health monitoring — if a capability's MCP server degrades, the app handles it silently (retry, restart)
 - Only surfaces to the user if something is genuinely broken: "Web search is temporarily unavailable"
 - No health dashboard, no status cards, no management UI — unless the user explicitly opens project settings
 
-### Phase 5 — Custom MCP Servers (Power Users)
+### Phase 4 — Custom MCP Servers (Power Users)
 
 - Context file supports full MCP server configuration for custom capabilities
 - XPC-based isolation: custom servers can't crash the app

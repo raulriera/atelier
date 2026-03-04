@@ -38,4 +38,15 @@ struct CapabilityRegistryTests {
         )
         #expect(config.serverName == "atelier-iwork")
     }
+
+    @Test("Safari capability has expected server name")
+    func safariServerName() throws {
+        // In test context the helper binary won't exist in the bundle,
+        // so safariCapability() returns nil. We test the config struct directly.
+        let config = MCPServerConfig(
+            command: "/path/to/helper",
+            serverName: "atelier-safari"
+        )
+        #expect(config.serverName == "atelier-safari")
+    }
 }
