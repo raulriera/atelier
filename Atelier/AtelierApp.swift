@@ -31,7 +31,7 @@ struct AtelierApp: App {
             // to existing projects so restored windows aren't empty.
             (try? projectStore.nextUnclaimedProject())?.id ?? UUID()
         }
-        .defaultSize(width: 600, height: 700)
+        .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Window") {

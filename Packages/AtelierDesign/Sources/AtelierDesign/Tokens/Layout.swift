@@ -14,4 +14,8 @@ public enum Layout {
     public static let minimumWindowWidth: CGFloat = 420
     /// 480pt — shortest usable window height.
     public static let minimumWindowHeight: CGFloat = 480
+    /// 360pt — compact folder picker panel width.
+    public static let folderPickerWidth: CGFloat = 360
+    /// 280pt — compact folder picker panel height.
+    public static let folderPickerHeight: CGFloat = 280
 }

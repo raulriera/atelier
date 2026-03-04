@@ -12,9 +12,15 @@ struct FolderSelectionView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.contentSecondary)
 
-            Text("Drop a folder to start")
-                .font(.sectionTitle)
-                .foregroundStyle(.contentPrimary)
+            VStack {
+                Text("Drop a folder to start")
+                    .font(.sectionTitle)
+                    .foregroundStyle(.contentPrimary)
+
+                Text("or choose one from your Mac")
+                    .font(.caption)
+                    .foregroundStyle(.contentPrimary)
+            }
 
             Button("Choose Folder...") {
                 Task {
@@ -27,12 +33,8 @@ struct FolderSelectionView: View {
             }
             .buttonStyle(.glass)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            RoundedRectangle(cornerRadius: Radii.lg, style: .continuous)
-                .strokeBorder(.contentTertiary.opacity(isTargeted ? 1 : 0), lineWidth: 2)
-                .animation(Motion.morph, value: isTargeted)
-        }
+        .frame(width: Layout.folderPickerWidth, height: Layout.folderPickerHeight)
+        .contentShape(.rect)
         .dropDestination(for: URL.self) { urls, _ in
             guard let url = urls.first else { return false }
             var isDir: ObjCBool = false
