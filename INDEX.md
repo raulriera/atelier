@@ -8,7 +8,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 35 |
+| **Total opportunities** | 36 |
 | **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -68,6 +68,7 @@ With a working conversation (M0) and a safe sandbox (M1), this is where Atelier 
 | 3.3 | Session Persistence | New | ✅ Done | [→](opportunities/architecture/04-session-persistence.md) |
 | 3.4 | Conversational Flow | New | 🔨 In progress | [→](opportunities/experience/03-conversational-flow.md) |
 | 3.5 | Living Context | New | 🔨 In progress | [→](opportunities/context/05-living-context.md) |
+| 3.6 | Session Browser | New | 🔲 Not started | [→](opportunities/experience/05-session-browser.md) |
 | 3.P | **Polish:** ~~Status icon pairings~~ | HIG | ✅ Done | — |
 
 ---
@@ -159,6 +160,7 @@ The product UX — window & conversation, project model, conversational flow, on
 | [02-project-workspace.md](opportunities/experience/02-project-workspace.md) | M2 |
 | [03-conversational-flow.md](opportunities/experience/03-conversational-flow.md) | M2 |
 | [04-onboarding.md](opportunities/experience/04-onboarding.md) | M5 |
+| [05-session-browser.md](opportunities/experience/05-session-browser.md) | M2 |
 
 ### Context (`opportunities/context/`)
 Project context files, templates, multi-agent visibility, approval flow.
@@ -226,7 +228,8 @@ atelier/
     │   ├── 01-window-conversation.md
     │   ├── 02-project-workspace.md
     │   ├── 03-conversational-flow.md
-    │   └── 04-onboarding.md
+    │   ├── 04-onboarding.md
+    │   └── 05-session-browser.md
     ├── context/
     │   ├── 01-project-context-files.md
     │   ├── 02-task-templates-workflows.md
