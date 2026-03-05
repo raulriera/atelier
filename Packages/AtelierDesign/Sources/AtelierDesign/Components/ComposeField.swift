@@ -25,7 +25,7 @@ public struct ComposeField: View {
 
     public init(
         text: Binding<String>,
-        placeholder: String = "Message Claude...",
+        placeholder: String = "Let's knock something off your plate...",
         isStreaming: Bool = false,
         onSubmit: @escaping () -> Void,
         onStop: (() -> Void)? = nil
@@ -84,6 +84,7 @@ public struct ComposeField: View {
                     .scrollIndicators(.hidden)
                     .frame(minHeight: 20, maxHeight: 200)
                     .fixedSize(horizontal: false, vertical: true)
+                    .offset(y: -2)
                     .onKeyPress(keys: [.return], phases: .down) { keyPress in
                         if keyPress.modifiers.contains(.shift) {
                             return .ignored

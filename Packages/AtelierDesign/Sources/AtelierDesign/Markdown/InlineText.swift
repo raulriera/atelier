@@ -30,7 +30,7 @@ public struct InlineText {
         case let code as InlineCode:
             var attr = AttributedString(code.code)
             attr.inlinePresentationIntent = .code
-            attr.foregroundColor = Color.accentColor
+            attr.foregroundColor = Color(.contentSecondary)
             return attr
 
         case let link as Markdown.Link:
@@ -38,6 +38,7 @@ public struct InlineText {
             if let destination = link.destination, let url = URL(string: destination) {
                 attr.link = url
             }
+            attr.foregroundColor = Color.accentColor
             attr.underlineStyle = .single
             return attr
 
