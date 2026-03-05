@@ -33,7 +33,7 @@ struct ContextFileLoaderTests {
         #expect(results[0].source == .nativeCLI)
     }
 
-    @Test func discoverFindsCoworkAsAtelierInjected() throws {
+    @Test func discoverFindsCoworkAsInjected() throws {
         let dir = try makeTempDir()
         defer { cleanup(dir) }
 
@@ -43,10 +43,10 @@ struct ContextFileLoaderTests {
         let results = ContextFileLoader.discover(from: dir)
         #expect(results.count == 1)
         #expect(results[0].filename == "COWORK.md")
-        #expect(results[0].source == .atelierInjected)
+        #expect(results[0].source == .injected)
     }
 
-    @Test func discoverFindsAtelierContextAsAtelierInjected() throws {
+    @Test func discoverFindsAtelierContextAsInjected() throws {
         let dir = try makeTempDir()
         defer { cleanup(dir) }
 
@@ -58,7 +58,7 @@ struct ContextFileLoaderTests {
         let results = ContextFileLoader.discover(from: dir)
         #expect(results.count == 1)
         #expect(results[0].filename == "context.md")
-        #expect(results[0].source == .atelierInjected)
+        #expect(results[0].source == .injected)
     }
 
     @Test func directoryWalkFindsParentFiles() throws {
@@ -180,7 +180,7 @@ struct ContextFileLoaderTests {
         let localResults = results.filter { $0.url.path.hasPrefix(dir.path) }
         #expect(localResults.count == 1)
         #expect(localResults[0].filename == "learnings.md")
-        #expect(localResults[0].source == .atelierMemory)
+        #expect(localResults[0].source == .memory)
     }
 
     @Test func memoryFilesNotScannedInParentDirectories() throws {

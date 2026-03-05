@@ -6,8 +6,8 @@ public enum ContextFileLoader {
     /// Well-known context filenames and their sources.
     private static let candidates: [(path: String, source: ContextFile.Source)] = [
         ("CLAUDE.md", .nativeCLI),
-        ("COWORK.md", .atelierInjected),
-        (".atelier/context.md", .atelierInjected),
+        ("COWORK.md", .injected),
+        (".atelier/context.md", .injected),
     ]
 
     /// Discovers context files from `projectRoot` up to the user's home directory.
@@ -82,7 +82,7 @@ public enum ContextFileLoader {
                 return ContextFile(
                     url: consistent,
                     filename: url.lastPathComponent,
-                    source: .atelierMemory
+                    source: .memory
                 )
             }
     }
@@ -96,13 +96,13 @@ public enum ContextFileLoader {
     /// they are auto-managed and should not be edited directly.
     public static func contentForInjection(from files: [ContextFile]) -> String? {
         let parts = files
-            .filter { $0.source == .atelierInjected || $0.source == .atelierMemory }
+            .filter { $0.source == .injected || $0.source == .memory }
             .compactMap { file -> String? in
                 guard let content = try? String(contentsOf: file.url, encoding: .utf8),
                       !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 else { return nil }
 
-                if file.source == .atelierMemory {
+                if file.source == .memory {
                     return """
                     <project-memory>
                     The following learnings are automatically managed by the app. \

@@ -8,7 +8,7 @@ extension Font {
     public static let conversationCode: Font = .title3.monospaced()
 
     /// Card headings, file names.
-    public static let cardTitle: Font = .body
+    public static let cardTitle: Font = .title2
 
     /// Card descriptions, secondary card content.
     public static let cardBody: Font = .callout

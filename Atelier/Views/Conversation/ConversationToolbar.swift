@@ -43,7 +43,6 @@ struct ConversationToolbar: ToolbarContent {
             .help("Context Files")
             .popover(isPresented: $showingContextFiles) {
                 ContextFilesCard(files: activeContextFiles)
-                    .padding(Spacing.sm)
             }
         }
         ToolbarItem(placement: .automatic) {

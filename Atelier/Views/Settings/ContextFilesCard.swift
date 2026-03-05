@@ -2,94 +2,143 @@ import SwiftUI
 import AtelierDesign
 import AtelierKit
 
+/// Displays context files discovered in the project hierarchy, grouped by directory.
+///
+/// Files are organized into sections by their parent directory, with `.atelier/` and
+/// `.atelier/memory/` files rolled up under the project root. Memory files appear inside
+/// a collapsible `DisclosureGroup`.
+///
+/// Shown inside a toolbar popover from ``ConversationToolbar``.
 struct ContextFilesCard: View {
     let files: [ContextFile]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            header
-            content
-        }
-        .cardContainer()
-        .frame(width: 280)
-    }
-
-    private var header: some View {
-        Text("Context Files")
-            .font(.cardTitle)
-            .foregroundStyle(.contentPrimary)
-    }
-
-    @ViewBuilder
-    private var content: some View {
         if files.isEmpty {
-            emptyState
+            ContentUnavailableView {
+                Label("No Context Files", systemImage: "doc.text")
+            } description: {
+                Text("Add a CLAUDE.md, COWORK.md, or .atelier/context.md to your project to provide context.")
+            }
+            .frame(width: 280)
+            .fixedSize()
         } else {
-            fileList
+            List {
+                ForEach(groups) { group in
+                    Section(group.displayName) {
+                        ForEach(group.files) { file in
+                            Label(file.filename, systemImage: "doc.text.fill")
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        if !group.memoryFiles.isEmpty {
+                            DisclosureGroup {
+                                ForEach(group.memoryFiles) { file in
+                                    Label(file.filename, systemImage: "document.badge.gearshape.fill")
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            } label: {
+                                Label(".atelier/memory", systemImage: "folder.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .listStyle(.inset)
+            .frame(minWidth: 260, idealWidth: 300)
         }
     }
 
-    private var emptyState: some View {
-        VStack(spacing: Spacing.xs) {
-            Image(systemName: "doc.text")
-                .font(.title2)
-                .foregroundStyle(.contentTertiary)
+    // MARK: - Grouping
 
-            Text("Add a CLAUDE.md, COWORK.md, or .atelier/context.md to your project to provide context.")
-                .font(.metadata)
-                .foregroundStyle(.contentTertiary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.md)
-    }
+    /// Groups the flat file array by parent directory, preserving discovery order.
+    ///
+    /// Files inside `.atelier/` and `.atelier/memory/` are rolled up to the project
+    /// root so they share a section with top-level files like `CLAUDE.md`. Memory
+    /// files are separated into ``DirectoryGroup/memoryFiles`` for the `DisclosureGroup`.
+    private var groups: [DirectoryGroup] {
+        var groupsByDirectory: [URL: DirectoryGroup] = [:]
+        var order: [URL] = []
 
-    private var fileList: some View {
-        VStack(spacing: 0) {
-            ForEach(files) { file in
-                ContextFileRow(file: file)
+        for file in files {
+            let directory: URL
+            let parent = file.url.deletingLastPathComponent()
+            if file.source == .memory {
+                // .atelier/memory/foo.md → project root (two levels up from file)
+                directory = parent.deletingLastPathComponent().deletingLastPathComponent()
+            } else if parent.lastPathComponent == ".atelier" {
+                // .atelier/context.md → project root (one level up)
+                directory = parent.deletingLastPathComponent()
+            } else {
+                directory = parent
+            }
+
+            if groupsByDirectory[directory] == nil {
+                groupsByDirectory[directory] = DirectoryGroup(directory: directory)
+                order.append(directory)
+            }
+
+            if file.source == .memory {
+                groupsByDirectory[directory]!.memoryFiles.append(file)
+            } else {
+                groupsByDirectory[directory]!.files.append(file)
             }
         }
+
+        return order.compactMap { groupsByDirectory[$0] }
     }
 }
 
-private struct ContextFileRow: View {
-    let file: ContextFile
+/// Groups context files belonging to the same project directory.
+///
+/// Regular files (CLI-loaded and injected) go in ``files``, while memory
+/// files go in ``memoryFiles`` for the nested `DisclosureGroup`.
+private struct DirectoryGroup: Identifiable {
+    let directory: URL
+    var files: [ContextFile] = []
+    var memoryFiles: [ContextFile] = []
 
-    var body: some View {
-        HStack(spacing: Spacing.xs) {
-            Image(systemName: "doc.text.fill")
-                .foregroundStyle(.contentAccent)
+    var id: URL { directory }
 
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(file.filename)
-                    .font(.cardTitle)
-                    .foregroundStyle(.contentPrimary)
-                    .lineLimit(1)
+    /// Abbreviated directory path with `~` for the home directory prefix.
+    var displayName: String { directory.abbreviatedPath }
+}
 
-                Text(abbreviatedDirectory)
-                    .font(.metadata)
-                    .foregroundStyle(.contentSecondary)
-                    .lineLimit(1)
-            }
+// MARK: - Previews
 
-            Spacer()
+#Preview("Context Files") {
+    let projectRoot = URL(filePath: "/Users/raul/Developer/atelier")
+    ContextFilesCard(files: [
+        ContextFile(
+            url: projectRoot.appending(path: "CLAUDE.md"),
+            filename: "CLAUDE.md",
+            source: .nativeCLI
+        ),
+        ContextFile(
+            url: projectRoot.appending(path: "COWORK.md"),
+            filename: "COWORK.md",
+            source: .injected
+        ),
+        ContextFile(
+            url: projectRoot.appending(path: ".atelier/context.md"),
+            filename: "context.md",
+            source: .injected
+        ),
+        ContextFile(
+            url: projectRoot.appending(path: ".atelier/memory/MEMORY.md"),
+            filename: "MEMORY.md",
+            source: .memory
+        ),
+        ContextFile(
+            url: projectRoot.appending(path: ".atelier/memory/patterns.md"),
+            filename: "patterns.md",
+            source: .memory
+        ),
+    ])
+    .frame(height: 300)
+}
 
-            if file.source == .atelierInjected {
-                Text("Injected")
-                    .font(.metadata)
-                    .foregroundStyle(.contentAccent)
-            }
-        }
-        .padding(.vertical, Spacing.xxs)
-    }
-
-    private var abbreviatedDirectory: String {
-        let dir = file.url.deletingLastPathComponent().path
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        if dir.hasPrefix(home) {
-            return "~" + dir.dropFirst(home.count)
-        }
-        return dir
-    }
+#Preview("Empty State") {
+    ContextFilesCard(files: [])
 }

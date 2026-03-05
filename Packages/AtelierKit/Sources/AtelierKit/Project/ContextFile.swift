@@ -7,11 +7,10 @@ public struct ContextFile: Sendable, Equatable, Identifiable {
     public enum Source: Sendable, Equatable {
         /// `CLAUDE.md` — the CLI loads it natively; Atelier only shows it for visibility.
         case nativeCLI
-        /// `COWORK.md`, `.atelier/context.md` — Atelier reads the content and injects it
-        /// via `--append-system-prompt`.
-        case atelierInjected
+        /// `COWORK.md`, `.atelier/context.md` — read and injected via `--append-system-prompt`.
+        case injected
         /// `.atelier/memory/*.md` — auto-managed learnings injected with a read-only header.
-        case atelierMemory
+        case memory
     }
 
     public var id: URL { url }
@@ -24,4 +23,10 @@ public struct ContextFile: Sendable, Equatable, Identifiable {
 
     /// Whether the CLI or Atelier is responsible for loading this file.
     public let source: Source
+
+    public init(url: URL, filename: String, source: Source) {
+        self.url = url
+        self.filename = filename
+        self.source = source
+    }
 }

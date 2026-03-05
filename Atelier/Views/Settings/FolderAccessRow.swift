@@ -1,5 +1,6 @@
 import SwiftUI
 import AtelierDesign
+import AtelierKit
 import AtelierSecurity
 
 struct FolderAccessRow: View {
@@ -37,12 +38,5 @@ struct FolderAccessRow: View {
         .padding(.vertical, Spacing.xxs)
     }
 
-    private var abbreviatedPath: String {
-        let path = entry.url.path
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        if path.hasPrefix(home) {
-            return "~" + path.dropFirst(home.count)
-        }
-        return path
-    }
+    private var abbreviatedPath: String { entry.url.abbreviatedPath }
 }

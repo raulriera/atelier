@@ -24,7 +24,7 @@ struct AskUserCard: View {
     private var pendingCard: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text(event.question)
-                .font(.cardBody)
+                .font(.cardTitle)
 
             VStack(spacing: Spacing.xxs) {
                 ForEach(Array(event.options.enumerated()), id: \.offset) { index, option in

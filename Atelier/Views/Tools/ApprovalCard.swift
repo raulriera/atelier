@@ -31,7 +31,7 @@ struct ApprovalCard: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack(spacing: Spacing.xs) {
                 Text(event.plainDescription)
-                    .font(.cardBody)
+                    .font(.cardTitle)
 
                 Spacer()
             }
