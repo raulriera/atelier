@@ -139,6 +139,7 @@ public actor DiskSessionPersistence: SessionPersistence {
             // Precompute summaries before stripping payloads
             event.cachedInputSummary = event.inputSummary
             event.cachedResultSummary = event.resultSummary
+            event.cachedPlainDescription = event.plainDescription
 
             event.inputJSON = ""
             event.resultOutput = ""

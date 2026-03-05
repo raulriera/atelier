@@ -47,7 +47,7 @@ There are no modes. There's one conversation that adapts to what's happening.
 - ✅ **Thinking indicator** — brain icon + pulsing animation during extended thinking
 - ✅ **Token usage** — displayed below completed assistant messages
 - ✅ **System events** — error and session-started events rendered inline
-- ✅ **Tool use cards** — inline cards for each tool invocation (Read, Write, Edit, Bash, etc.) with input summary, status, and result preview
+- ✅ **Tool use cards** — inline cards for each tool invocation with plain-English descriptions (e.g. "Searching the web for 'flights to Tokyo'", not "Web Search"). Technical tool names and raw commands never appear as the primary label — descriptions must be human-readable for non-technical users.
 - ✅ **Inspector sidebar** — right-side panel (`.inspector()`) showing full tool output, togglable via toolbar, compresses content in-place
 - ✅ **Scrolling performance** — visible items window + cached properties for efficient timeline rendering
 - ✅ **File card** — compact representation of a file read/write, expandable to show content

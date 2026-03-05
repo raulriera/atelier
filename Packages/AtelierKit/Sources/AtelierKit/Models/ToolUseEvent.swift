@@ -7,7 +7,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, inputJSON, status, resultOutput, cachedInputSummary, cachedResultSummary
+        case id, name, inputJSON, status, resultOutput, cachedInputSummary, cachedResultSummary, cachedPlainDescription
     }
 
     public let id: String
@@ -17,6 +17,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
     public var resultOutput: String
     public var cachedInputSummary: String
     public var cachedResultSummary: String
+    public var cachedPlainDescription: String
 
     // Cached derived properties — excluded from Codable, recomputed via cacheInputProperties().
     private struct CachedInput: Sendable {
@@ -37,7 +38,8 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         status: Status = .running,
         resultOutput: String = "",
         cachedInputSummary: String = "",
-        cachedResultSummary: String = ""
+        cachedResultSummary: String = "",
+        cachedPlainDescription: String = ""
     ) {
         self.id = id
         self.name = name
@@ -46,6 +48,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         self.resultOutput = resultOutput
         self.cachedInputSummary = cachedInputSummary
         self.cachedResultSummary = cachedResultSummary
+        self.cachedPlainDescription = cachedPlainDescription
     }
 
     public init(from decoder: Decoder) throws {
@@ -57,6 +60,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         resultOutput = try container.decodeIfPresent(String.self, forKey: .resultOutput) ?? ""
         cachedInputSummary = try container.decodeIfPresent(String.self, forKey: .cachedInputSummary) ?? ""
         cachedResultSummary = try container.decodeIfPresent(String.self, forKey: .cachedResultSummary) ?? ""
+        cachedPlainDescription = try container.decodeIfPresent(String.self, forKey: .cachedPlainDescription) ?? ""
     }
 
     /// Extracts the primary input value from a parsed JSON dictionary based on tool name.
@@ -285,6 +289,74 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
     }
 
     // MARK: - Display metadata
+
+    /// A human-readable sentence describing what this tool call does.
+    ///
+    /// Survives payload stripping via `cachedPlainDescription`, which is precomputed
+    /// in `separatePayloads` before `inputJSON` is cleared.
+    public var plainDescription: String {
+        if !cachedPlainDescription.isEmpty { return cachedPlainDescription }
+
+        switch name {
+        case "Bash":
+            if let desc = parsedInput?["description"] as? String, !desc.isEmpty { return desc }
+            return "Run a terminal command"
+
+        case "Read":
+            if let file = fileName { return "Reading \(file)" }
+            return "Reading a file"
+
+        case "Write":
+            if let file = fileName { return "Creating \(file)" }
+            return "Creating a new file"
+
+        case "Edit":
+            if let file = fileName { return "Editing \(file)" }
+            return "Editing a file"
+
+        case "Glob":
+            if let pattern = _cached?.inputSummaryValue ?? (parsedInput?["pattern"] as? String) {
+                return "Searching for files matching \(pattern)"
+            }
+            return "Searching for files"
+
+        case "Grep":
+            if let pattern = _cached?.inputSummaryValue ?? (parsedInput?["pattern"] as? String) {
+                return "Searching file contents for \"\(pattern)\""
+            }
+            return "Searching file contents"
+
+        case "WebSearch":
+            if let query = parsedInput?["query"] as? String {
+                return "Searching the web for \"\(query)\""
+            }
+            return "Searching the web"
+
+        case "WebFetch":
+            if let url = parsedInput?["url"] as? String,
+               let host = URL(string: url)?.host {
+                return "Fetching a page from \(host)"
+            }
+            return "Fetching a web page"
+
+        case "Agent":
+            if let desc = parsedInput?["description"] as? String, !desc.isEmpty {
+                let truncated = desc.count <= 60 ? desc : String(desc.prefix(57)) + "..."
+                return truncated
+            }
+            return "Working on a subtask"
+
+        default:
+            if name.hasPrefix("mcp__") {
+                let parts = name.split(separator: "__")
+                if parts.count >= 3 {
+                    let toolName = parts.last!.replacingOccurrences(of: "_", with: " ")
+                    return toolName.capitalized
+                }
+            }
+            return displayName
+        }
+    }
 
     /// User-friendly display name for the tool.
     public var displayName: String {

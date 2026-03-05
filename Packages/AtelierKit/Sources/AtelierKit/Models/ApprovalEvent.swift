@@ -29,6 +29,42 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
 
     // MARK: - Display metadata
 
+    /// A human-readable sentence describing what this approval is for.
+    public var plainDescription: String {
+        guard let dict = parsedInput else { return displayName }
+
+        switch toolName {
+        case "Bash":
+            if let desc = dict["description"] as? String, !desc.isEmpty { return desc }
+            return "Run a terminal command"
+
+        case "Write":
+            if let path = dict["file_path"] as? String, !path.isEmpty {
+                return "Create \((path as NSString).lastPathComponent)"
+            }
+            return "Create a new file"
+
+        case "Edit":
+            if let path = dict["file_path"] as? String, !path.isEmpty {
+                return "Edit \((path as NSString).lastPathComponent)"
+            }
+            return "Edit a file"
+
+        case "NotebookEdit":
+            return "Edit a notebook"
+
+        default:
+            if toolName.hasPrefix("mcp__") {
+                let parts = toolName.split(separator: "__")
+                if parts.count >= 3 {
+                    let tool = parts.last!.replacingOccurrences(of: "_", with: " ")
+                    return tool.capitalized
+                }
+            }
+            return displayName
+        }
+    }
+
     /// User-friendly display name describing what Claude wants to do.
     public var displayName: String {
         switch toolName {

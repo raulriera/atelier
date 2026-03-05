@@ -25,11 +25,20 @@ Not everything needs the same level of scrutiny:
 | **Confirm** | Modify existing files, rename, move | Inline diff preview + Approve/Reject buttons |
 | **Biometric** | Delete files, send emails, modify external systems | Touch ID or password via `LAContext` |
 
+### Plain-English descriptions are mandatory
+
+Every tool call — whether silently executed or requiring approval — must show a human-readable sentence explaining what's happening. Technical names like "Run Terminal Command" or raw commands like `gem install rails` mean nothing to non-technical users. They cannot make an informed approval decision without understanding the action.
+
+- **Approval cards** show a plain-English description as the headline (e.g. "Install Ruby on Rails framework"). The raw command or file path appears as secondary detail underneath in monospace.
+- **Tool use cells** in the timeline show a plain-English label (e.g. "Searching the web for 'flights to Tokyo'", "Reading itinerary.md") instead of technical tool names.
+- For Bash tools, the CLI already sends a `description` field in the tool input JSON — use it directly. For file tools, derive from the filename. For search tools, include the query or pattern.
+- Raw commands and file paths may appear as secondary detail, but never as the primary label.
+
 ### How it looks in the conversation
 
 ```
 ┌─────────────────────────────────────────┐
-│  Claude wants to modify                 │
+│  Update quarterly revenue figures       │
 │  ~/Reports/Q1-summary.xlsx              │
 │                                         │
 │  - Cell B12: $45,000 → $47,500          │

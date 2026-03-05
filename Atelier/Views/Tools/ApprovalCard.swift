@@ -30,7 +30,7 @@ struct ApprovalCard: View {
     private var pendingCard: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack(spacing: Spacing.xs) {
-                Text("Claude wants to \(event.displayName)")
+                Text(event.plainDescription)
                     .font(.cardBody)
 
                 Spacer()
@@ -39,7 +39,7 @@ struct ApprovalCard: View {
             if !event.inputSummary.isEmpty {
                 Text(event.inputSummary)
                     .font(.conversationCode)
-                    .foregroundStyle(.contentSecondary)
+                    .foregroundStyle(.contentTertiary)
                     .lineLimit(3)
             }
 
@@ -80,7 +80,7 @@ struct ApprovalCard: View {
         ApprovalCard(event: ApprovalEvent(
             id: "1",
             toolName: "Bash",
-            inputJSON: #"{"command":"rm -rf ~/Documents/old-backups"}"#,
+            inputJSON: #"{"command":"rm -rf ~/Documents/old-backups","description":"Delete old backup files"}"#,
             status: .pending
         ))
 
@@ -101,7 +101,7 @@ struct ApprovalCard: View {
         ApprovalCard(event: ApprovalEvent(
             id: "4",
             toolName: "Bash",
-            inputJSON: #"{"command":"curl https://example.com/api"}"#,
+            inputJSON: #"{"command":"curl https://example.com/api","description":"Fetch data from example API"}"#,
             status: .denied
         ))
     }

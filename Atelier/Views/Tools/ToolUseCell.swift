@@ -20,15 +20,11 @@ struct ToolUseCell: View {
                     .foregroundStyle(.contentTertiary)
                     .font(.caption)
 
-                Text(event.displayName)
+                Text(event.plainDescription)
                     .font(.metadata)
                     .foregroundStyle(.contentSecondary)
-
-                if !event.inputSummary.isEmpty {
-                    summaryText
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
                 Spacer()
 
@@ -57,19 +53,6 @@ struct ToolUseCell: View {
         .transition(Motion.cardReveal)
     }
 
-    @ViewBuilder
-    private var summaryText: some View {
-        if event.name == "Bash", let spaceIndex = event.inputSummary.firstIndex(of: " ") {
-            let command = String(event.inputSummary[..<spaceIndex])
-            let arguments = String(event.inputSummary[event.inputSummary.index(after: spaceIndex)...])
-            Text("\(Text(command).fontWeight(.semibold).foregroundStyle(.contentSecondary)) \(Text(arguments).foregroundStyle(.contentTertiary))")
-                .font(.metadata)
-        } else {
-            Text(event.inputSummary)
-                .font(.metadata)
-                .foregroundStyle(.contentTertiary)
-        }
-    }
 }
 
 #Preview("Tool Use Cells") {
@@ -85,7 +68,7 @@ struct ToolUseCell: View {
         ToolUseCell(event: ToolUseEvent(
             id: "2",
             name: "Bash",
-            inputJSON: #"{"command":"ls -la ~/Documents"}"#,
+            inputJSON: #"{"command":"ls -la ~/Documents","description":"List files in Documents folder"}"#,
             status: .completed,
             resultOutput: "total 42\ndrwxr-xr-x  5 raul staff..."
         ))
