@@ -153,10 +153,16 @@ struct ToolUseEventTests {
             #expect(event.iconName == input.expected)
         }
 
-        @Test("Unknown tool returns wrench")
-        func unknownToolReturnsWrench() {
+        @Test("Unknown tool returns sparkles")
+        func unknownToolReturnsSparkles() {
             let event = ToolUseEvent(id: "t", name: "CustomTool")
-            #expect(event.iconName == "wrench")
+            #expect(event.iconName == "sparkles.2")
+        }
+
+        @Test("MCP tool returns puzzle piece")
+        func mcpToolReturnsPuzzlePiece() {
+            let event = ToolUseEvent(id: "t", name: "mcp__pencil__batch_design")
+            #expect(event.iconName == "puzzlepiece.extension")
         }
     }
 

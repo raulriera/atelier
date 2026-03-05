@@ -247,7 +247,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
     // MARK: - Task operations
 
     private static let taskToolNames: Set<String> = [
-        "TaskCreate", "TaskUpdate", "TaskList", "TaskGet",
+        "Task", "TaskCreate", "TaskUpdate", "TaskList", "TaskGet",
         "TodoWrite", "TodoRead",
     ]
 
@@ -346,6 +346,27 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
             }
             return "Working on a subtask"
 
+        case "Skill":
+            if let skill = parsedInput?["skill"] as? String, !skill.isEmpty {
+                return "Running \(skill)"
+            }
+            return "Running a skill"
+
+        case "EnterPlanMode":
+            return "Starting to plan"
+
+        case "ExitPlanMode":
+            return "Finished planning"
+
+        case "ToolSearch":
+            return "Searching for tools"
+
+        case "TaskStop":
+            return "Stopping a task"
+
+        case "TaskOutput":
+            return "Reading task output"
+
         default:
             if name.hasPrefix("mcp__") {
                 let parts = name.split(separator: "__")
@@ -370,10 +391,16 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case "WebFetch": "Fetch Web Page"
         case "WebSearch": "Web Search"
         case "Agent": "Sub-agent"
-        case "TaskCreate", "TodoWrite": "Tasks"
+        case "Task", "TaskCreate", "TodoWrite": "Tasks"
         case "TaskUpdate": "Update Task"
         case "TaskList", "TodoRead": "Tasks"
         case "TaskGet": "Get Task"
+        case "TaskOutput": "Task Output"
+        case "TaskStop": "Stop Task"
+        case "EnterPlanMode": "Planning"
+        case "ExitPlanMode": "Planning"
+        case "Skill": "Run Skill"
+        case "ToolSearch": "Search Tools"
         default: name
         }
     }
@@ -385,14 +412,21 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case "Write": "doc.badge.plus"
         case "Edit": "pencil"
         case "Bash": "terminal"
-        case "Glob": "magnifyingglass"
+        case "Glob", "ToolSearch": "magnifyingglass"
         case "Grep": "text.magnifyingglass"
         case "WebFetch", "WebSearch": "globe"
         case "Agent": "person.2"
-        case "TaskCreate", "TodoWrite": "checklist"
+        case "Task", "TaskCreate", "TodoWrite": "checklist"
         case "TaskUpdate": "checklist.checked"
         case "TaskList", "TaskGet", "TodoRead": "list.bullet"
-        default: "wrench"
+        case "TaskOutput": "text.page"
+        case "TaskStop": "stop.circle"
+        case "EnterPlanMode": "checklist"
+        case "ExitPlanMode": "checklist.checked"
+        case "Skill": "wand.and.sparkles"
+        default:
+            if name.hasPrefix("mcp__") { "puzzlepiece.extension" }
+            else { "sparkles.2" }
         }
     }
 }
