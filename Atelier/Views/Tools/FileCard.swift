@@ -2,9 +2,18 @@ import SwiftUI
 import AtelierDesign
 import AtelierKit
 
+/// Timeline card for file operations (Read, Write, Edit).
+///
+/// Shows the file name and parent directory when available, falling back to
+/// a plain-English description while the tool input is still streaming.
+/// Completed Read/Edit cards open the inspector; Write cards reveal the
+/// file in Finder.
 struct FileCard: View {
+    /// The file tool event to display.
     let event: ToolUseEvent
+    /// Whether this card is currently selected in the inspector.
     var isSelected: Bool = false
+    /// Called when the user taps a completed card to inspect its output.
     var onSelect: ((ToolUseEvent) -> Void)?
 
     /// Write cards reveal in Finder; Read/Edit cards open the inspector.
@@ -27,6 +36,13 @@ struct FileCard: View {
         }
     }
 
+    /// The primary label: file name when available, plain description as fallback.
+    private var displayText: String {
+        if let name = event.fileName { return name }
+        let summary = event.inputSummary
+        return summary.isEmpty ? event.plainDescription : summary
+    }
+
     var body: some View {
         Button {
             if isWriteOnly, let path = event.filePath {
@@ -43,19 +59,18 @@ struct FileCard: View {
                     .font(.cardBody)
                     .frame(width: 16, alignment: .center)
 
-                Text(event.fileName ?? event.inputSummary)
+                Text(displayText)
                     .font(.cardBody)
                     .foregroundStyle(.contentSecondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                if let dir = event.fileDirectory {
-                    Text(dir)
-                        .font(.cardBody)
-                        .foregroundStyle(.contentTertiary)
-                        .lineLimit(1)
-                        .truncationMode(.head)
-                }
+                Text(event.fileDirectory ?? "")
+                    .font(.cardBody)
+                    .foregroundStyle(.contentTertiary)
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                    .opacity(event.fileDirectory != nil ? 1 : 0)
 
                 Spacer()
 
@@ -84,7 +99,7 @@ struct FileCard: View {
             .padding(.vertical, Spacing.xs)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plainUnfaded)
         .disabled(!isTappable)
         .background {
             if isSelected {
@@ -119,6 +134,13 @@ struct FileCard: View {
             id: "3",
             name: "Edit",
             inputJSON: #"{"file_path":"/Users/raul/Desktop/meeting-notes.txt"}"#,
+            status: .running
+        ))
+
+        // Running state with no inputJSON yet (the bare case this fix addresses)
+        FileCard(event: ToolUseEvent(
+            id: "5",
+            name: "Read",
             status: .running
         ))
 

@@ -2,8 +2,15 @@ import SwiftUI
 import AtelierDesign
 import AtelierKit
 
+/// Timeline card for ask-user questions with selectable options.
+///
+/// Pending questions show the full question text with option buttons and an
+/// expandable "Other" free-text field. Once answered, the card collapses
+/// to a centered one-line label showing the selected option.
 struct AskUserCard: View {
+    /// The ask-user event to display.
     let event: AskUserEvent
+    /// Called when the user selects an option: `(eventID, selectedIndex, customText?)`.
     var onResponse: ((String, Int, String?) -> Void)?
 
     @State private var isOtherExpanded = false

@@ -2,8 +2,15 @@ import SwiftUI
 import AtelierDesign
 import AtelierKit
 
+/// Timeline card for tool approval requests.
+///
+/// Pending approvals show a full card with the tool description and
+/// Approve/Deny buttons. Once resolved, the card collapses to a centered
+/// one-line label indicating the outcome.
 struct ApprovalCard: View {
+    /// The approval event to display.
     let event: ApprovalEvent
+    /// Called when the user approves or denies the request.
     var onDecision: ((String, ApprovalDecision) -> Void)?
 
     var body: some View {

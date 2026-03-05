@@ -2,9 +2,17 @@ import SwiftUI
 import AtelierDesign
 import AtelierKit
 
+/// Timeline card for non-file tool calls (Bash, Grep, WebSearch, Agent, etc.).
+///
+/// Shows a plain-English description of the tool action with a spinner while
+/// running and a disclosure chevron once completed output is available.
+/// Tapping a completed card opens the inspector to show its result.
 struct ToolUseCell: View {
+    /// The tool event to display.
     let event: ToolUseEvent
+    /// Whether this card is currently selected in the inspector.
     var isSelected: Bool = false
+    /// Called when the user taps a completed card to inspect its output.
     var onSelect: ((ToolUseEvent) -> Void)?
 
     private var isTappable: Bool {
@@ -42,7 +50,7 @@ struct ToolUseCell: View {
             .padding(.vertical, Spacing.xs)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plainUnfaded)
         .disabled(!isTappable)
         .background {
             if isSelected {
