@@ -53,8 +53,8 @@ There are no modes. There's one conversation that adapts to what's happening.
 - ✅ **File card** — compact representation of a file read/write, expandable to show content
 - ✅ **Diff view** — track-changes view in inspector for Edit operations (strikethrough removed, highlighted added)
 - ✅ **Todo list** — `TaskCreate`/`TaskUpdate` tool events rendered as a persistent overlay (`TaskListOverlay`) with status icons (pending, in-progress, completed). Cards display task subject, description, and active spinner text.
-- 🔲 **Ask user card** — `AskUserQuestion` tool calls need interactive rendering: show the question, options as clickable buttons, and send the selection back to the CLI. Requires a response channel (MCP-based, like approvals). Currently the CLI handles this via terminal stdin, which Atelier can't reach.
-- 🔲 **Plan review** — `EnterPlanMode` / `ExitPlanMode` tool calls. Claude writes a plan file and asks for approval before implementing. Render the plan as a reviewable card with approve/reject actions. Same MCP response channel as ask user and approvals.
+- ✅ **Ask user card** — `AskUserQuestion` tool calls rendered as interactive cards with question, options as clickable buttons, and custom text input. Responses sent back via MCP approval server.
+- ✅ **Plan review** — `ExitPlanMode` renders as a compact `PlanReviewCard` with Approve and Review Plan buttons. Review Plan opens a sheet with the full plan markdown (loaded asynchronously from `~/.claude/plans/`). Approve routes through the MCP approval server to unblock the CLI. `EnterPlanMode` is hidden from the timeline. Pending interactions are dismissed on stop.
 - 🔲 **Progress indicator** — shows what Claude is doing, estimated time, cancellation
 - ✅ **Approval gate** — inline approval cards with approve/deny, compact resolved state, wired through MCP
 - 🔲 **Result card** — summary of completed work with expandable details (blocked on M3 — hub/01-claude-code-integration.md)
