@@ -8,9 +8,13 @@ struct TimelineView: View {
     var onSelectTool: ((ToolUseEvent) -> Void)?
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
     var onAskUserResponse: ((String, Int, String?) -> Void)?
+    var onPlanApprove: (() -> Void)?
 
     var body: some View {
         let items = session.visibleTimelineItems
+        let hasPlanEvents = items.contains { if case .toolUse(let e) = $0.content { e.isPlanReview } else { false } }
+        let resolvedPlanIDs = hasPlanEvents ? Self.resolvedPlanIDs(in: items, session: session) : []
+        let planFilePaths = hasPlanEvents ? Self.planFilePaths(in: items, session: session) : [:]
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
@@ -28,6 +32,9 @@ struct TimelineView: View {
                         onSelectTool: onSelectTool,
                         onApprovalDecision: onApprovalDecision,
                         onAskUserResponse: onAskUserResponse,
+                        onPlanApprove: onPlanApprove,
+                        resolvedPlanIDs: resolvedPlanIDs,
+                        planFilePaths: planFilePaths,
                         showsTail: showsTail
                     )
                     .padding(.bottom, bottomPadding)
@@ -52,6 +59,43 @@ struct TimelineView: View {
             .padding(.bottom, Spacing.md)
         }
         .scaleEffect(x: 1, y: -1)
+    }
+
+    /// Pre-computes plan file paths for each ExitPlanMode event.
+    ///
+    /// The CLI writes plans to `~/.claude/plans/*.md` before ExitPlanMode.
+    /// Paths are resolved here (pure array scan, no I/O) so each
+    /// `PlanReviewCard` can load its content asynchronously via `.task`.
+    private static func planFilePaths(in items: [TimelineItem], session: Session) -> [String: String] {
+        var paths: [String: String] = [:]
+        for item in items {
+            guard case .toolUse(let event) = item.content, event.isPlanReview else { continue }
+            guard let path = session.planFilePath(before: event.id) else { continue }
+            paths[event.id] = path
+        }
+        return paths
+    }
+
+    /// Pre-computes which ExitPlanMode events have been resolved.
+    ///
+    /// A plan is resolved when a user message follows it in the timeline,
+    /// or when there are no pending ExitPlanMode approvals (user tapped Approve).
+    /// Scanned once per render cycle to avoid recomputing inside each
+    /// `TimelineItemView` body.
+    private static func resolvedPlanIDs(in items: [TimelineItem], session: Session) -> Set<String> {
+        let hasPendingPlanApproval = session.pendingApproval(toolName: "ExitPlanMode") != nil
+
+        var resolved = Set<String>()
+        var sawUserMessage = false
+        for item in items.reversed() {
+            if case .userMessage = item.content { sawUserMessage = true }
+            else if case .toolUse(let event) = item.content, event.isPlanReview {
+                if sawUserMessage || !hasPendingPlanApproval {
+                    resolved.insert(event.id)
+                }
+            }
+        }
+        return resolved
     }
 }
 
@@ -81,6 +125,9 @@ private struct TimelineItemView: View {
     let onSelectTool: ((ToolUseEvent) -> Void)?
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
     var onAskUserResponse: ((String, Int, String?) -> Void)?
+    var onPlanApprove: (() -> Void)?
+    var resolvedPlanIDs: Set<String> = []
+    var planFilePaths: [String: String] = [:]
     var showsTail: Bool = true
 
     var body: some View {
@@ -101,7 +148,14 @@ private struct TimelineItemView: View {
         case .system(let event):
             SystemEventCell(event: event)
         case .toolUse(let event):
-            if event.isFileOperation {
+            if event.isPlanReview {
+                PlanReviewCard(
+                    event: event,
+                    planFilePath: planFilePaths[event.id],
+                    isResolved: resolvedPlanIDs.contains(event.id),
+                    onApprove: onPlanApprove
+                )
+            } else if event.isFileOperation {
                 FileCard(event: event, isSelected: event.id == selectedToolID, onSelect: onSelectTool)
             } else {
                 ToolUseCell(event: event, isSelected: event.id == selectedToolID, onSelect: onSelectTool)

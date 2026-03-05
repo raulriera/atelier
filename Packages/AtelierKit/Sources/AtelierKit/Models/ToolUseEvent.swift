@@ -288,6 +288,13 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         return todos.compactMap { TodoItem(dict: $0) }
     }
 
+    // MARK: - Plan operations
+
+    /// Whether this tool is an ExitPlanMode call that should render as a plan review card.
+    public var isPlanReview: Bool {
+        name == "ExitPlanMode"
+    }
+
     // MARK: - Display metadata
 
     /// A human-readable sentence describing what this tool call does.

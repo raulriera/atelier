@@ -55,11 +55,18 @@ public final class Session {
         return cachedHasActiveTasks
     }
 
-    /// Visible items with task and ask-user tool operations filtered out, for the timeline.
+    /// Visible items with internal operations filtered out, for the timeline.
     public var visibleTimelineItems: [TimelineItem] {
         visibleItems.filter { item in
-            guard case .toolUse(let event) = item.content else { return true }
-            return !event.isTaskOperation && !event.isAskUserOperation
+            switch item.content {
+            case .toolUse(let event):
+                return !event.isTaskOperation && !event.isAskUserOperation && event.name != "EnterPlanMode"
+            case .approval(let event):
+                // ExitPlanMode approvals are handled by PlanReviewCard instead.
+                return event.toolName != "ExitPlanMode"
+            default:
+                return true
+            }
         }
     }
 
@@ -366,6 +373,29 @@ public final class Session {
         invalidateTaskCache()
     }
 
+    /// Returns the file path of the plan written before a given ExitPlanMode event.
+    ///
+    /// The CLI writes plans to `~/.claude/plans/*.md` via a Write tool call
+    /// immediately before calling ExitPlanMode. This scans backward from the
+    /// given tool event to find that file path.
+    @MainActor
+    public func planFilePath(before toolEventID: String) -> String? {
+        guard let exitIndex = items.lastIndex(where: {
+            if case .toolUse(let event) = $0.content { return event.id == toolEventID }
+            return false
+        }) else { return nil }
+
+        // Scan backward from the ExitPlanMode event for a Write to .claude/plans/
+        for index in items[..<exitIndex].indices.reversed() {
+            guard case .toolUse(let event) = items[index].content,
+                  event.name == "Write",
+                  let path = event.filePath,
+                  path.contains(".claude/plans/") else { continue }
+            return path
+        }
+        return nil
+    }
+
     // MARK: - Tool Approval
 
     @MainActor
@@ -373,6 +403,19 @@ public final class Session {
         let event = ApprovalEvent(id: id, toolName: toolName, inputJSON: inputJSON)
         let item = TimelineItem(content: .approval(event))
         appendItem(item)
+    }
+
+    /// Returns the first pending approval event matching the given tool name.
+    @MainActor
+    public func pendingApproval(toolName: String) -> ApprovalEvent? {
+        for item in items.reversed() {
+            if case .approval(let event) = item.content,
+               event.toolName == toolName,
+               event.status == .pending {
+                return event
+            }
+        }
+        return nil
     }
 
     @MainActor
@@ -413,6 +456,31 @@ public final class Session {
         event.status = .answered
         event.answeredAt = Date()
         items[index].content = .askUser(event)
+    }
+
+    /// Dismisses all pending approval and ask-user events.
+    ///
+    /// Called when the conversation is stopped so interactive cards collapse
+    /// instead of staying actionable after the CLI process is gone.
+    @MainActor
+    public func dismissPendingInteractions() {
+        let now = Date()
+        for index in items.indices {
+            switch items[index].content {
+            case .approval(var event) where event.status == .pending:
+                event.status = .denied
+                event.decidedAt = now
+                items[index].content = .approval(event)
+            case .askUser(var event) where event.status == .pending:
+                event.status = .answered
+                event.selectedIndex = AskUserEvent.customTextIndex
+                event.customText = "Dismissed"
+                event.answeredAt = now
+                items[index].content = .askUser(event)
+            default:
+                continue
+            }
+        }
     }
 
     // MARK: - Tool Payload Population

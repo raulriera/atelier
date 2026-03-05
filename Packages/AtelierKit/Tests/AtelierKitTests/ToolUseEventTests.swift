@@ -212,6 +212,21 @@ struct ToolUseEventTests {
         }
     }
 
+    @Suite("isPlanReview")
+    struct PlanReviewTests {
+        @Test("Only ExitPlanMode is a plan review")
+        func onlyExitIsPlanReview() {
+            let exit = ToolUseEvent(id: "t", name: "ExitPlanMode")
+            #expect(exit.isPlanReview)
+
+            let enter = ToolUseEvent(id: "t", name: "EnterPlanMode")
+            #expect(!enter.isPlanReview)
+
+            let other = ToolUseEvent(id: "t", name: "Bash")
+            #expect(!other.isPlanReview)
+        }
+    }
+
     @Suite("editOldString / editNewString")
     struct EditStrings {
         @Test("Parses old_string and new_string from Edit tool")

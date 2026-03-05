@@ -114,6 +114,66 @@ struct SessionTaskTests {
         }
     }
 
+    @Test("visibleTimelineItems excludes EnterPlanMode")
+    @MainActor func visibleTimelineItemsExcludesEnterPlanMode() {
+        let session = Session()
+        session.beginAssistantMessage()
+
+        session.beginToolUse(id: "t1", name: "EnterPlanMode")
+        session.completeToolUse(id: "t1")
+
+        session.beginToolUse(id: "t2", name: "ExitPlanMode")
+        session.completeToolUse(id: "t2")
+
+        session.beginToolUse(id: "t3", name: "Read")
+        session.completeToolUse(id: "t3")
+
+        let visible = session.visibleTimelineItems
+        let toolNames = visible.compactMap {
+            if case .toolUse(let e) = $0.content { return e.name }
+            return nil
+        }
+        #expect(!toolNames.contains("EnterPlanMode"))
+        #expect(toolNames.contains("ExitPlanMode"))
+        #expect(toolNames.contains("Read"))
+    }
+
+    @Test("planFilePath finds Write to .claude/plans/ before ExitPlanMode")
+    @MainActor func planFilePathFindsWriteBeforeExit() {
+        let session = Session()
+        session.beginAssistantMessage()
+
+        let planPath = "/Users/dev/.claude/plans/my-plan.md"
+        session.beginToolUse(id: "t1", name: "Write")
+        session.applyToolInputDelta(id: "t1", json: "{\"file_path\":\"\(planPath)\"}")
+        session.completeToolUse(id: "t1")
+
+        session.beginToolUse(id: "t2", name: "ExitPlanMode")
+        session.completeToolUse(id: "t2")
+
+        #expect(session.planFilePath(before: "t2") == planPath)
+    }
+
+    @Test("planFilePath returns nil when no plan file precedes ExitPlanMode")
+    @MainActor func planFilePathReturnsNilWithoutPlanFile() {
+        let session = Session()
+        session.beginAssistantMessage()
+
+        session.beginToolUse(id: "t1", name: "Read")
+        session.completeToolUse(id: "t1")
+
+        session.beginToolUse(id: "t2", name: "ExitPlanMode")
+        session.completeToolUse(id: "t2")
+
+        #expect(session.planFilePath(before: "t2") == nil)
+    }
+
+    @Test("planFilePath returns nil for non-existent event")
+    @MainActor func planFilePathReturnsNilForMissingEvent() {
+        let session = Session()
+        #expect(session.planFilePath(before: "nonexistent") == nil)
+    }
+
     @Test("reset clears task state")
     @MainActor func resetClearsTaskState() {
         let session = Session()

@@ -41,6 +41,8 @@ struct ConversationWindow: View {
                     handleApprovalDecision(id: id, decision: decision)
                 }, onAskUserResponse: { id, selectedIndex, customText in
                     handleAskUserResponse(id: id, selectedIndex: selectedIndex, customText: customText)
+                }, onPlanApprove: {
+                    handlePlanApprove()
                 })
                 .overlay(alignment: .top) {
                     Rectangle()
@@ -254,8 +256,8 @@ struct ConversationWindow: View {
             session.beginAssistantMessage()
         }
 
-        // Discover context files fresh on every send so edits take effect immediately.
-        var promptParts: [String] = []
+        // Build the supplemental system prompt: core behavior + context files + capabilities.
+        var promptParts: [String] = [AtelierPrompt.coreInstructions]
         if let cwd = workingDirectory {
             let discovered = ContextFileLoader.discover(from: cwd)
             activeContextFiles = discovered
@@ -353,6 +355,12 @@ struct ConversationWindow: View {
         streamingTask = nil
         session.clearPendingMessages()
         session.completeAssistantMessage(usage: TokenUsage())
+        withAnimation(Motion.morph) {
+            session.dismissPendingInteractions()
+        }
+        if let server = approvalServer {
+            Task { await server.denyAllPending() }
+        }
         Task {
             try? await session.save(to: sessionPersistence)
         }
@@ -365,6 +373,12 @@ struct ConversationWindow: View {
         if let server = approvalServer {
             Task { await server.respond(requestId: id, decision: decision) }
         }
+    }
+
+    private func handlePlanApprove() {
+        // Find the pending ExitPlanMode approval and approve it.
+        guard let approval = session.pendingApproval(toolName: "ExitPlanMode") else { return }
+        handleApprovalDecision(id: approval.id, decision: .allow)
     }
 
     private func handleAskUserResponse(id: String, selectedIndex: Int, customText: String? = nil) {

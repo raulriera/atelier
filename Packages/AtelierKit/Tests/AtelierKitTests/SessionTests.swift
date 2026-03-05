@@ -665,6 +665,53 @@ struct SessionTests {
             let event2 = try #require(session.items[1].content.approval)
             #expect(event2.status == .approved)
         }
+
+        @Test("dismissPendingInteractions resolves pending approvals and ask-user events")
+        @MainActor func dismissPendingInteractions() throws {
+            let session = Session()
+            session.beginApproval(id: "req-1", toolName: "Bash", inputJSON: "{}")
+            session.beginApproval(id: "req-2", toolName: "Write", inputJSON: "{}")
+            session.resolveApproval(id: "req-2", decision: .allow)
+            session.beginAskUser(id: "ask-1", question: "Pick one", options: [
+                AskUserEvent.Option(label: "A"),
+                AskUserEvent.Option(label: "B"),
+            ])
+
+            session.dismissPendingInteractions()
+
+            // Pending approval should be denied
+            let approval1 = try #require(session.items[0].content.approval)
+            #expect(approval1.status == .denied)
+
+            // Already-resolved approval should be unchanged
+            let approval2 = try #require(session.items[1].content.approval)
+            #expect(approval2.status == .approved)
+
+            // Pending ask-user should be answered with dismissed text
+            let askUser = try #require(session.items[2].content.askUser)
+            #expect(askUser.status == .answered)
+            #expect(askUser.customText == "Dismissed")
+        }
+
+        @Test("dismissPendingInteractions is idempotent")
+        @MainActor func dismissPendingInteractionsIdempotent() throws {
+            let session = Session()
+            session.beginApproval(id: "req-1", toolName: "Bash", inputJSON: "{}")
+
+            session.dismissPendingInteractions()
+            session.dismissPendingInteractions()
+
+            let event = try #require(session.items[0].content.approval)
+            #expect(event.status == .denied)
+            #expect(session.items.count == 1)
+        }
+
+        @Test("dismissPendingInteractions is safe with no pending items")
+        @MainActor func dismissPendingInteractionsEmpty() {
+            let session = Session()
+            session.dismissPendingInteractions()
+            #expect(session.items.isEmpty)
+        }
     }
 
     @Suite("Queue orchestration")

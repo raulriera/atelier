@@ -160,6 +160,11 @@ public actor ApprovalServer {
             _ = fcntl(fd, F_SETFL, flags & ~O_NONBLOCK)
         }
 
+        // Prevent SIGPIPE when the CLI closes the connection before we respond
+        // (e.g. user stopped generation while an ask-user card was pending).
+        var noSigPipe: Int32 = 1
+        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+
         // Read one JSON line
         guard let requestData = readLine(from: fd) else {
             Self.logger.warning("Failed to read request from connection")
