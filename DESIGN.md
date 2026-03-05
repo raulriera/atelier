@@ -92,13 +92,13 @@ Extend `Font` directly with semantic roles mapped to system text styles. macOS d
 
 | Token | Base | Usage |
 |-------|------|-------|
-| `.conversationBody` | `.body` | Message text |
-| `.conversationCode` | `.body.monospaced()` | Inline code, code blocks |
-| `.cardTitle` | `.headline` | Card headings, file names |
-| `.cardBody` | `.subheadline` | Card descriptions |
+| `.conversationBody` | `.title3` | Message text |
+| `.conversationCode` | `.title3.monospaced()` | Inline code, code blocks |
+| `.cardTitle` | `.body` | Card headings, file names |
+| `.cardBody` | `.callout` | Card descriptions |
 | `.sectionTitle` | `.title3` | Section labels |
 | `.tokenCount` | `.caption2.monospacedDigit()` | Token/cost display |
-| `.metadata` | `.caption` | Timestamps, secondary info |
+| `.metadata` | `.footnote` | Timestamps, secondary info |
 
 **Usage:**
 ```swift

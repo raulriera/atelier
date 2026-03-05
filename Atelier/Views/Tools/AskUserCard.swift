@@ -78,7 +78,7 @@ struct AskUserCard: View {
     private var resolvedLabel: some View {
         Label(
             "Selected: \(event.selectedLabel ?? "Unknown")",
-            systemImage: "checkmark.bubble.fill"
+            systemImage: "checkmark.bubble"
         )
         .systemContainer()
         .foregroundStyle(.statusSuccess)

@@ -2,16 +2,16 @@ import SwiftUI
 
 extension Font {
     /// Message text in the conversation timeline.
-    public static let conversationBody: Font = .body
+    public static let conversationBody: Font = .title3
 
     /// Inline code spans and code blocks.
-    public static let conversationCode: Font = .body.monospaced()
+    public static let conversationCode: Font = .title3.monospaced()
 
     /// Card headings, file names.
-    public static let cardTitle: Font = .headline
+    public static let cardTitle: Font = .body
 
     /// Card descriptions, secondary card content.
-    public static let cardBody: Font = .subheadline
+    public static let cardBody: Font = .callout
 
     /// Section labels in the conversation.
     public static let sectionTitle: Font = .title3
@@ -20,5 +20,5 @@ extension Font {
     public static let tokenCount: Font = .caption2.monospacedDigit()
 
     /// Timestamps, secondary metadata.
-    public static let metadata: Font = .caption
+    public static let metadata: Font = .footnote
 }

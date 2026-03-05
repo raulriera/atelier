@@ -15,13 +15,14 @@ struct ToolUseCell: View {
         Button {
             onSelect?(event)
         } label: {
-            HStack(spacing: Spacing.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                 Image(systemName: event.iconName)
                     .foregroundStyle(.contentTertiary)
-                    .font(.caption)
+                    .font(.cardBody)
+                    .frame(width: 16, alignment: .center)
 
                 Text(event.plainDescription)
-                    .font(.metadata)
+                    .font(.cardBody)
                     .foregroundStyle(.contentSecondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -34,7 +35,7 @@ struct ToolUseCell: View {
                 } else if isTappable {
                     Image(systemName: "chevron.right")
                         .foregroundStyle(.contentTertiary)
-                        .font(.caption2)
+                        .font(.metadata)
                 }
             }
             .padding(.horizontal, Spacing.sm)

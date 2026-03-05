@@ -18,7 +18,7 @@ struct FolderSelectionView: View {
                     .foregroundStyle(.contentPrimary)
 
                 Text("or choose one from your Mac")
-                    .font(.caption)
+                    .font(.cardBody)
                     .foregroundStyle(.contentPrimary)
             }
 

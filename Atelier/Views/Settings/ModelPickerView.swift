@@ -20,7 +20,7 @@ struct ModelPickerView: View {
             }
         } label: {
             Text(selection.displayName)
-                .font(.caption)
+                .font(.metadata)
                 .foregroundStyle(.contentSecondary)
         }
         .menuStyle(.borderlessButton)

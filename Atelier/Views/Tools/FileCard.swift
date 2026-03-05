@@ -37,20 +37,21 @@ struct FileCard: View {
                 onSelect?(event)
             }
         } label: {
-            HStack(spacing: Spacing.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                 Image(systemName: event.iconName)
                     .foregroundStyle(.contentTertiary)
-                    .font(.caption)
+                    .font(.cardBody)
+                    .frame(width: 16, alignment: .center)
 
                 Text(event.fileName ?? event.inputSummary)
-                    .font(.metadata)
+                    .font(.cardBody)
                     .foregroundStyle(.contentSecondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
                 if let dir = event.fileDirectory {
                     Text(dir)
-                        .font(.metadata)
+                        .font(.cardBody)
                         .foregroundStyle(.contentTertiary)
                         .lineLimit(1)
                         .truncationMode(.head)
@@ -65,7 +66,7 @@ struct FileCard: View {
                     if isTappable {
                         Image(systemName: "finder")
                             .foregroundStyle(.contentTertiary)
-                            .font(.caption2)
+                            .font(.metadata)
                     }
                 } else {
                     if isTappable {
@@ -75,7 +76,7 @@ struct FileCard: View {
 
                         Image(systemName: "chevron.right")
                             .foregroundStyle(.contentTertiary)
-                            .font(.caption2)
+                            .font(.metadata)
                     }
                 }
             }

@@ -12,13 +12,13 @@ struct ApprovalCard: View {
             pendingCard
         case .approved:
             resolvedLabel(
-                icon: "checkmark.circle.fill",
+                icon: "checkmark",
                 style: .statusSuccess,
                 verb: "Approved"
             )
         case .denied:
             resolvedLabel(
-                icon: "xmark.circle.fill",
+                icon: "xmark",
                 style: .statusError,
                 verb: "Denied"
             )
