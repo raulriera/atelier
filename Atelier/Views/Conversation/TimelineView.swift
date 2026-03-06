@@ -4,7 +4,7 @@ import AtelierKit
 
 struct TimelineView: View {
     let session: Session
-    @Bindable var capabilityStore: CapabilityStore
+    let capabilityStore: CapabilityStore
     var selectedToolID: String?
     var onSelectTool: ((ToolUseEvent) -> Void)?
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
@@ -83,7 +83,7 @@ private extension TimelineContent {
 private struct TimelineItemView: View {
     let item: TimelineItem
     let session: Session
-    @Bindable var capabilityStore: CapabilityStore
+    let capabilityStore: CapabilityStore
     let selectedToolID: String?
     let onSelectTool: ((ToolUseEvent) -> Void)?
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?

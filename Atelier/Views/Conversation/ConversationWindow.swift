@@ -4,7 +4,7 @@ import AtelierKit
 
 struct ConversationWindow: View {
     @Bindable var fileAccessStore: FileAccessStore
-    @Bindable var capabilityStore: CapabilityStore
+    let capabilityStore: CapabilityStore
     var sessionPersistence: SessionPersistence
     var workingDirectory: URL?
     @State private var session = Session()
@@ -484,8 +484,8 @@ struct ConversationWindow: View {
         let captured = session.snapshot()
         withAnimation(Motion.appear) {
             session.reset()
+            capabilityHealthMonitor.reset()
         }
-        capabilityHealthMonitor.reset()
         if let captured {
             let persistence = sessionPersistence
             Task { try? await persistence.save(captured) }

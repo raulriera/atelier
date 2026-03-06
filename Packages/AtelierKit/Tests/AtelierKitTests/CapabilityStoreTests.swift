@@ -144,19 +144,40 @@ struct CapabilityStoreTests {
         let store = CapabilityStore()
         store.load()
 
-        #expect(!store.isEnabled("test-cap"))
-        store.enable("test-cap")
-        // Without registry entries, enabledGroups will be empty set.
-        // But the method should at least set the key.
-        #expect(store.enabledGroups["test-cap"] != nil)
+        // Manually add a group so the capability is partially enabled
+        store.toggleGroup("read", for: "mail")
+        #expect(store.isGroupEnabled("read", for: "mail"))
+        #expect(!store.isGroupEnabled("send", for: "mail"))
+
+        // Disable it, then enable via enable() — should not crash
+        store.toggle("mail")
+        #expect(!store.isEnabled("mail"))
+
+        store.enable("mail")
+        // Without registry the group set is empty, but the key is set
+        #expect(store.enabledGroups["mail"] != nil)
     }
 
-    @Test @MainActor func disabledCapabilitiesMentionedInTextMatchesCaseInsensitively() {
+    @Test @MainActor func disabledCapabilitiesNoMatchForEmptyRegistry() {
         let store = CapabilityStore()
         store.load()
-        // Without bundled helpers, capabilities are empty — so result is empty.
-        // This test verifies no crash and correct return type.
+        // Without bundled helpers the registry is empty — verify no crash
         let mentioned = store.disabledCapabilities(mentionedIn: "You could enable Calendar for this.")
-        #expect(mentioned.isEmpty) // no registry entries in test bundle
+        #expect(mentioned.isEmpty)
+    }
+
+    @Test @MainActor func enableIdempotentPreservesExistingGroups() {
+        let store = CapabilityStore()
+        store.load()
+
+        store.toggleGroup("read", for: "mail")
+        store.toggleGroup("send", for: "mail")
+        let beforeCount = store.enabledIDs.count
+
+        // Calling enable on already-enabled should not change anything
+        store.enable("mail")
+        #expect(store.isGroupEnabled("read", for: "mail"))
+        #expect(store.isGroupEnabled("send", for: "mail"))
+        #expect(store.enabledIDs.count == beforeCount)
     }
 }

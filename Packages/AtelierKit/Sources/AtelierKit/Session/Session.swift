@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 @Observable
 public final class Session {
     public private(set) var items: [TimelineItem] = []
