@@ -5,6 +5,7 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
         case pending
         case approved
         case denied
+        case dismissed
     }
 
     public let id: String

@@ -140,7 +140,7 @@ struct ToolUseEventTests {
         @Test("Returns correct icon names", arguments: [
             ("Read", "doc.text"),
             ("Write", "doc.badge.plus"),
-            ("Edit", "pencil"),
+            ("Edit", "long.text.page.and.pencil"),
             ("Bash", "terminal"),
             ("Glob", "magnifyingglass"),
             ("Grep", "text.magnifyingglass"),

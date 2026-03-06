@@ -266,7 +266,7 @@ struct ConversationWindow: View {
         }
 
         // Build the supplemental system prompt: core behavior + context files + capabilities.
-        var promptParts: [String] = [AtelierPrompt.coreInstructions]
+        var promptParts: [String] = [SystemPrompt.coreInstructions]
         if let cwd = workingDirectory {
             let discovered = ContextFileLoader.discover(from: cwd)
             activeContextFiles = discovered

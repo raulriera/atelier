@@ -29,6 +29,12 @@ struct ApprovalCard: View {
                 style: .statusError,
                 verb: "Denied"
             )
+        case .dismissed:
+            resolvedLabel(
+                icon: "minus.circle",
+                style: .contentSecondary,
+                verb: "Dismissed"
+            )
         }
     }
 

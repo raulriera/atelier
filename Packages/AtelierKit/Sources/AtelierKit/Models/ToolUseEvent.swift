@@ -424,7 +424,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         switch name {
         case "Read": "doc.text"
         case "Write": "doc.badge.plus"
-        case "Edit": "pencil"
+        case "Edit": "long.text.page.and.pencil"
         case "Bash": "terminal"
         case "Glob", "ToolSearch": "magnifyingglass"
         case "Grep": "text.magnifyingglass"
