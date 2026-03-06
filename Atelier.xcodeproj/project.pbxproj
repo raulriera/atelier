@@ -159,6 +159,7 @@
 				4C0BECF02F52B20000A608CC /* Compile Approval MCP Helper */,
 				4CA1B0012F70000000000001 /* Compile iWork MCP Helper */,
 				4CA1B0022F70000000000002 /* Compile Safari MCP Helper */,
+				4CA1B0032F70000000000003 /* Compile Mail MCP Helper */,
 				4C0BECEA2F52B10000A608CC /* Embed XPC Services */,
 			);
 			buildRules = (
@@ -384,6 +385,22 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-safari-mcp\" \"$SRCROOT/Helpers/atelier-safari-mcp.swift\"\n";
+		};
+		4CA1B0032F70000000000003 /* Compile Mail MCP Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Helpers/atelier-mail-mcp.swift",
+			);
+			name = "Compile Mail MCP Helper";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Helpers/atelier-mail-mcp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-mail-mcp\" \"$SRCROOT/Helpers/atelier-mail-mcp.swift\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

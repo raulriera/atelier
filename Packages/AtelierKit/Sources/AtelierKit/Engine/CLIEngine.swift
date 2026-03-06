@@ -16,7 +16,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
         workingDirectory: URL? = nil,
         appendSystemPrompt: String? = nil,
         approvalSocketPath: String? = nil,
-        enabledCapabilities: [MCPServerConfig] = []
+        enabledCapabilities: [EnabledCapability] = []
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         let path = cliPath
         let alias = model.cliAlias
@@ -28,7 +28,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
                 // Write temp MCP config if approval or capabilities are enabled
                 var mcpConfigPath: String?
                 if let socketPath = approvalSocketPath {
-                    mcpConfigPath = Self.writeMCPConfig(socketPath: socketPath, capabilities: enabledCapabilities, workingDirectory: cwd.path)
+                    mcpConfigPath = Self.writeMCPConfig(socketPath: socketPath, capabilities: enabledCapabilities.map(\.config), workingDirectory: cwd.path)
                 }
                 defer {
                     if let configPath = mcpConfigPath {
@@ -216,7 +216,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
         sessionId: String?,
         appendSystemPrompt: String? = nil,
         mcpConfigPath: String? = nil,
-        capabilityConfigs: [MCPServerConfig] = []
+        capabilityConfigs: [EnabledCapability] = []
     ) -> [String] {
         var args = [
             "-p",
@@ -245,9 +245,9 @@ public final class CLIEngine: ConversationEngine, Sendable {
             // Block the built-in AskUserQuestion (relies on stdin we don't pipe)
             args += ["--disallowedTools", "AskUserQuestion"]
             // Auto-approve tools from enabled capabilities
-            for config in capabilityConfigs {
-                for tool in config.autoApproveTools {
-                    args += ["--allowedTools", "mcp__\(config.serverName)__\(tool)"]
+            for cap in capabilityConfigs {
+                for tool in cap.approvedTools {
+                    args += ["--allowedTools", "mcp__\(cap.config.serverName)__\(tool)"]
                 }
             }
         }

@@ -463,6 +463,30 @@ public final class Session {
         return approval.id
     }
 
+    /// Dismisses the pending ask-user event if one exists, using the given
+    /// message as the custom text response. Called when the user sends a
+    /// message while an ask-user card is waiting — the message supersedes
+    /// the card interaction.
+    ///
+    /// - Returns: The event ID that was dismissed, or `nil` if no pending
+    ///   ask-user existed.
+    @MainActor
+    @discardableResult
+    public func dismissPendingAskUser(customText: String) -> String? {
+        for index in items.indices.reversed() {
+            if case .askUser(var event) = items[index].content,
+               event.status == .pending {
+                event.selectedIndex = AskUserEvent.customTextIndex
+                event.customText = customText
+                event.status = .answered
+                event.answeredAt = Date()
+                items[index].content = .askUser(event)
+                return event.id
+            }
+        }
+        return nil
+    }
+
     @MainActor
     public func resolveApproval(id: String, decision: ApprovalDecision) {
         guard let index = items.lastIndex(where: {

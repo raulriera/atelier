@@ -40,7 +40,10 @@ struct CLIEngineCapabilityTests {
             serverConfig: MCPServerConfig(
                 command: "/usr/bin/test",
                 serverName: "test-server"
-            )
+            ),
+            toolGroups: [
+                ToolGroup(id: "read", name: "Read", description: "Read things", tools: ["read_item"])
+            ]
         )
         let data = try JSONEncoder().encode(cap)
         let decoded = try JSONDecoder().decode(Capability.self, from: data)
@@ -51,13 +54,12 @@ struct CLIEngineCapabilityTests {
     func autoApproveToolsAddedToAllowedTools() {
         let config = MCPServerConfig(
             command: "/bin/echo",
-            serverName: "test-server",
-            autoApproveTools: ["create_thing", "edit_thing"]
+            serverName: "test-server"
         )
         let args = CLIEngine.buildArguments(
             message: "hello", modelAlias: "opus", sessionId: nil,
             mcpConfigPath: "/tmp/test.json",
-            capabilityConfigs: [config]
+            capabilityConfigs: [EnabledCapability(config: config, approvedTools: ["create_thing", "edit_thing"])]
         )
         #expect(args.contains("mcp__test-server__create_thing"))
         #expect(args.contains("mcp__test-server__edit_thing"))

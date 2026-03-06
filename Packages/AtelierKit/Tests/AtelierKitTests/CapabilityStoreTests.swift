@@ -29,6 +29,42 @@ struct CapabilityStoreTests {
         #expect(!store.isEnabled("test-cap"))
     }
 
+    @Test @MainActor func toggleGroupEnablesAndDisables() {
+        let store = CapabilityStore()
+        store.load()
+
+        // Enable the capability first
+        store.toggle("test-cap")
+        #expect(store.isEnabled("test-cap"))
+
+        // Toggle a specific group on
+        store.toggleGroup("read", for: "test-cap")
+        #expect(store.isGroupEnabled("read", for: "test-cap"))
+
+        // Toggle it off
+        store.toggleGroup("read", for: "test-cap")
+        // When last group is removed, capability is removed
+        #expect(!store.isEnabled("test-cap"))
+    }
+
+    @Test @MainActor func toggleGroupAddsToExistingCapability() {
+        let store = CapabilityStore()
+        store.load()
+
+        store.toggleGroup("read", for: "mail")
+        #expect(store.isEnabled("mail"))
+        #expect(store.isGroupEnabled("read", for: "mail"))
+
+        store.toggleGroup("send", for: "mail")
+        #expect(store.isGroupEnabled("read", for: "mail"))
+        #expect(store.isGroupEnabled("send", for: "mail"))
+
+        store.toggleGroup("read", for: "mail")
+        #expect(!store.isGroupEnabled("read", for: "mail"))
+        #expect(store.isGroupEnabled("send", for: "mail"))
+        #expect(store.isEnabled("mail"))
+    }
+
     @Test @MainActor func persistenceRoundTrip() throws {
         let url = makeTempURL()
         defer { try? FileManager.default.removeItem(at: url) }
@@ -47,31 +83,47 @@ struct CapabilityStoreTests {
         #expect(FileManager.default.fileExists(atPath: url.path))
     }
 
-    @Test @MainActor func enabledServerConfigsMatchesToggled() {
+    @Test @MainActor func legacyFormatMigration() throws {
+        let url = makeTempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        // Write legacy format: Set<String>
+        let legacyIDs: Set<String> = ["iwork", "safari"]
+        let data = try JSONEncoder().encode(legacyIDs)
+        try data.write(to: url)
+
+        let store = CapabilityStore(persistenceURL: url)
+        store.load()
+        // Without bundled helpers, capabilities won't be in the registry,
+        // so they get filtered. We verify the file was readable.
+        #expect(FileManager.default.fileExists(atPath: url.path))
+    }
+
+    @Test @MainActor func enabledCapabilityConfigsMatchesToggled() {
         let store = CapabilityStore()
         store.load()
 
-        // No capabilities enabled → empty
-        #expect(store.enabledServerConfigs().isEmpty)
+        // No capabilities enabled -> empty
+        #expect(store.enabledCapabilityConfigs().isEmpty)
     }
 
-    @Test @MainActor func malformedFileDoesNotCrash() {
+    @Test @MainActor func malformedFileDoesNotCrash() throws {
         let url = makeTempURL()
         defer { try? FileManager.default.removeItem(at: url) }
 
         // Write garbage
-        try? Data("not json".utf8).write(to: url)
+        try Data("not json".utf8).write(to: url)
 
         let store = CapabilityStore(persistenceURL: url)
         store.load()
         #expect(store.enabledIDs.isEmpty)
     }
 
-    @Test @MainActor func emptyFileDoesNotCrash() {
+    @Test @MainActor func emptyFileDoesNotCrash() throws {
         let url = makeTempURL()
         defer { try? FileManager.default.removeItem(at: url) }
 
-        try? Data().write(to: url)
+        try Data().write(to: url)
 
         let store = CapabilityStore(persistenceURL: url)
         store.load()

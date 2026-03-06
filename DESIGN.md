@@ -95,10 +95,10 @@ Extend `Font` directly with semantic roles mapped to system text styles. macOS d
 | `.conversationBody` | `.title3` | Message text |
 | `.conversationCode` | `.title3.monospaced()` | Inline code, code blocks |
 | `.cardTitle` | `.body` | Card headings, file names |
-| `.cardBody` | `.callout` | Card descriptions |
+| `.cardBody` | `.body` | Card descriptions, secondary content |
 | `.sectionTitle` | `.title3` | Section labels |
 | `.tokenCount` | `.caption2.monospacedDigit()` | Token/cost display |
-| `.metadata` | `.footnote` | Timestamps, secondary info |
+| `.metadata` | `.callout` | Timestamps, secondary info, captions |
 
 **Usage:**
 ```swift

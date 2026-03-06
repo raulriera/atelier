@@ -253,6 +253,15 @@ struct ConversationWindow: View {
             }
         }
 
+        // If there's a pending ask-user, dismiss it — the user's message
+        // supersedes the card. This unblocks the CLI which is waiting for
+        // the ask_user response on the socket.
+        if let dismissedID = session.dismissPendingAskUser(customText: text) {
+            if let server = approvalServer {
+                Task { await server.respondAskUser(requestId: dismissedID, selectedIndex: AskUserEvent.customTextIndex, selectedLabel: text) }
+            }
+        }
+
         if session.isStreaming {
             withAnimation(Motion.appear) {
                 session.enqueuePendingMessage(text)
@@ -285,7 +294,7 @@ struct ConversationWindow: View {
     private func startStreaming(message: String, appendSystemPrompt: String? = nil) {
         streamingTask = Task {
             let socketPath = await approvalServer?.socketPath
-            let capConfigs = capabilityStore.enabledServerConfigs()
+            let capConfigs = capabilityStore.enabledCapabilityConfigs()
             let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath, enabledCapabilities: capConfigs)
             do {
                 for try await event in stream {

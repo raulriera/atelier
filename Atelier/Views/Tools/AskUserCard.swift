@@ -4,18 +4,16 @@ import AtelierKit
 
 /// Timeline card for ask-user questions with selectable options.
 ///
-/// Pending questions show the full question text with option buttons and an
-/// expandable "Other" free-text field. Once answered, the card collapses
-/// to a centered one-line label showing the selected option.
+/// Pending questions show the question text with a radio group picker for
+/// the options and a hint that the user can type a message instead. Once
+/// answered, the card collapses to a centered one-line label.
 struct AskUserCard: View {
     /// The ask-user event to display.
     let event: AskUserEvent
     /// Called when the user selects an option: `(eventID, selectedIndex, customText?)`.
     var onResponse: ((String, Int, String?) -> Void)?
 
-    @State private var isOtherExpanded = false
-    @State private var otherText = ""
-    @FocusState private var isOtherFocused: Bool
+    @State private var selection: Int?
 
     var body: some View {
         switch event.status {
@@ -26,55 +24,39 @@ struct AskUserCard: View {
         }
     }
 
-    // MARK: - Pending (question with option buttons)
+    // MARK: - Pending (question with radio picker)
 
     private var pendingCard: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(event.question)
                 .font(.cardTitle)
 
-            VStack(spacing: Spacing.xxs) {
+            Picker(selection: $selection) {
                 ForEach(Array(event.options.enumerated()), id: \.offset) { index, option in
-                    Button {
-                        onResponse?(event.id, index, nil)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(option.label)
-                            if let description = option.description, !description.isEmpty {
-                                Text(description)
-                                    .font(.conversationCode)
-                                    .foregroundStyle(.contentSecondary)
-                            }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(option.label)
+                        if let description = option.description, !description.isEmpty {
+                            Text(description)
+                                .font(.cardBody)
+                                .foregroundStyle(.contentSecondary)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .buttonStyle(.glass(.clear))
+                    .padding(.leading, Spacing.xxs)
+                    .tag(Optional(index))
                 }
-
-                if isOtherExpanded {
-                    HStack(spacing: Spacing.xs) {
-                        TextField("Type your answer...", text: $otherText)
-                            .textFieldStyle(.plain)
-                            .focused($isOtherFocused)
-                            .onSubmit { submitOther() }
-
-                        Button("Submit") { submitOther() }
-                            .buttonStyle(.glass(.clear))
-                            .disabled(otherText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                    .padding(Spacing.xs)
-                    .background(.fill.quaternary, in: .rect(cornerRadius: Radii.sm))
-                } else {
-                    Button {
-                        isOtherExpanded = true
-                        isOtherFocused = true
-                    } label: {
-                        Text("Other")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .buttonStyle(.glass(.clear))
-                }
+            } label: {
+                EmptyView()
             }
+            .pickerStyle(.radioGroup)
+            .labelsHidden()
+            .onChange(of: selection) { _, newValue in
+                guard let index = newValue else { return }
+                onResponse?(event.id, index, nil)
+            }
+
+            Text("Or type a message to answer in your own words.")
+                .font(.cardBody)
+                .foregroundStyle(.contentTertiary)
         }
         .cardContainer()
         .transition(Motion.approvalAppear)
@@ -83,20 +65,35 @@ struct AskUserCard: View {
     // MARK: - Answered (compact one-liner)
 
     private var resolvedLabel: some View {
-        Label(
-            "Selected: \(event.selectedLabel ?? "Unknown")",
-            systemImage: "checkmark.bubble"
-        )
-        .systemContainer()
-        .foregroundStyle(.statusSuccess)
-        .frame(maxWidth: .infinity, alignment: .center)
-        .transition(Motion.approvalAppear)
+        Label(resolvedText, systemImage: resolvedIcon)
+            .systemContainer()
+            .foregroundStyle(resolvedStyle)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .transition(Motion.approvalAppear)
     }
 
-    private func submitOther() {
-        let trimmed = otherText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        onResponse?(event.id, AskUserEvent.customTextIndex, trimmed)
+    private var resolvedText: String {
+        if event.customText == "Dismissed" {
+            return "No answer, dismissed"
+        }
+        if event.selectedIndex == AskUserEvent.customTextIndex {
+            return "Answered with a message"
+        }
+        return "Selected: \(event.selectedLabel ?? "Unknown")"
+    }
+
+    private var resolvedIcon: String {
+        if event.customText == "Dismissed" {
+            return "bubble"
+        }
+        return "checkmark.bubble"
+    }
+
+    private var resolvedStyle: some ShapeStyle {
+        if event.customText == "Dismissed" {
+            return AnyShapeStyle(.contentSecondary)
+        }
+        return AnyShapeStyle(.statusSuccess)
     }
 }
 
@@ -134,8 +131,19 @@ struct AskUserCard: View {
             ],
             selectedIndex: AskUserEvent.customTextIndex,
             customText: "my-custom-name.md",
-            status: .answered,
-            answeredAt: Date()
+            status: .answered
+        ))
+
+        AskUserCard(event: AskUserEvent(
+            id: "4",
+            question: "Which format should I use for your notes?",
+            options: [
+                .init(label: "Markdown", description: nil),
+                .init(label: "Plain Text", description: nil),
+            ],
+            selectedIndex: AskUserEvent.customTextIndex,
+            customText: "Dismissed",
+            status: .answered
         ))
     }
     .padding()

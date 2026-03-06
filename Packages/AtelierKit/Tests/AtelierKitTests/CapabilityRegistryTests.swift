@@ -28,25 +28,21 @@ struct CapabilityRegistryTests {
         }
     }
 
-    @Test("iWork capability has expected server name")
-    func iWorkServerName() throws {
-        // In test context the helper binary won't exist in the bundle,
-        // so iWorkCapability() returns nil. We test the config struct directly.
-        let config = MCPServerConfig(
-            command: "/path/to/helper",
-            serverName: "atelier-iwork"
-        )
-        #expect(config.serverName == "atelier-iwork")
+    @Test("All tool groups have unique IDs within their capability")
+    func uniqueGroupIDs() {
+        for cap in CapabilityRegistry.allCapabilities() {
+            let groupIDs = cap.toolGroups.map(\.id)
+            #expect(Set(groupIDs).count == groupIDs.count, "Duplicate group IDs in \(cap.id)")
+        }
     }
 
-    @Test("Safari capability has expected server name")
-    func safariServerName() throws {
-        // In test context the helper binary won't exist in the bundle,
-        // so safariCapability() returns nil. We test the config struct directly.
-        let config = MCPServerConfig(
-            command: "/path/to/helper",
-            serverName: "atelier-safari"
-        )
-        #expect(config.serverName == "atelier-safari")
+    @Test("All tool groups have non-empty tools")
+    func groupsHaveTools() {
+        for cap in CapabilityRegistry.allCapabilities() {
+            for group in cap.toolGroups {
+                #expect(!group.tools.isEmpty, "Group \(group.id) in \(cap.id) has no tools")
+            }
+        }
     }
+
 }

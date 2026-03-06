@@ -29,9 +29,8 @@ struct ConversationToolbar: ToolbarContent {
                 Label("Capabilities", systemImage: "puzzlepiece.extension")
             }
             .help("Capabilities")
-            .popover(isPresented: $showingCapabilities) {
-                CapabilitiesCard(capabilityStore: capabilityStore)
-                    .padding(Spacing.sm)
+            .sheet(isPresented: $showingCapabilities) {
+                CapabilitiesSheet(capabilityStore: capabilityStore)
             }
         }
         ToolbarItem(placement: .automatic) {

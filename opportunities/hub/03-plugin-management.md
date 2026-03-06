@@ -50,16 +50,19 @@ Just names. Not server URLs, not commands, not port numbers. Atelier resolves th
 
 For developers building custom tools, the deepest layer supports full MCP server configuration — but this is explicitly a power-user feature that nobody else ever sees.
 
-## Current Implementation (MVP shipped)
+## Current Implementation
 
-The capabilities architecture is live with iWork as the first built-in capability:
+The capabilities architecture is live with iWork, Safari, and Mail as built-in capabilities:
 
-- **Capability models** — `Capability`, `MCPServerConfig`, `CapabilityRegistry` in `AtelierKit/Capabilities/`
-- **CapabilityStore** — per-project persistence of enabled capabilities (`capabilities.json`)
-- **CLIEngine integration** — merges capability MCP servers into the temp config, auto-approves enabled tools via `--allowedTools`
-- **System prompt injection** — Claude knows about available/enabled capabilities and can suggest enabling them
-- **UI** — toolbar popover with `CapabilitiesCard` / `CapabilityRow` (toggle per capability)
-- **iWork MCP helper** — `Helpers/atelier-iwork-mcp.swift`, compiled to `Contents/Helpers/atelier-iwork-mcp`, speaks JSON-RPC 2.0 over stdio, 12 tools across Keynote/Pages/Numbers via JXA
+- **Capability models** — `Capability`, `ToolGroup`, `MCPServerConfig`, `EnabledCapability`, `CapabilityRegistry` in `AtelierKit/Capabilities/`
+- **Tool groups** — each capability defines named groups of tools (e.g. Mail has Read, Manage, Send). Users enable/disable groups independently for granular control
+- **CapabilityStore** — per-project persistence of enabled groups (`capabilities.json`), with migration from legacy flat format
+- **CLIEngine integration** — merges capability MCP servers into the temp config, auto-approves tools from enabled groups via `--allowedTools`
+- **System prompt injection** — Claude knows about available/enabled capabilities (including which groups are active) and can suggest enabling them
+- **UI** — toolbar sheet with NavigationStack drill-down to per-group toggles
+- **iWork MCP helper** — `Helpers/atelier-iwork-mcp.swift`, 12 tools across Keynote/Pages/Numbers via JXA, 2 groups (Create, Export)
+- **Safari MCP helper** — `Helpers/atelier-safari-mcp.swift`, 6 tools via JXA, 2 groups (Browse, Script)
+- **Mail MCP helper** — `Helpers/atelier-mail-mcp.swift`, 10 tools via JXA, 3 groups (Read, Manage, Send)
 - **Export defaults** — saves to project working directory when no path specified
 
 Pattern for adding new capabilities: add a new helper in `Helpers/`, register in `CapabilityRegistry`, add a build phase in the Xcode project.
@@ -71,7 +74,7 @@ Pattern for adding new capabilities: add a new helper in `Helpers/`, register in
 | Capability | App | What it unlocks | Complexity |
 |-----------|-----|----------------|------------|
 | ✅ **iWork** | Keynote, Pages, Numbers | Create/edit presentations, documents, spreadsheets | Shipped |
-| 🔲 **Mail** | Mail.app | Draft, send, reply to emails. "Summarize this and email it to the team." | Medium — full JXA scripting support |
+| ✅ **Mail** | Mail.app | Draft, send, reply to emails. "Summarize this and email it to the team." | Shipped |
 | 🔲 **Reminders** | Reminders.app | Create tasks, lists, due dates. "Remind me to review the budget Friday." | Low — simple scripting dictionary |
 | 🔲 **Calendar** | Calendar.app | Create events, check availability. "Block 2 hours tomorrow for this project." | Low — EventKit or JXA |
 | 🔲 **Notes** | Notes.app | Read/write Apple Notes. "Save these meeting notes to my Work folder." | Medium — Notes scripting is limited but workable |
@@ -81,7 +84,7 @@ Pattern for adding new capabilities: add a new helper in `Helpers/`, register in
 
 | Capability | App | What it unlocks | Complexity |
 |-----------|-----|----------------|------------|
-| 🔲 **Safari** | Safari | Open URLs, read page content, bookmark. "Research competitors and save the links." | Medium — WebKit automation via JXA |
+| ✅ **Safari** | Safari | Open URLs, read page content, bookmark. "Research competitors and save the links." | Shipped |
 | 🔲 **Finder** | Finder | Organize files, create folders, tag files. "Organize my Downloads by type." Smart folders. | Low — comprehensive scripting dictionary |
 | 🔲 **Shortcuts** | Shortcuts.app | Trigger any user-defined Shortcut. Meta-capability — unlocks everything the user has already automated. | Low — `shortcuts run` CLI |
 
@@ -98,8 +101,11 @@ Pattern for adding new capabilities: add a new helper in `Helpers/`, register in
 
 - ✅ Capability registry and store architecture
 - ✅ iWork capability (Keynote, Pages, Numbers)
-- 🔲 Mail, Reminders, Calendar, Notes, Preview/PDF capabilities
-- 🔲 Finder, Safari, Shortcuts capabilities
+- ✅ Safari capability (Browse, Script)
+- ✅ Mail capability (Read, Manage, Send)
+- ✅ Tool groups — granular per-group enablement with NavigationStack sheet UI
+- 🔲 Reminders, Calendar, Notes, Preview/PDF capabilities
+- 🔲 Finder, Shortcuts capabilities
 
 ### Phase 2 — On-Demand Activation
 

@@ -83,7 +83,7 @@ The features that make Atelier smart — embedded Claude Code, approval gates, c
 | 4.1 | Claude Code Integration | New | 🔨 In progress | [→](opportunities/hub/01-claude-code-integration.md) |
 | 4.2 | Approval & Review Flow | New | ✅ Done | [→](opportunities/context/04-approval-review-flow.md) |
 | 4.3 | Token Usage Visibility | New | ✅ Done | [→](opportunities/hub/05-token-usage-visibility.md) |
-| 4.4 | Capabilities | New | 🔲 Not started | [→](opportunities/hub/03-plugin-management.md) |
+| 4.4 | Capabilities | New | 🔨 In progress | [→](opportunities/hub/03-plugin-management.md) |
 | 4.5 | Cloud Connectors | New | 🔲 Not started | [→](opportunities/hub/06-cloud-connectors.md) |
 | 4.6 | Prompt Injection Defense | New | 🔲 Not started | [→](opportunities/security/03-prompt-injection-defense.md) |
 | 4.P | **Polish:** ~~Evaluate system Liquid Glass button styles for approval actions~~ | HIG | ✅ Done | — |

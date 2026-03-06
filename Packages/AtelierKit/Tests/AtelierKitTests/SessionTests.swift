@@ -1061,4 +1061,139 @@ struct SessionTests {
             #expect(session.planFilePath(for: "nonexistent") == nil)
         }
     }
+
+    @Suite("Dismiss pending ask-user")
+    struct DismissPendingAskUser {
+
+        @Test("dismissPendingAskUser resolves pending ask-user and returns its ID")
+        @MainActor func dismissPendingAskUser() throws {
+            let session = Session()
+            session.beginAskUser(id: "ask-1", question: "Pick one", options: [
+                AskUserEvent.Option(label: "A"),
+                AskUserEvent.Option(label: "B"),
+            ])
+
+            let dismissedID = session.dismissPendingAskUser(customText: "Actually, do C instead")
+
+            #expect(dismissedID == "ask-1")
+            let event = try #require(session.items[0].content.askUser)
+            #expect(event.status == .answered)
+            #expect(event.selectedIndex == AskUserEvent.customTextIndex)
+            #expect(event.customText == "Actually, do C instead")
+            #expect(event.answeredAt != nil)
+        }
+
+        @Test("dismissPendingAskUser returns nil when no pending ask-user exists")
+        @MainActor func dismissPendingAskUserNoPending() {
+            let session = Session()
+
+            let dismissedID = session.dismissPendingAskUser(customText: "hello")
+
+            #expect(dismissedID == nil)
+        }
+
+        @Test("dismissPendingAskUser ignores already-answered ask-user events")
+        @MainActor func dismissPendingAskUserAlreadyAnswered() {
+            let session = Session()
+            session.beginAskUser(id: "ask-1", question: "Pick one", options: [
+                AskUserEvent.Option(label: "A"),
+            ])
+            session.resolveAskUser(id: "ask-1", selectedIndex: 0)
+
+            let dismissedID = session.dismissPendingAskUser(customText: "override")
+
+            #expect(dismissedID == nil)
+            // Original answer stays unchanged
+            let event = session.items[0].content.askUser!
+            #expect(event.selectedIndex == 0)
+            #expect(event.customText == nil)
+        }
+
+        @Test("dismissPendingAskUser picks the most recent pending event")
+        @MainActor func dismissPendingAskUserPicksMostRecent() throws {
+            let session = Session()
+            session.beginAskUser(id: "ask-1", question: "First?", options: [])
+            session.resolveAskUser(id: "ask-1", selectedIndex: 0)
+            session.beginAskUser(id: "ask-2", question: "Second?", options: [])
+
+            let dismissedID = session.dismissPendingAskUser(customText: "my answer")
+
+            #expect(dismissedID == "ask-2")
+            // First ask-user stays resolved
+            let first = try #require(session.items[0].content.askUser)
+            #expect(first.selectedIndex == 0)
+            // Second is dismissed with custom text
+            let second = try #require(session.items[1].content.askUser)
+            #expect(second.customText == "my answer")
+        }
+
+        @Test("dismissPendingAskUser works while streaming with queued message")
+        @MainActor func dismissPendingAskUserWhileStreaming() throws {
+            let session = Session()
+            session.appendUserMessage("Hello")
+            session.beginAssistantMessage()
+            session.applyDelta("Let me ask...")
+
+            // Simulate CLI calling ask_user while streaming
+            session.beginAskUser(id: "ask-1", question: "What next?", options: [
+                AskUserEvent.Option(label: "Option A"),
+                AskUserEvent.Option(label: "Option B"),
+            ])
+
+            #expect(session.isStreaming)
+
+            // User sends a message — should dismiss the pending ask-user
+            let dismissedID = session.dismissPendingAskUser(customText: "Do option C")
+
+            #expect(dismissedID == "ask-1")
+            let event = try #require(session.items.last(where: {
+                if case .askUser = $0.content { return true }
+                return false
+            })?.content.askUser)
+            #expect(event.status == .answered)
+            #expect(event.customText == "Do option C")
+        }
+
+        @Test("Full flow: ask-user dismissed by message, then CLI completes, queued message dispatched")
+        @MainActor func fullFlowAskUserDismissedThenQueued() throws {
+            let session = Session()
+
+            // User starts a conversation
+            session.appendUserMessage("Help me plan")
+            session.beginAssistantMessage()
+            session.applyDelta("Sure, let me ask...")
+
+            // CLI calls ask_user
+            session.beginAskUser(id: "ask-1", question: "What kind of plan?", options: [
+                AskUserEvent.Option(label: "Business"),
+                AskUserEvent.Option(label: "Personal"),
+            ])
+
+            // User types a message instead of clicking a button
+            // In the real app, sendMessage() would:
+            // 1. Dismiss the pending ask_user
+            // 2. Enqueue the message (since isStreaming)
+            let dismissedID = session.dismissPendingAskUser(customText: "A billiard salon plan")
+            #expect(dismissedID == "ask-1")
+
+            session.enqueuePendingMessage("A billiard salon plan")
+            #expect(session.pendingMessages.count == 1)
+
+            // CLI processes the ask_user response and completes its turn
+            session.completeAssistantMessage(usage: TokenUsage(inputTokens: 20, outputTokens: 10))
+
+            // Dequeue the pending message for the next turn
+            let queued = session.dequeuePendingMessage()
+            #expect(queued == "A billiard salon plan")
+            #expect(session.pendingMessages.isEmpty)
+
+            // The ask-user event is answered, not pending
+            let askEvent = try #require(session.items.first(where: {
+                if case .askUser = $0.content { return true }
+                return false
+            })?.content.askUser)
+            #expect(askEvent.status == .answered)
+            #expect(askEvent.customText == "A billiard salon plan")
+        }
+    }
 }
