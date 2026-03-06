@@ -142,7 +142,8 @@ public final class CapabilityStore {
             lines.append("# Available capabilities (not yet enabled)")
             lines.append(contentsOf: disabledLines)
             lines.append("")
-            lines.append("If the user's request would benefit from a disabled capability, mention it by name (e.g. \"I could help with that if you enable Calendar\"). The app will automatically show an inline Enable button next to your message.")
+            lines.append("IMPORTANT: You already have built-in tools (WebSearch, WebFetch, Write, Edit, Bash, Read, Glob, Grep). ALWAYS use these first. Only suggest enabling a capability when it provides something your built-in tools genuinely cannot do (e.g. creating calendar events, managing reminders, controlling Safari tabs). Never refuse a request just because a capability is disabled — use your built-in tools instead.")
+            lines.append("When a capability would add clear value beyond built-in tools, mention it by name (e.g. \"I could also help with that if you enable Calendar\"). The app will automatically show an inline Enable button next to your message.")
         }
 
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
