@@ -57,14 +57,7 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
             return "Edit a notebook"
 
         default:
-            if toolName.hasPrefix("mcp__") {
-                let parts = toolName.split(separator: "__")
-                if parts.count >= 3 {
-                    let tool = parts.last!.replacingOccurrences(of: "_", with: " ")
-                    return tool.capitalized
-                }
-            }
-            return displayName
+            return MCPToolMetadata.displayName(for: toolName) ?? "Use \(toolName)"
         }
     }
 
@@ -75,7 +68,7 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
         case "Write": "Write File"
         case "Edit": "Edit File"
         case "NotebookEdit": "Edit Notebook"
-        default: "Use \(toolName)"
+        default: MCPToolMetadata.displayName(for: toolName) ?? "Use \(toolName)"
         }
     }
 
@@ -86,7 +79,10 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
         case "Edit": "pencil"
         case "Bash": "terminal"
         case "NotebookEdit": "book"
-        default: "wrench"
+        default:
+            if let mcpIcon = MCPToolMetadata.iconName(for: toolName) { mcpIcon }
+            else if toolName.hasPrefix("mcp__") { "puzzlepiece.extension" }
+            else { "wrench" }
         }
     }
 

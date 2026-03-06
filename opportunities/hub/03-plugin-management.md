@@ -68,6 +68,8 @@ The capabilities architecture is live with iWork, Safari, and Mail as built-in c
 - **Notes MCP helper** — `Helpers/atelier-notes-mcp.swift`, 6 tools via JXA, 3 groups (Read, Create, Manage)
 - **Finder MCP helper** — `Helpers/atelier-finder-mcp.swift`, 9 tools via JXA, 2 groups (Browse, Organize)
 - **Export defaults** — saves to project working directory when no path specified
+- **Plain-English tool names** — `MCPToolMetadata` maps MCP tool identifiers to human-readable names and SF Symbols in both tool use cards and approval cards (e.g. "Move to Trash" instead of `mcp__atelier-finder__finder_trash`)
+- **Destructive tool gating** — destructive tools (trash, delete, send) are excluded from auto-approve so they go through the approval flow
 
 Pattern for adding new capabilities: add a new helper in `Helpers/`, register in `CapabilityRegistry`, add a build phase in the Xcode project.
 

@@ -375,12 +375,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case "TaskOutput": raw = "Reading task output"
 
         default:
-            if name.hasPrefix("mcp__") {
-                let parts = name.split(separator: "__")
-                if parts.count >= 3, let last = parts.last {
-                    raw = String(last).replacingOccurrences(of: "_", with: " ").capitalized
-                } else { raw = displayName }
-            } else { raw = displayName }
+            raw = MCPToolMetadata.displayName(for: name) ?? name
         }
 
         if raw.count <= 120 { return raw }
@@ -409,7 +404,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case "ExitPlanMode": "Planning"
         case "Skill": "Run Skill"
         case "ToolSearch": "Search Tools"
-        default: name
+        default: MCPToolMetadata.displayName(for: name) ?? name
         }
     }
 
@@ -433,7 +428,8 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case "ExitPlanMode": "checklist.checked"
         case "Skill": "wand.and.sparkles"
         default:
-            if name.hasPrefix("mcp__") { "puzzlepiece.extension" }
+            if let mcpIcon = MCPToolMetadata.iconName(for: name) { mcpIcon }
+            else if name.hasPrefix("mcp__") { "puzzlepiece.extension" }
             else { "sparkles.2" }
         }
     }

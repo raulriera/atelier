@@ -117,6 +117,13 @@ struct ApprovalCard: View {
             inputJSON: #"{"command":"curl https://example.com/api","description":"Fetch data from example API"}"#,
             status: .denied
         ))
+
+        ApprovalCard(event: ApprovalEvent(
+            id: "5",
+            toolName: "mcp__atelier-finder__finder_trash",
+            inputJSON: #"{"path":"old-drafts"}"#,
+            status: .approved
+        ))
     }
     .padding()
     .frame(width: 500)
