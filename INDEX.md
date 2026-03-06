@@ -8,7 +8,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 37 |
+| **Total opportunities** | 38 |
 | **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -84,7 +84,8 @@ The features that make Atelier smart — embedded Claude Code, approval gates, c
 | 4.2 | Approval & Review Flow | New | ✅ Done | [→](opportunities/context/04-approval-review-flow.md) |
 | 4.3 | Token Usage Visibility | New | ✅ Done | [→](opportunities/hub/05-token-usage-visibility.md) |
 | 4.4 | Capabilities | New | 🔲 Not started | [→](opportunities/hub/03-plugin-management.md) |
-| 4.5 | Prompt Injection Defense | New | 🔲 Not started | [→](opportunities/security/03-prompt-injection-defense.md) |
+| 4.5 | Cloud Connectors | New | 🔲 Not started | [→](opportunities/hub/06-cloud-connectors.md) |
+| 4.6 | Prompt Injection Defense | New | 🔲 Not started | [→](opportunities/security/03-prompt-injection-defense.md) |
 | 4.P | **Polish:** ~~Evaluate system Liquid Glass button styles for approval actions~~ | HIG | ✅ Done | — |
 
 ---
@@ -184,6 +185,7 @@ Code integration, capabilities, capability health, token usage.
 | [03-plugin-management.md](opportunities/hub/03-plugin-management.md) | M5 |
 | [04-mcp-connector-health.md](opportunities/hub/04-mcp-connector-health.md) | M5 |
 | [05-token-usage-visibility.md](opportunities/hub/05-token-usage-visibility.md) | M3 |
+| [06-cloud-connectors.md](opportunities/hub/06-cloud-connectors.md) | M3 |
 
 ### macOS Integration (`opportunities/macos/`)
 System services, Spotlight, drag-drop, menu bar, Shortcuts, FSEvents, clipboard, document generation.
@@ -243,7 +245,8 @@ atelier/
     │   ├── 01-claude-code-integration.md
     │   ├── 03-plugin-management.md
     │   ├── 04-mcp-connector-health.md
-    │   └── 05-token-usage-visibility.md
+    │   ├── 05-token-usage-visibility.md
+    │   └── 06-cloud-connectors.md
     └── macos/
         ├── 01-system-services.md
         ├── 02-spotlight-search.md
