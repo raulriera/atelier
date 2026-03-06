@@ -21,7 +21,7 @@ struct CardContainerModifier: ViewModifier {
             }
             .overlay(
                 RoundedRectangle(cornerRadius: Radii.md, style: .continuous)
-                    .strokeBorder(.white.opacity(colorScheme == .dark ? 0.08 : 0), lineWidth: 0.5)
+                    .strokeBorder(colorScheme == .dark ? .white.opacity(0.08) : .black.opacity(0.06), lineWidth: 0.5)
             )
     }
 }

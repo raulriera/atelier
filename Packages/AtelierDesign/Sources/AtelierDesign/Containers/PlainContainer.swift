@@ -15,6 +15,7 @@ import SwiftUI
 /// Text(grouped.text).plainContainer(showsTail: false)
 /// ```
 struct PlainContainerModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
     var showsTail: Bool = true
 
     private var bubbleShape: AnyShape {
@@ -25,12 +26,16 @@ struct PlainContainerModifier: ViewModifier {
         }
     }
 
+    private var bubbleColor: Color {
+        colorScheme == .dark ? Color(white: 0.22) : Color(white: 0.93)
+    }
+
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, Spacing.xs)
             .foregroundStyle(.contentPrimary)
-            .background(Color(white: 0.22), in: bubbleShape)
+            .background(bubbleColor, in: bubbleShape)
     }
 }
 

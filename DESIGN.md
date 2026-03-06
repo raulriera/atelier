@@ -220,7 +220,7 @@ View modifiers that apply padding, background, and corner radius. Clean defaults
 | Modifier | Background | Padding | Usage |
 |----------|------------|---------|-------|
 | `.tintedContainer()` | `.surfaceTinted` | 12H / 8V | User messages |
-| `.plainContainer()` | None | 12H / 8V | Assistant messages |
+| `.plainContainer()` | Gray bubble (adapts to color scheme) | 12H / 8V | Assistant messages |
 | `.cardContainer()` | `.surfaceElevated` | 12pt | File cards, approvals, elevated content |
 | `.systemContainer()` | None (text styling only) | — | System/status messages |
 
