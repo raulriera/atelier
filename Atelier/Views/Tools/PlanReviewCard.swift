@@ -12,8 +12,8 @@ struct PlanReviewCard: View {
     let event: ToolUseEvent
     /// Path to the plan file on disk, resolved by the session.
     var planFilePath: String?
-    /// Whether the user has already responded to this plan review.
-    var isResolved: Bool = false
+    /// The resolution status — `.pending` until the user decides.
+    var resolution: ApprovalEvent.Status
     /// Called when the user approves the plan — resolves the ExitPlanMode approval.
     var onApprove: (() -> Void)?
 
@@ -22,12 +22,11 @@ struct PlanReviewCard: View {
 
     var body: some View {
         Group {
-            if event.status == .running {
-                runningRow
-            } else if isResolved {
-                resolvedLabel
-            } else {
+            switch resolution {
+            case .pending:
                 completedCard
+            case .approved, .denied, .dismissed:
+                resolvedLabel(status: resolution)
             }
         }
         .task(id: planFilePath) {
@@ -39,23 +38,7 @@ struct PlanReviewCard: View {
         }
     }
 
-    // MARK: - Running (spinner row)
-
-    private var runningRow: some View {
-        HStack(spacing: Spacing.xs) {
-            ProgressView()
-                .controlSize(.mini)
-
-            Text("Finishing plan…")
-                .font(.cardBody)
-                .foregroundStyle(.contentSecondary)
-        }
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
-        .transition(Motion.cardReveal)
-    }
-
-    // MARK: - Completed (compact card with buttons)
+    // MARK: - Pending (compact card with button)
 
     private var completedCard: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -66,36 +49,42 @@ struct PlanReviewCard: View {
                 .font(.cardBody)
                 .foregroundStyle(.contentSecondary)
 
-            HStack(spacing: Spacing.sm) {
-                Button("Approve") {
-                    onApprove?()
-                }
-                .buttonStyle(.glassProminent)
-                
-                if planContent != nil {
-                    Button("Review Plan") {
-                        showingPlan = true
-                    }
-                    .buttonStyle(.glass)
-                }
+            Button("Review Plan") {
+                showingPlan = true
             }
+            .buttonStyle(.glassProminent)
             .padding(.top, Spacing.xxs)
         }
         .cardContainer()
         .transition(Motion.approvalAppear)
         .sheet(isPresented: $showingPlan) {
-            if let planContent {
-                PlanReviewSheet(planContent: planContent, onApprove: onApprove)
-            }
+            PlanReviewSheet(
+                planContent: planContent ?? "",
+                onApprove: onApprove
+            )
         }
     }
 
     // MARK: - Resolved (compact one-liner)
 
-    private var resolvedLabel: some View {
-        Label("Reviewed plan", systemImage: "checkmark")
+    @ViewBuilder
+    private func resolvedLabel(status: ApprovalEvent.Status) -> some View {
+        switch status {
+        case .approved:
+            statusLabel("Plan approved", icon: "checkmark", style: .statusSuccess)
+        case .denied:
+            statusLabel("Changes requested", icon: "arrow.uturn.backward", style: .contentSecondary)
+        case .dismissed:
+            statusLabel("Plan dismissed", icon: "minus.circle", style: .contentSecondary)
+        case .pending:
+            EmptyView()
+        }
+    }
+
+    private func statusLabel(_ text: String, icon: String, style: some ShapeStyle) -> some View {
+        Label(text, systemImage: icon)
             .systemContainer()
-            .foregroundStyle(.statusSuccess)
+            .foregroundStyle(style)
             .frame(maxWidth: .infinity, alignment: .center)
             .transition(Motion.approvalAppear)
     }
@@ -103,26 +92,33 @@ struct PlanReviewCard: View {
 
 #Preview("Plan Review Card") {
     VStack(spacing: Spacing.md) {
-        PlanReviewCard(event: ToolUseEvent(
-            id: "1",
-            name: "ExitPlanMode",
-            status: .running
-        ))
-
         PlanReviewCard(
             event: ToolUseEvent(
-                id: "2",
+                id: "1",
                 name: "ExitPlanMode",
-                status: .completed
+                status: .running
             ),
-            planFilePath: "/tmp/example-plan.md"
+            planFilePath: "/tmp/example-plan.md",
+            resolution: .pending
         )
 
         PlanReviewCard(event: ToolUseEvent(
             id: "3",
             name: "ExitPlanMode",
             status: .completed
-        ), isResolved: true)
+        ), resolution: .approved)
+
+        PlanReviewCard(event: ToolUseEvent(
+            id: "4",
+            name: "ExitPlanMode",
+            status: .completed
+        ), resolution: .denied)
+
+        PlanReviewCard(event: ToolUseEvent(
+            id: "5",
+            name: "ExitPlanMode",
+            status: .completed
+        ), resolution: .dismissed)
     }
     .padding()
     .frame(width: 500)

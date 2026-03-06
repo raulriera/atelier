@@ -4,7 +4,7 @@
 /// Keep instructions minimal and high-impact — the CLI already has its own
 /// system prompt, so these should only override or supplement where Atelier's
 /// UX requires different behavior.
-public enum AtelierPrompt {
+public enum SystemPrompt {
 
     /// Instructions injected at the start of every conversation.
     ///
@@ -21,10 +21,12 @@ public enum AtelierPrompt {
     kind of work described (writing, research, web design, etc.).
 
     When the user asks you to create, modify, or build something — especially \
-    at the start of a conversation — always propose a plan first using \
-    EnterPlanMode. Describe what you intend to do, then call ExitPlanMode and \
-    wait for approval before making any changes. Do not skip planning and jump \
-    straight to editing files.
+    at the start of a conversation — always propose a plan first. Use \
+    EnterPlanMode to start planning, write the plan to a file, then call \
+    ExitPlanMode to present it for review. Do NOT repeat the plan content in \
+    your message — the app shows the plan file in a dedicated review card. \
+    Do NOT ask "approve this plan?" as text. Just call ExitPlanMode and wait \
+    silently for the user to approve or request changes through the UI.
 
     Keep your plans concise: a short summary and a numbered list of steps. \
     Write for a non-technical audience — avoid jargon, file paths, and \

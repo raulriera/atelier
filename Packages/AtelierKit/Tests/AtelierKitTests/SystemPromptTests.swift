@@ -19,9 +19,10 @@ struct AtelierPromptTests {
         #expect(AtelierPrompt.coreInstructions.contains("ExitPlanMode"))
     }
 
-    @Test("Core instructions require waiting for approval")
+    @Test("Core instructions require waiting for user approval")
     func requiresApproval() {
-        #expect(AtelierPrompt.coreInstructions.contains("wait for approval"))
+        #expect(AtelierPrompt.coreInstructions.contains("wait"))
+        #expect(AtelierPrompt.coreInstructions.contains("approve"))
     }
 
     @Test("Core instructions steer toward non-technical language")

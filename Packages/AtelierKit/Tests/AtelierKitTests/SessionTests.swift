@@ -666,6 +666,114 @@ struct SessionTests {
             #expect(event2.status == .approved)
         }
 
+        @Test("denyPendingPlanApproval denies pending ExitPlanMode and returns its ID")
+        @MainActor func denyPendingPlanApproval() throws {
+            let session = Session()
+            session.beginApproval(id: "plan-1", toolName: "ExitPlanMode", inputJSON: "{}")
+
+            let deniedID = session.denyPendingPlanApproval(reason: "Add more detail")
+
+            #expect(deniedID == "plan-1")
+            let event = try #require(session.items[0].content.approval)
+            #expect(event.status == .denied)
+            #expect(event.decidedAt != nil)
+        }
+
+        @Test("denyPendingPlanApproval returns nil when no pending plan exists")
+        @MainActor func denyPendingPlanApprovalNoPending() {
+            let session = Session()
+
+            let deniedID = session.denyPendingPlanApproval(reason: "feedback")
+
+            #expect(deniedID == nil)
+        }
+
+        @Test("denyPendingPlanApproval ignores already-resolved plan approvals")
+        @MainActor func denyPendingPlanApprovalAlreadyResolved() {
+            let session = Session()
+            session.beginApproval(id: "plan-1", toolName: "ExitPlanMode", inputJSON: "{}")
+            session.resolveApproval(id: "plan-1", decision: .allow)
+
+            let deniedID = session.denyPendingPlanApproval(reason: "feedback")
+
+            #expect(deniedID == nil)
+            // Original approval stays approved
+            let event = session.items[0].content.approval!
+            #expect(event.status == .approved)
+        }
+
+        @Test("denyPendingPlanApproval only affects ExitPlanMode, not other tools")
+        @MainActor func denyPendingPlanApprovalOnlyPlan() {
+            let session = Session()
+            session.beginApproval(id: "req-1", toolName: "Bash", inputJSON: "{}")
+            session.beginApproval(id: "plan-1", toolName: "ExitPlanMode", inputJSON: "{}")
+
+            let deniedID = session.denyPendingPlanApproval(reason: "feedback")
+
+            #expect(deniedID == "plan-1")
+            // Bash approval remains pending
+            let bash = session.items[0].content.approval!
+            #expect(bash.status == .pending)
+        }
+
+        @Test("denyPendingPlanApproval works while streaming with queued message")
+        @MainActor func denyPendingPlanApprovalWhileStreaming() throws {
+            let session = Session()
+            session.appendUserMessage("Make a plan")
+            session.beginAssistantMessage()
+            // Simulate the CLI creating a plan approval while streaming
+            session.beginApproval(id: "plan-1", toolName: "ExitPlanMode", inputJSON: "{}")
+
+            #expect(session.isStreaming)
+
+            // User sends feedback — deny should work even while streaming
+            let deniedID = session.denyPendingPlanApproval(reason: "Remove the polish section")
+
+            #expect(deniedID == "plan-1")
+            let event = try #require(session.items.last(where: {
+                if case .approval = $0.content { return true }
+                return false
+            })?.content.approval)
+            #expect(event.status == .denied)
+        }
+
+        @Test("ExitPlanMode approvals are excluded from visibleTimelineItems")
+        @MainActor func exitPlanModeApprovalFilteredFromVisible() {
+            let session = Session()
+            session.beginApproval(id: "plan-1", toolName: "ExitPlanMode", inputJSON: "{}")
+
+            // Present in items
+            #expect(session.items.contains { if case .approval = $0.content { true } else { false } })
+
+            // Filtered from visible timeline
+            let hasApprovalInVisible = session.visibleTimelineItems.contains {
+                if case .approval = $0.content { true } else { false }
+            }
+            #expect(!hasApprovalInVisible)
+        }
+
+        @Test("Resolved ExitPlanMode approval is findable via session.items after approve")
+        @MainActor func resolvedPlanApprovalInFullItems() {
+            let session = Session()
+            // Simulate: tool event, then approval
+            session.beginToolUse(id: "tool-1", name: "ExitPlanMode")
+            session.completeToolUse(id: "tool-1")
+            session.beginApproval(id: "plan-1", toolName: "ExitPlanMode", inputJSON: "{}")
+            session.resolveApproval(id: "plan-1", decision: .allow)
+
+            // The approval is resolved in session.items
+            let approval = session.items.last(where: {
+                if case .approval(let e) = $0.content { e.toolName == "ExitPlanMode" } else { false }
+            })?.content.approval
+            #expect(approval?.status == .approved)
+
+            // But NOT in visibleTimelineItems
+            let visibleApproval = session.visibleTimelineItems.contains {
+                if case .approval(let e) = $0.content { e.toolName == "ExitPlanMode" } else { false }
+            }
+            #expect(!visibleApproval)
+        }
+
         @Test("dismissPendingInteractions resolves pending approvals and ask-user events")
         @MainActor func dismissPendingInteractions() throws {
             let session = Session()
@@ -679,9 +787,9 @@ struct SessionTests {
 
             session.dismissPendingInteractions()
 
-            // Pending approval should be denied
+            // Pending approval should be dismissed
             let approval1 = try #require(session.items[0].content.approval)
-            #expect(approval1.status == .denied)
+            #expect(approval1.status == .dismissed)
 
             // Already-resolved approval should be unchanged
             let approval2 = try #require(session.items[1].content.approval)
@@ -702,7 +810,7 @@ struct SessionTests {
             session.dismissPendingInteractions()
 
             let event = try #require(session.items[0].content.approval)
-            #expect(event.status == .denied)
+            #expect(event.status == .dismissed)
             #expect(session.items.count == 1)
         }
 
@@ -881,6 +989,76 @@ struct SessionTests {
             #expect(!session.isStreaming)
             // Queued messages are not dispatched
             #expect(session.dequeuePendingMessage() == nil)
+        }
+    }
+
+    @Suite("Plan review")
+    struct PlanReview {
+
+        /// Sets up a session with a plan write + ExitPlanMode + pending approval.
+        @MainActor
+        private func sessionWithPlan() -> Session {
+            let session = Session()
+            session.beginAssistantMessage()
+
+            session.beginToolUse(id: "w1", name: "Write")
+            session.applyToolInputDelta(id: "w1", json: "{\"file_path\":\"/Users/dev/.claude/plans/plan.md\"}")
+            session.completeToolUse(id: "w1")
+
+            session.beginToolUse(id: "exit1", name: "ExitPlanMode")
+            session.completeToolUse(id: "exit1")
+
+            session.beginApproval(id: "approval1", toolName: "ExitPlanMode", inputJSON: "{}")
+            return session
+        }
+
+        @Test("resolveApproval updates planReviewEntries")
+        @MainActor func resolveApprovalUpdatesPlanEntries() {
+            let session = sessionWithPlan()
+
+            #expect(session.planResolution(for: "exit1") == .pending)
+
+            session.resolveApproval(id: "approval1", decision: .allow)
+
+            #expect(session.planResolution(for: "exit1") == .approved)
+            #expect(session.planReviewEntries.count == 1)
+            #expect(session.planReviewEntries[0].filePath == "/Users/dev/.claude/plans/plan.md")
+        }
+
+        @Test("denyPendingPlanApproval updates entries to denied")
+        @MainActor func denyPlanUpdatesPlanEntries() {
+            let session = sessionWithPlan()
+
+            session.denyPendingPlanApproval(reason: "Add more detail")
+
+            #expect(session.planResolution(for: "exit1") == .denied)
+        }
+
+        @Test("dismissPendingInteractions marks entries dismissed")
+        @MainActor func dismissMarksPlanDismissed() {
+            let session = sessionWithPlan()
+
+            session.dismissPendingInteractions()
+
+            #expect(session.planResolution(for: "exit1") == .dismissed)
+        }
+
+        @Test("planResolution returns pending for unknown ID")
+        @MainActor func planResolutionUnknownID() {
+            let session = Session()
+            #expect(session.planResolution(for: "nonexistent") == .pending)
+        }
+
+        @Test("planFilePath returns correct path via convenience method")
+        @MainActor func planFilePathConvenience() {
+            let session = sessionWithPlan()
+            #expect(session.planFilePath(for: "exit1") == "/Users/dev/.claude/plans/plan.md")
+        }
+
+        @Test("planFilePath returns nil for unknown ID")
+        @MainActor func planFilePathUnknownID() {
+            let session = Session()
+            #expect(session.planFilePath(for: "nonexistent") == nil)
         }
     }
 }

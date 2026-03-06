@@ -55,6 +55,41 @@ public final class Session {
         return cachedHasActiveTasks
     }
 
+    // MARK: - Plan Review State
+
+    private var cachedPlanReviewEntries: [PlanReviewEntry] = []
+    private var planCacheVersion: UInt = 0
+    private var planCacheValidVersion: UInt = .max
+
+    private func invalidatePlanCache() {
+        planCacheVersion &+= 1
+    }
+
+    private func rebuildPlanCacheIfNeeded() {
+        guard planCacheVersion != planCacheValidVersion else { return }
+        cachedPlanReviewEntries = PlanReviewEntry.buildList(from: items)
+        planCacheValidVersion = planCacheVersion
+    }
+
+    /// Aggregated plan review entries derived from all timeline items.
+    public var planReviewEntries: [PlanReviewEntry] {
+        rebuildPlanCacheIfNeeded()
+        return cachedPlanReviewEntries
+    }
+
+    /// Returns the resolution status for a given ExitPlanMode tool event.
+    /// Returns `.pending` when no entry is found.
+    public func planResolution(for toolEventID: String) -> ApprovalEvent.Status {
+        rebuildPlanCacheIfNeeded()
+        return cachedPlanReviewEntries.first { $0.id == toolEventID }?.resolution ?? .pending
+    }
+
+    /// Returns the plan file path for a given ExitPlanMode tool event.
+    public func planFilePath(for toolEventID: String) -> String? {
+        rebuildPlanCacheIfNeeded()
+        return cachedPlanReviewEntries.first { $0.id == toolEventID }?.filePath
+    }
+
     /// Visible items with internal operations filtered out, for the timeline.
     public var visibleTimelineItems: [TimelineItem] {
         visibleItems.filter { item in
@@ -99,6 +134,7 @@ public final class Session {
     private func appendItem(_ item: TimelineItem) {
         items.append(item)
         invalidateTaskCache()
+        invalidatePlanCache()
         let visibleCount = items.count - visibleStartIndex
         if visibleCount > Self.visibleWindowSize + Self.loadBatchSize {
             visibleStartIndex = items.count - Self.visibleWindowSize
@@ -218,6 +254,9 @@ public final class Session {
         cachedHasActiveTasks = false
         taskCacheVersion = 0
         taskCacheValidVersion = .max
+        cachedPlanReviewEntries = []
+        planCacheVersion = 0
+        planCacheValidVersion = .max
     }
 
     @MainActor
@@ -347,6 +386,7 @@ public final class Session {
         event.inputJSON += json
         items[index].content = .toolUse(event)
         invalidateTaskCache()
+        invalidatePlanCache()
     }
 
     /// Caches input properties once the input JSON is fully streamed (content_block_stop)
@@ -366,6 +406,7 @@ public final class Session {
         event.resultOutput += output
         items[index].content = .toolUse(event)
         invalidateTaskCache()
+        invalidatePlanCache()
     }
 
     @MainActor
@@ -377,6 +418,7 @@ public final class Session {
         items[index].content = .toolUse(event)
         activeToolIndices.removeValue(forKey: id)
         invalidateTaskCache()
+        invalidatePlanCache()
     }
 
     /// Looks up a tool event index by checking `activeToolIndices` first, falling back
@@ -389,29 +431,6 @@ public final class Session {
             if case .toolUse(let event) = $0.content { return event.id == id }
             return false
         })
-    }
-
-    /// Returns the file path of the plan written before a given ExitPlanMode event.
-    ///
-    /// The CLI writes plans to `~/.claude/plans/*.md` via a Write tool call
-    /// immediately before calling ExitPlanMode. This scans backward from the
-    /// given tool event to find that file path.
-    @MainActor
-    public func planFilePath(before toolEventID: String) -> String? {
-        guard let exitIndex = items.lastIndex(where: {
-            if case .toolUse(let event) = $0.content { return event.id == toolEventID }
-            return false
-        }) else { return nil }
-
-        // Scan backward from the ExitPlanMode event for a Write to .claude/plans/
-        for index in items[..<exitIndex].indices.reversed() {
-            guard case .toolUse(let event) = items[index].content,
-                  event.name == "Write",
-                  let path = event.filePath,
-                  path.contains(".claude/plans/") else { continue }
-            return path
-        }
-        return nil
     }
 
     // MARK: - Tool Approval
@@ -431,19 +450,6 @@ public final class Session {
                event.toolName == toolName,
                event.status == .pending {
                 return event
-            }
-        }
-        return nil
-    }
-
-    /// Returns the status of the most recent approval for the given tool, if resolved.
-    @MainActor
-    public func resolvedApprovalStatus(toolName: String) -> ApprovalEvent.Status? {
-        for item in items.reversed() {
-            if case .approval(let event) = item.content,
-               event.toolName == toolName,
-               event.status != .pending {
-                return event.status
             }
         }
         return nil
@@ -479,6 +485,7 @@ public final class Session {
         }
         event.decidedAt = Date()
         items[index].content = .approval(event)
+        invalidatePlanCache()
     }
 
     // MARK: - Ask User
@@ -527,6 +534,7 @@ public final class Session {
                 continue
             }
         }
+        invalidatePlanCache()
     }
 
     // MARK: - Tool Payload Population
@@ -549,6 +557,7 @@ public final class Session {
         event.cacheInputProperties()
         items[index].content = .toolUse(event)
         invalidateTaskCache()
+        invalidatePlanCache()
     }
 
     // MARK: - Private Helpers
