@@ -27,9 +27,16 @@ public final class Session {
     private var taskCacheVersion: UInt = 0
     private var taskCacheValidVersion: UInt = .max
 
-    /// Bumps the task cache version so the next access rebuilds.
-    private func invalidateTaskCache() {
-        taskCacheVersion &+= 1
+    /// Aggregated task entries derived from all task tool events in the conversation.
+    public var taskEntries: [TaskEntry] {
+        rebuildTaskCacheIfNeeded()
+        return cachedTaskEntries
+    }
+
+    /// Whether there are active (non-completed) tasks.
+    public var hasActiveTasks: Bool {
+        rebuildTaskCacheIfNeeded()
+        return cachedHasActiveTasks
     }
 
     private func rebuildTaskCacheIfNeeded() {
@@ -43,33 +50,11 @@ public final class Session {
         taskCacheValidVersion = taskCacheVersion
     }
 
-    /// Aggregated task entries derived from all task tool events in the conversation.
-    public var taskEntries: [TaskEntry] {
-        rebuildTaskCacheIfNeeded()
-        return cachedTaskEntries
-    }
-
-    /// Whether there are active (non-completed) tasks.
-    public var hasActiveTasks: Bool {
-        rebuildTaskCacheIfNeeded()
-        return cachedHasActiveTasks
-    }
-
     // MARK: - Plan Review State
 
     private var cachedPlanReviewEntries: [PlanReviewEntry] = []
     private var planCacheVersion: UInt = 0
     private var planCacheValidVersion: UInt = .max
-
-    private func invalidatePlanCache() {
-        planCacheVersion &+= 1
-    }
-
-    private func rebuildPlanCacheIfNeeded() {
-        guard planCacheVersion != planCacheValidVersion else { return }
-        cachedPlanReviewEntries = PlanReviewEntry.buildList(from: items)
-        planCacheValidVersion = planCacheVersion
-    }
 
     /// Aggregated plan review entries derived from all timeline items.
     public var planReviewEntries: [PlanReviewEntry] {
@@ -90,15 +75,27 @@ public final class Session {
         return cachedPlanReviewEntries.first { $0.id == toolEventID }?.filePath
     }
 
+    private func rebuildPlanCacheIfNeeded() {
+        guard planCacheVersion != planCacheValidVersion else { return }
+        cachedPlanReviewEntries = PlanReviewEntry.buildList(from: items)
+        planCacheValidVersion = planCacheVersion
+    }
+
+    /// Invalidates both task and plan caches so the next access rebuilds.
+    private func invalidateDerivedCaches() {
+        taskCacheVersion &+= 1
+        planCacheVersion &+= 1
+    }
+
     /// Visible items with internal operations filtered out, for the timeline.
     public var visibleTimelineItems: [TimelineItem] {
         visibleItems.filter { item in
             switch item.content {
             case .toolUse(let event):
-                return !event.isTaskOperation && !event.isAskUserOperation && event.name != "EnterPlanMode"
+                return !event.isTaskOperation && !event.isAskUserOperation && !event.isPlanOperation
             case .approval(let event):
                 // ExitPlanMode approvals are handled by PlanReviewCard instead.
-                return event.toolName != "ExitPlanMode"
+                return event.toolName != ApprovalEvent.exitPlanModeToolName
             default:
                 return true
             }
@@ -133,8 +130,7 @@ public final class Session {
     /// Appends an item and trims the visible window if it has grown too large.
     private func appendItem(_ item: TimelineItem) {
         items.append(item)
-        invalidateTaskCache()
-        invalidatePlanCache()
+        invalidateDerivedCaches()
         let visibleCount = items.count - visibleStartIndex
         if visibleCount > Self.visibleWindowSize + Self.loadBatchSize {
             visibleStartIndex = items.count - Self.visibleWindowSize
@@ -385,8 +381,7 @@ public final class Session {
               case .toolUse(var event) = items[index].content else { return }
         event.inputJSON += json
         items[index].content = .toolUse(event)
-        invalidateTaskCache()
-        invalidatePlanCache()
+        invalidateDerivedCaches()
     }
 
     /// Caches input properties once the input JSON is fully streamed (content_block_stop)
@@ -405,8 +400,7 @@ public final class Session {
               case .toolUse(var event) = items[index].content else { return }
         event.resultOutput += output
         items[index].content = .toolUse(event)
-        invalidateTaskCache()
-        invalidatePlanCache()
+        invalidateDerivedCaches()
     }
 
     @MainActor
@@ -417,8 +411,7 @@ public final class Session {
         event.cacheInputProperties()
         items[index].content = .toolUse(event)
         activeToolIndices.removeValue(forKey: id)
-        invalidateTaskCache()
-        invalidatePlanCache()
+        invalidateDerivedCaches()
     }
 
     /// Looks up a tool event index by checking `activeToolIndices` first, falling back
@@ -465,7 +458,7 @@ public final class Session {
     @MainActor
     @discardableResult
     public func denyPendingPlanApproval(reason: String) -> String? {
-        guard let approval = pendingApproval(toolName: "ExitPlanMode") else { return nil }
+        guard let approval = pendingApproval(toolName: ApprovalEvent.exitPlanModeToolName) else { return nil }
         resolveApproval(id: approval.id, decision: .deny(reason: reason))
         return approval.id
     }
@@ -485,7 +478,7 @@ public final class Session {
         }
         event.decidedAt = Date()
         items[index].content = .approval(event)
-        invalidatePlanCache()
+        planCacheVersion &+= 1
     }
 
     // MARK: - Ask User
@@ -534,7 +527,7 @@ public final class Session {
                 continue
             }
         }
-        invalidatePlanCache()
+        planCacheVersion &+= 1
     }
 
     // MARK: - Tool Payload Population
@@ -556,8 +549,7 @@ public final class Session {
         event.cachedResultSummary = ""
         event.cacheInputProperties()
         items[index].content = .toolUse(event)
-        invalidateTaskCache()
-        invalidatePlanCache()
+        invalidateDerivedCaches()
     }
 
     // MARK: - Private Helpers

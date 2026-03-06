@@ -14,6 +14,8 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
     public var status: Status
     public var decidedAt: Date?
 
+    public static let exitPlanModeToolName = "ExitPlanMode"
+
     public init(
         id: String,
         toolName: String,

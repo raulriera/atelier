@@ -73,7 +73,7 @@ extension PlanReviewEntry {
         let searchRange = (afterIndex + 1)..<min(upperBound, items.count)
         for index in searchRange {
             if case .approval(let event) = items[index].content,
-               event.toolName == "ExitPlanMode",
+               event.toolName == ApprovalEvent.exitPlanModeToolName,
                event.status != .pending {
                 return event.status
             }

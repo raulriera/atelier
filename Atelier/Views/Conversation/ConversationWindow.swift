@@ -388,7 +388,7 @@ struct ConversationWindow: View {
     }
 
     private func handlePlanApprove() {
-        guard let approval = session.pendingApproval(toolName: "ExitPlanMode") else { return }
+        guard let approval = session.pendingApproval(toolName: ApprovalEvent.exitPlanModeToolName) else { return }
         handleApprovalDecision(id: approval.id, decision: .allow)
     }
 

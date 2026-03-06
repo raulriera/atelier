@@ -297,9 +297,17 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
 
     // MARK: - Plan operations
 
+    private static let enterPlanMode = "EnterPlanMode"
+    private static let exitPlanMode = "ExitPlanMode"
+
     /// Whether this tool is an ExitPlanMode call that should render as a plan review card.
     public var isPlanReview: Bool {
-        name == "ExitPlanMode"
+        name == Self.exitPlanMode
+    }
+
+    /// Whether this tool is a plan-related operation hidden from the timeline.
+    public var isPlanOperation: Bool {
+        name == Self.enterPlanMode
     }
 
     // MARK: - Display metadata
@@ -311,86 +319,72 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
     public var plainDescription: String {
         if !cachedPlainDescription.isEmpty { return cachedPlainDescription }
 
+        let raw: String
         switch name {
         case "Bash":
-            if let desc = parsedInput?["description"] as? String, !desc.isEmpty { return desc }
-            return "Run a terminal command"
+            if let desc = parsedInput?["description"] as? String, !desc.isEmpty { raw = desc }
+            else { raw = "Run a terminal command" }
 
         case "Read":
-            if let file = fileName { return "Reading \(file)" }
-            return "Reading a file"
+            if let file = fileName { raw = "Reading \(file)" }
+            else { raw = "Reading a file" }
 
         case "Write":
-            if let file = fileName { return "Creating \(file)" }
-            return "Creating a new file"
+            if let file = fileName { raw = "Creating \(file)" }
+            else { raw = "Creating a new file" }
 
         case "Edit":
-            if let file = fileName { return "Editing \(file)" }
-            return "Editing a file"
+            if let file = fileName { raw = "Editing \(file)" }
+            else { raw = "Editing a file" }
 
         case "Glob":
             if let pattern = _cached?.inputSummaryValue ?? (parsedInput?["pattern"] as? String) {
-                return "Searching for files matching \(pattern)"
-            }
-            return "Searching for files"
+                raw = "Searching for files matching \(pattern)"
+            } else { raw = "Searching for files" }
 
         case "Grep":
             if let pattern = _cached?.inputSummaryValue ?? (parsedInput?["pattern"] as? String) {
-                return "Searching file contents for \"\(pattern)\""
-            }
-            return "Searching file contents"
+                raw = "Searching file contents for \"\(pattern)\""
+            } else { raw = "Searching file contents" }
 
         case "WebSearch":
             if let query = parsedInput?["query"] as? String {
-                return "Searching the web for \"\(query)\""
-            }
-            return "Searching the web"
+                raw = "Searching the web for \"\(query)\""
+            } else { raw = "Searching the web" }
 
         case "WebFetch":
             if let url = parsedInput?["url"] as? String,
                let host = URL(string: url)?.host {
-                return "Fetching a page from \(host)"
-            }
-            return "Fetching a web page"
+                raw = "Fetching a page from \(host)"
+            } else { raw = "Fetching a web page" }
 
         case "Agent":
             if let desc = parsedInput?["description"] as? String, !desc.isEmpty {
-                let truncated = desc.count <= 60 ? desc : String(desc.prefix(57)) + "..."
-                return truncated
-            }
-            return "Working on a subtask"
+                raw = desc.count <= 60 ? desc : String(desc.prefix(57)) + "..."
+            } else { raw = "Working on a subtask" }
 
         case "Skill":
             if let skill = parsedInput?["skill"] as? String, !skill.isEmpty {
-                return "Running \(skill)"
-            }
-            return "Running a skill"
+                raw = "Running \(skill)"
+            } else { raw = "Running a skill" }
 
-        case "EnterPlanMode":
-            return "Starting to plan"
-
-        case "ExitPlanMode":
-            return "Finished planning"
-
-        case "ToolSearch":
-            return "Searching for tools"
-
-        case "TaskStop":
-            return "Stopping a task"
-
-        case "TaskOutput":
-            return "Reading task output"
+        case "EnterPlanMode": raw = "Starting to plan"
+        case "ExitPlanMode": raw = "Finished planning"
+        case "ToolSearch": raw = "Searching for tools"
+        case "TaskStop": raw = "Stopping a task"
+        case "TaskOutput": raw = "Reading task output"
 
         default:
             if name.hasPrefix("mcp__") {
                 let parts = name.split(separator: "__")
-                if parts.count >= 3 {
-                    let toolName = parts.last!.replacingOccurrences(of: "_", with: " ")
-                    return toolName.capitalized
-                }
-            }
-            return displayName
+                if parts.count >= 3, let last = parts.last {
+                    raw = String(last).replacingOccurrences(of: "_", with: " ").capitalized
+                } else { raw = displayName }
+            } else { raw = displayName }
         }
+
+        if raw.count <= 120 { return raw }
+        return String(raw.prefix(117)) + "..."
     }
 
     /// User-friendly display name for the tool.
