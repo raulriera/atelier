@@ -8,7 +8,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 38 |
+| **Total opportunities** | 40 |
 | **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -122,6 +122,8 @@ Expand the product surface. Chat integration, onboarding, workflows, and all the
 | 6.9 | Document Generation | Improvement | 🔲 Not started | [→](opportunities/macos/10-document-generation.md) |
 | 6.10 | Quick Look Previews | New | 🔲 Not started | [→](opportunities/macos/04-quick-look-previews.md) |
 | 6.11 | Audit & Compliance | New | 🔲 Not started | [→](opportunities/security/05-audit-compliance.md) |
+| 6.12 | Desktop Widgets | New | 🔲 Not started | [→](opportunities/macos/11-widgets.md) |
+| 6.13 | Focus Filters | New | 🔲 Not started | [→](opportunities/macos/12-focus-filters.md) |
 
 ---
 
@@ -188,7 +190,7 @@ Code integration, capabilities, capability health, token usage.
 | [06-cloud-connectors.md](opportunities/hub/06-cloud-connectors.md) | M3 |
 
 ### macOS Integration (`opportunities/macos/`)
-System services, Spotlight, drag-drop, menu bar, Shortcuts, FSEvents, clipboard, document generation.
+System services, Spotlight, drag-drop, menu bar, Shortcuts, FSEvents, clipboard, document generation, widgets, Focus filters.
 
 | File | Milestone |
 |------|-----------|
@@ -202,6 +204,8 @@ System services, Spotlight, drag-drop, menu bar, Shortcuts, FSEvents, clipboard,
 | [08-file-system-events.md](opportunities/macos/08-file-system-events.md) | M5 |
 | [09-clipboard-integration.md](opportunities/macos/09-clipboard-integration.md) | M5 |
 | [10-document-generation.md](opportunities/macos/10-document-generation.md) | M5 |
+| [11-widgets.md](opportunities/macos/11-widgets.md) | M5 |
+| [12-focus-filters.md](opportunities/macos/12-focus-filters.md) | M5 |
 
 ---
 
@@ -257,5 +261,7 @@ atelier/
         ├── 07-notifications.md
         ├── 08-file-system-events.md
         ├── 09-clipboard-integration.md
-        └── 10-document-generation.md
+        ├── 10-document-generation.md
+        ├── 11-widgets.md
+        └── 12-focus-filters.md
 ```
