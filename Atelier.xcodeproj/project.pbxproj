@@ -160,6 +160,10 @@
 				4CA1B0012F70000000000001 /* Compile iWork MCP Helper */,
 				4CA1B0022F70000000000002 /* Compile Safari MCP Helper */,
 				4CA1B0032F70000000000003 /* Compile Mail MCP Helper */,
+				4CA1B0042F70000000000004 /* Compile Reminders MCP Helper */,
+				4CA1B0052F70000000000005 /* Compile Calendar MCP Helper */,
+				4CA1B0062F70000000000006 /* Compile Notes MCP Helper */,
+				4CA1B0072F70000000000007 /* Compile Finder MCP Helper */,
 				4C0BECEA2F52B10000A608CC /* Embed XPC Services */,
 			);
 			buildRules = (
@@ -402,6 +406,70 @@
 			shellPath = /bin/sh;
 			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-mail-mcp\" \"$SRCROOT/Helpers/atelier-mail-mcp.swift\"\n";
 		};
+		4CA1B0042F70000000000004 /* Compile Reminders MCP Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Helpers/atelier-reminders-mcp.swift",
+			);
+			name = "Compile Reminders MCP Helper";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Helpers/atelier-reminders-mcp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-reminders-mcp\" \"$SRCROOT/Helpers/atelier-reminders-mcp.swift\"\n";
+		};
+		4CA1B0052F70000000000005 /* Compile Calendar MCP Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Helpers/atelier-calendar-mcp.swift",
+			);
+			name = "Compile Calendar MCP Helper";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Helpers/atelier-calendar-mcp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-calendar-mcp\" \"$SRCROOT/Helpers/atelier-calendar-mcp.swift\"\n";
+		};
+		4CA1B0062F70000000000006 /* Compile Notes MCP Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Helpers/atelier-notes-mcp.swift",
+			);
+			name = "Compile Notes MCP Helper";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Helpers/atelier-notes-mcp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-notes-mcp\" \"$SRCROOT/Helpers/atelier-notes-mcp.swift\"\n";
+		};
+		4CA1B0072F70000000000007 /* Compile Finder MCP Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Helpers/atelier-finder-mcp.swift",
+			);
+			name = "Compile Finder MCP Helper";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Helpers/atelier-finder-mcp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-finder-mcp\" \"$SRCROOT/Helpers/atelier-finder-mcp.swift\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -587,7 +655,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Atelier uses Apple Events to create and edit documents in Keynote, Pages, and Numbers.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Atelier uses Apple Events to work with apps like Keynote, Pages, Numbers, Mail, Calendar, Reminders, Notes, and Finder on your behalf.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -619,7 +687,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Atelier uses Apple Events to create and edit documents in Keynote, Pages, and Numbers.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Atelier uses Apple Events to work with apps like Keynote, Pages, Numbers, Mail, Calendar, Reminders, Notes, and Finder on your behalf.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

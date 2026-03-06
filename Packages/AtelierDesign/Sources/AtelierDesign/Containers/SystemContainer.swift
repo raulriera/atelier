@@ -9,6 +9,7 @@ import SwiftUI
 struct SystemContainerModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
+            .labelIconToTitleSpacing(Spacing.xxs)
             .font(.metadata)
             .foregroundStyle(.contentSecondary)
             .padding(.horizontal, Spacing.sm)

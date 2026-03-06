@@ -63,6 +63,10 @@ The capabilities architecture is live with iWork, Safari, and Mail as built-in c
 - **iWork MCP helper** — `Helpers/atelier-iwork-mcp.swift`, 12 tools across Keynote/Pages/Numbers via JXA, 2 groups (Create, Export)
 - **Safari MCP helper** — `Helpers/atelier-safari-mcp.swift`, 6 tools via JXA, 2 groups (Browse, Script)
 - **Mail MCP helper** — `Helpers/atelier-mail-mcp.swift`, 10 tools via JXA, 3 groups (Read, Manage, Send)
+- **Reminders MCP helper** — `Helpers/atelier-reminders-mcp.swift`, 6 tools via JXA, 3 groups (Read, Create, Manage)
+- **Calendar MCP helper** — `Helpers/atelier-calendar-mcp.swift`, 5 tools via JXA, 3 groups (Read, Create, Manage)
+- **Notes MCP helper** — `Helpers/atelier-notes-mcp.swift`, 6 tools via JXA, 3 groups (Read, Create, Manage)
+- **Finder MCP helper** — `Helpers/atelier-finder-mcp.swift`, 9 tools via JXA, 2 groups (Browse, Organize)
 - **Export defaults** — saves to project working directory when no path specified
 
 Pattern for adding new capabilities: add a new helper in `Helpers/`, register in `CapabilityRegistry`, add a build phase in the Xcode project.
@@ -75,9 +79,9 @@ Pattern for adding new capabilities: add a new helper in `Helpers/`, register in
 |-----------|-----|----------------|------------|
 | ✅ **iWork** | Keynote, Pages, Numbers | Create/edit presentations, documents, spreadsheets | Shipped |
 | ✅ **Mail** | Mail.app | Draft, send, reply to emails. "Summarize this and email it to the team." | Shipped |
-| 🔲 **Reminders** | Reminders.app | Create tasks, lists, due dates. "Remind me to review the budget Friday." | Low — simple scripting dictionary |
-| 🔲 **Calendar** | Calendar.app | Create events, check availability. "Block 2 hours tomorrow for this project." | Low — EventKit or JXA |
-| 🔲 **Notes** | Notes.app | Read/write Apple Notes. "Save these meeting notes to my Work folder." | Medium — Notes scripting is limited but workable |
+| ✅ **Reminders** | Reminders.app | Create tasks, lists, due dates. "Remind me to review the budget Friday." | Shipped |
+| ✅ **Calendar** | Calendar.app | Create events, check availability. "Block 2 hours tomorrow for this project." | Shipped |
+| ✅ **Notes** | Notes.app | Read/write Apple Notes. "Save these meeting notes to my Work folder." | Shipped |
 | 🔲 **Preview / PDF** | Preview, PDFKit | Merge, split, annotate PDFs. "Combine these three PDFs into one." | Medium — may use PDFKit directly instead of JXA |
 
 ### Medium Priority — Productivity Multipliers
@@ -85,7 +89,7 @@ Pattern for adding new capabilities: add a new helper in `Helpers/`, register in
 | Capability | App | What it unlocks | Complexity |
 |-----------|-----|----------------|------------|
 | ✅ **Safari** | Safari | Open URLs, read page content, bookmark. "Research competitors and save the links." | Shipped |
-| 🔲 **Finder** | Finder | Organize files, create folders, tag files. "Organize my Downloads by type." Smart folders. | Low — comprehensive scripting dictionary |
+| ✅ **Finder** | Finder | Organize files, create folders, tag files. "Organize my Downloads by type." Smart folders. | Shipped |
 | 🔲 **Shortcuts** | Shortcuts.app | Trigger any user-defined Shortcut. Meta-capability — unlocks everything the user has already automated. | Low — `shortcuts run` CLI |
 
 ### Lower Priority — Delight
@@ -103,9 +107,13 @@ Pattern for adding new capabilities: add a new helper in `Helpers/`, register in
 - ✅ iWork capability (Keynote, Pages, Numbers)
 - ✅ Safari capability (Browse, Script)
 - ✅ Mail capability (Read, Manage, Send)
+- ✅ Reminders capability (Read, Create, Manage)
+- ✅ Calendar capability (Read, Create, Manage)
+- ✅ Notes capability (Read, Create, Manage)
+- ✅ Finder capability (Browse, Organize)
 - ✅ Tool groups — granular per-group enablement with NavigationStack sheet UI
-- 🔲 Reminders, Calendar, Notes, Preview/PDF capabilities
-- 🔲 Finder, Shortcuts capabilities
+- 🔲 Preview/PDF capability
+- 🔲 Shortcuts capability
 
 ### Phase 2 — On-Demand Activation
 

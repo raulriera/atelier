@@ -22,9 +22,11 @@ struct CapabilityStoreTests {
         let store = CapabilityStore()
         store.load()
 
-        store.toggle("test-cap")
+        // Toggle on — adds a group so the capability counts as enabled
+        store.toggleGroup("read", for: "test-cap")
         #expect(store.isEnabled("test-cap"))
 
+        // Toggle off
         store.toggle("test-cap")
         #expect(!store.isEnabled("test-cap"))
     }
@@ -33,17 +35,13 @@ struct CapabilityStoreTests {
         let store = CapabilityStore()
         store.load()
 
-        // Enable the capability first
-        store.toggle("test-cap")
-        #expect(store.isEnabled("test-cap"))
-
         // Toggle a specific group on
         store.toggleGroup("read", for: "test-cap")
+        #expect(store.isEnabled("test-cap"))
         #expect(store.isGroupEnabled("read", for: "test-cap"))
 
-        // Toggle it off
+        // Toggle it off — capability becomes disabled (empty groups)
         store.toggleGroup("read", for: "test-cap")
-        // When last group is removed, capability is removed
         #expect(!store.isEnabled("test-cap"))
     }
 
@@ -69,10 +67,10 @@ struct CapabilityStoreTests {
         let url = makeTempURL()
         defer { try? FileManager.default.removeItem(at: url) }
 
-        // Save
+        // Save — use toggleGroup to add a real group
         let store1 = CapabilityStore(persistenceURL: url)
         store1.load()
-        store1.toggle("iwork")
+        store1.toggleGroup("create", for: "iwork")
         #expect(store1.isEnabled("iwork"))
 
         // Reload

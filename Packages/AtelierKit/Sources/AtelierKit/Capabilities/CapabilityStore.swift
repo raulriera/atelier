@@ -13,7 +13,7 @@ public final class CapabilityStore {
 
     /// Convenience: the set of capability IDs that have at least one group enabled.
     public var enabledIDs: Set<String> {
-        Set(enabledGroups.keys)
+        Set(enabledGroups.filter { !$0.value.isEmpty }.keys)
     }
 
     private let persistenceURL: URL?
@@ -30,6 +30,8 @@ public final class CapabilityStore {
 
         guard let url = persistenceURL,
               let data = try? Data(contentsOf: url) else {
+            // No persisted state — enable default capabilities
+            applyDefaults()
             return
         }
 
@@ -40,23 +42,25 @@ public final class CapabilityStore {
             for (capID, groupIDs) in groupDict where validIDs.contains(capID) {
                 enabledGroups[capID] = Set(groupIDs)
             }
-            return
         }
-
         // Fall back to legacy format: Set<String> (enable all groups)
-        if let ids = try? JSONDecoder().decode(Set<String>.self, from: data) {
+        else if let ids = try? JSONDecoder().decode(Set<String>.self, from: data) {
             for id in ids.intersection(validIDs) {
                 let cap = capabilities.first { $0.id == id }
                 let allGroupIDs = Set(cap?.toolGroups.map(\.id) ?? [])
                 enabledGroups[id] = allGroupIDs
             }
         }
+
+        // Merge defaults for any new default-on capabilities not yet in the persisted state
+        applyDefaults()
     }
 
     /// Toggles a capability on (all groups) or off entirely and persists the change.
     public func toggle(_ id: String) {
-        if enabledGroups[id] != nil {
-            enabledGroups.removeValue(forKey: id)
+        if let groups = enabledGroups[id], !groups.isEmpty {
+            // Store empty set to distinguish "user disabled" from "never seen"
+            enabledGroups[id] = []
         } else {
             let cap = capabilities.first { $0.id == id }
             let allGroupIDs = Set(cap?.toolGroups.map(\.id) ?? [])
@@ -70,21 +74,16 @@ public final class CapabilityStore {
         var groups = enabledGroups[capabilityID] ?? []
         if groups.contains(groupID) {
             groups.remove(groupID)
-            if groups.isEmpty {
-                enabledGroups.removeValue(forKey: capabilityID)
-            } else {
-                enabledGroups[capabilityID] = groups
-            }
         } else {
             groups.insert(groupID)
-            enabledGroups[capabilityID] = groups
         }
+        enabledGroups[capabilityID] = groups
         persist()
     }
 
     /// Whether a given capability is currently enabled (has any group enabled).
     public func isEnabled(_ id: String) -> Bool {
-        enabledGroups[id] != nil
+        !(enabledGroups[id]?.isEmpty ?? true)
     }
 
     /// Whether a specific tool group is enabled within a capability.
@@ -95,7 +94,7 @@ public final class CapabilityStore {
     /// Returns enabled capabilities paired with their approved tool names.
     public func enabledCapabilityConfigs() -> [EnabledCapability] {
         capabilities
-            .filter { enabledGroups[$0.id] != nil }
+            .filter { !(enabledGroups[$0.id]?.isEmpty ?? true) }
             .map { cap in
                 let groups = enabledGroups[cap.id] ?? []
                 let tools = cap.toolGroups
@@ -116,7 +115,7 @@ public final class CapabilityStore {
         var disabledLines: [String] = []
 
         for cap in capabilities {
-            if let groups = enabledGroups[cap.id] {
+            if let groups = enabledGroups[cap.id], !groups.isEmpty {
                 var line = "- \(cap.name): \(cap.description)"
                 if !cap.toolGroups.isEmpty {
                     let groupNames = cap.toolGroups
@@ -125,6 +124,9 @@ public final class CapabilityStore {
                     if !groupNames.isEmpty {
                         line += " (enabled: \(groupNames.joined(separator: ", ")))"
                     }
+                }
+                if let hint = cap.systemPromptHint {
+                    line += "\n  " + hint
                 }
                 enabledLines.append(line)
             } else {
@@ -146,6 +148,21 @@ public final class CapabilityStore {
         }
 
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    }
+
+    /// Enables capabilities marked as `defaultEnabled` that aren't already in the persisted state.
+    ///
+    /// This runs on every load so that newly added default-on capabilities
+    /// are enabled even for existing users who already have a persistence file.
+    private func applyDefaults() {
+        var changed = false
+        for cap in capabilities where cap.defaultEnabled && enabledGroups[cap.id] == nil {
+            enabledGroups[cap.id] = Set(cap.toolGroups.map(\.id))
+            changed = true
+        }
+        if changed {
+            persist()
+        }
     }
 
     private func persist() {

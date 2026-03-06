@@ -7,8 +7,15 @@ import Foundation
 public enum CapabilityRegistry {
     /// All capabilities available in this build.
     public static func allCapabilities() -> [Capability] {
-        [iWorkCapability(), safariCapability(), mailCapability()]
-            .compactMap { $0 }
+        [
+            iWorkCapability(),
+            safariCapability(),
+            mailCapability(),
+            remindersCapability(),
+            calendarCapability(),
+            notesCapability(),
+            finderCapability(),
+        ].compactMap { $0 }
     }
 
     // MARK: - Factory
@@ -19,7 +26,9 @@ public enum CapabilityRegistry {
         description: String,
         iconSystemName: String,
         helperName: String,
-        toolGroups: [ToolGroup]
+        toolGroups: [ToolGroup],
+        systemPromptHint: String? = nil,
+        defaultEnabled: Bool = false
     ) -> Capability? {
         guard let path = CLIEngine.bundledHelperPath(named: helperName) else { return nil }
         return Capability(
@@ -28,7 +37,9 @@ public enum CapabilityRegistry {
             description: description,
             iconSystemName: iconSystemName,
             serverConfig: MCPServerConfig(command: path, serverName: String(helperName.dropLast(4))),
-            toolGroups: toolGroups
+            toolGroups: toolGroups,
+            systemPromptHint: systemPromptHint,
+            defaultEnabled: defaultEnabled
         )
     }
 
@@ -129,24 +140,168 @@ public enum CapabilityRegistry {
                 ToolGroup(
                     id: "manage",
                     name: "Manage",
-                    description: "Move, flag, mark as read, and delete messages",
+                    description: "Move, flag, and mark messages as read",
                     tools: [
                         "mail_move_message",
                         "mail_mark_read",
                         "mail_flag_message",
-                        "mail_delete_message",
                     ]
                 ),
                 ToolGroup(
                     id: "send",
                     name: "Send",
-                    description: "Create drafts and send email messages",
+                    description: "Create email drafts",
                     tools: [
                         "mail_create_draft",
-                        "mail_send_message",
+                    ]
+                ),
+                // mail_send_message is still available but requires user approval
+            ]
+        )
+    }
+
+    // MARK: - Reminders
+
+    static func remindersCapability() -> Capability? {
+        capability(
+            id: "reminders",
+            name: "Reminders",
+            description: "Create, complete, and manage reminders and lists.",
+            iconSystemName: "checklist",
+            helperName: "atelier-reminders-mcp",
+            toolGroups: [
+                ToolGroup(
+                    id: "read",
+                    name: "Read",
+                    description: "List and search reminders",
+                    tools: [
+                        "reminders_list_lists",
+                        "reminders_list_reminders",
+                        "reminders_search",
+                    ]
+                ),
+                ToolGroup(
+                    id: "create",
+                    name: "Create",
+                    description: "Create new reminders with due dates and priorities",
+                    tools: [
+                        "reminders_create",
+                    ]
+                ),
+                ToolGroup(
+                    id: "manage",
+                    name: "Manage",
+                    description: "Complete reminders",
+                    tools: [
+                        "reminders_complete",
                     ]
                 ),
             ]
+        )
+    }
+
+    // MARK: - Calendar
+
+    static func calendarCapability() -> Capability? {
+        capability(
+            id: "calendar",
+            name: "Calendar",
+            description: "View, create, and manage calendar events.",
+            iconSystemName: "calendar",
+            helperName: "atelier-calendar-mcp",
+            toolGroups: [
+                ToolGroup(
+                    id: "read",
+                    name: "Read",
+                    description: "List calendars and view events",
+                    tools: [
+                        "calendar_list_calendars",
+                        "calendar_list_events",
+                        "calendar_search_events",
+                    ]
+                ),
+                ToolGroup(
+                    id: "create",
+                    name: "Create",
+                    description: "Create new calendar events",
+                    tools: [
+                        "calendar_create_event",
+                    ]
+                ),
+                // calendar_delete_event is still available but requires user approval
+            ]
+        )
+    }
+
+    // MARK: - Notes
+
+    static func notesCapability() -> Capability? {
+        capability(
+            id: "notes",
+            name: "Notes",
+            description: "Read, create, and manage notes in Apple Notes.",
+            iconSystemName: "note.text",
+            helperName: "atelier-notes-mcp",
+            toolGroups: [
+                ToolGroup(
+                    id: "read",
+                    name: "Read",
+                    description: "List folders, browse notes, and search content",
+                    tools: [
+                        "notes_list_folders",
+                        "notes_list_notes",
+                        "notes_get_note",
+                        "notes_search",
+                    ]
+                ),
+                ToolGroup(
+                    id: "create",
+                    name: "Create",
+                    description: "Create new notes",
+                    tools: [
+                        "notes_create",
+                    ]
+                ),
+                // notes_delete is still available but requires user approval
+            ]
+        )
+    }
+
+    // MARK: - Finder
+
+    static func finderCapability() -> Capability? {
+        capability(
+            id: "finder",
+            name: "Finder",
+            description: "Browse, organize, move, copy, and tag files and folders.",
+            iconSystemName: "folder",
+            helperName: "atelier-finder-mcp",
+            toolGroups: [
+                ToolGroup(
+                    id: "browse",
+                    name: "Browse",
+                    description: "List files, get info, and open items",
+                    tools: [
+                        "finder_list",
+                        "finder_get_info",
+                        "finder_open",
+                    ]
+                ),
+                ToolGroup(
+                    id: "organize",
+                    name: "Organize",
+                    description: "Create folders, move, copy, rename, and tag files",
+                    tools: [
+                        "finder_create_folder",
+                        "finder_move",
+                        "finder_copy",
+                        "finder_rename",
+                        "finder_set_tags",
+                    ]
+                ),
+            ],
+            systemPromptHint: "IMPORTANT: When deleting files, ALWAYS use finder_trash instead of the rm command. finder_trash moves files to the Trash (recoverable), while rm permanently deletes them. Never use Bash rm, rmdir, or unlink for file deletion when Finder is enabled.",
+            defaultEnabled: true
         )
     }
 }
