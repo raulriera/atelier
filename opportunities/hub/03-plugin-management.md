@@ -84,7 +84,7 @@ Pattern for adding new capabilities: add a new helper in `Helpers/`, register in
 | ✅ **Reminders** | Reminders.app | Create tasks, lists, due dates. "Remind me to review the budget Friday." | Shipped |
 | ✅ **Calendar** | Calendar.app | Create events, check availability. "Block 2 hours tomorrow for this project." | Shipped |
 | ✅ **Notes** | Notes.app | Read/write Apple Notes. "Save these meeting notes to my Work folder." | Shipped |
-| 🔲 **Preview / PDF** | Preview, PDFKit | Merge, split, annotate PDFs. "Combine these three PDFs into one." | Medium — may use PDFKit directly instead of JXA |
+| ✅ **Preview / PDF** | PDFKit | Read, merge, split, extract text from PDFs. "Combine these three PDFs into one." | Shipped |
 
 ### Medium Priority — Productivity Multipliers
 
@@ -114,20 +114,22 @@ Pattern for adding new capabilities: add a new helper in `Helpers/`, register in
 - ✅ Notes capability (Read, Create, Manage)
 - ✅ Finder capability (Browse, Organize)
 - ✅ Tool groups — granular per-group enablement with NavigationStack sheet UI
-- 🔲 Preview/PDF capability
+- ✅ Preview/PDF capability (PDFKit — info, extract text, merge, split)
 - 🔲 Shortcuts capability
 
 ### Phase 2 — On-Demand Activation
 
 - ✅ Claude detects when a capability would help and suggests enabling it (via system prompt injection)
-- 🔲 One-click enable directly from the conversation (not just toolbar)
+- ✅ One-click enable directly from the conversation (inline suggestion bar below assistant messages)
 - 🔲 OAuth flows for capabilities that need authentication (Google Calendar, etc.)
 
 ### Phase 3 — Capability Health (Invisible)
 
-- Background health monitoring — if a capability's MCP server degrades, the app handles it silently (retry, restart)
-- Only surfaces to the user if something is genuinely broken: "Web search is temporarily unavailable"
-- No health dashboard, no status cards, no management UI — unless the user explicitly opens project settings
+- ✅ Background health monitoring — tracks tool call success/failure per capability via `CapabilityHealthMonitor`
+- ✅ Only surfaces to the user if something is genuinely broken: "[Capability] is temporarily unavailable"
+- ✅ No health dashboard, no status cards, no management UI — health is tracked silently, alerts shown as system events
+- Health states: healthy → degraded → unavailable (after 3 consecutive failures)
+- Automatically resets on new conversation (CLI spawns fresh MCP servers)
 
 ### Phase 4 — Custom MCP Servers (Power Users)
 

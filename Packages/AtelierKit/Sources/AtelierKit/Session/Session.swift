@@ -426,6 +426,14 @@ public final class Session {
         })
     }
 
+    /// Returns the MCP tool name for a given tool event ID, or nil if not found.
+    @MainActor
+    public func toolName(for id: String) -> String? {
+        guard let index = toolIndex(for: id),
+              case .toolUse(let event) = items[index].content else { return nil }
+        return event.name
+    }
+
     // MARK: - Tool Approval
 
     @MainActor

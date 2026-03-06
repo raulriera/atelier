@@ -99,6 +99,11 @@ enum MCPToolMetadata {
         "safari_search": "Search the Web",
         "safari_close_tab": "Close Tab",
         "safari_execute_javascript": "Run JavaScript",
+        // Preview / PDF
+        "pdf_info": "PDF Info",
+        "pdf_extract_text": "Extract PDF Text",
+        "pdf_merge": "Merge PDFs",
+        "pdf_split": "Split PDF",
     ]
 
     /// SF Symbol name per MCP server.
@@ -110,5 +115,6 @@ enum MCPToolMetadata {
         "notes": "note.text",
         "iwork": "richtext",
         "safari": "safari",
+        "preview": "doc.text.magnifyingglass",
     ]
 }

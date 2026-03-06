@@ -88,10 +88,12 @@ struct CLIContentBlock: Decodable {
     let type: String
     let toolUseId: String?
     let content: CLIBlockContent?
+    let isError: Bool?
 
     enum CodingKeys: String, CodingKey {
         case type, content
         case toolUseId = "tool_use_id"
+        case isError = "is_error"
     }
 }
 

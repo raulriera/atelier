@@ -8,6 +8,7 @@ struct ConversationWindow: View {
     var sessionPersistence: SessionPersistence
     var workingDirectory: URL?
     @State private var session = Session()
+    @State private var capabilityHealthMonitor = CapabilityHealthMonitor()
     @State private var draft = ""
     @State private var selectedModel: ModelConfiguration = .default
     @State private var streamingTask: Task<Void, Never>?
@@ -30,7 +31,7 @@ struct ConversationWindow: View {
 
     var body: some View {
         NavigationStack {
-            TimelineView(session: session, selectedToolID: selectedToolEvent?.id, onSelectTool: { event in
+            TimelineView(session: session, capabilityStore: capabilityStore, selectedToolID: selectedToolEvent?.id, onSelectTool: { event in
                     if selectedToolEvent?.id == event.id {
                         selectedToolEvent = nil
                     } else {
@@ -43,6 +44,14 @@ struct ConversationWindow: View {
                     handleAskUserResponse(id: id, selectedIndex: selectedIndex, customText: customText)
                 }, onPlanApprove: {
                     handlePlanApprove()
+                }, onEnableCapability: { id in
+                    let name = capabilityStore.capabilities.first { $0.id == id }?.name ?? id
+                    withAnimation(Motion.morph) {
+                        capabilityStore.enable(id)
+                        session.appendSystemEvent(
+                            SystemEvent(kind: .info, message: "\(name) enabled. Try your request again.")
+                        )
+                    }
                 })
                 .overlay(alignment: .top) {
                     Rectangle()
@@ -334,9 +343,21 @@ struct ConversationWindow: View {
             // Don't complete yet — the tool is still executing server-side.
             // Cache input properties now so cards can display descriptions while running.
             session.finalizeToolInput(id: id)
-        case .toolResultReceived(let id, let output):
+        case .toolResultReceived(let id, let output, let isError):
+            let toolName = session.toolName(for: id)
             session.applyToolResult(id: id, output: output)
             session.completeToolUse(id: id)
+            if let toolName {
+                if isError {
+                    if let alert = capabilityHealthMonitor.recordFailure(toolName: toolName) {
+                        withAnimation(Motion.appear) {
+                            session.appendSystemEvent(SystemEvent(kind: .info, message: alert))
+                        }
+                    }
+                } else {
+                    capabilityHealthMonitor.recordSuccess(toolName: toolName)
+                }
+            }
         case .messageComplete(let usage):
             handleMessageComplete(usage: usage)
         case .error(let engineError):
@@ -464,6 +485,7 @@ struct ConversationWindow: View {
         withAnimation(Motion.appear) {
             session.reset()
         }
+        capabilityHealthMonitor.reset()
         if let captured {
             let persistence = sessionPersistence
             Task { try? await persistence.save(captured) }

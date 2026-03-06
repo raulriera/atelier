@@ -115,7 +115,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
                                     where block.type == "tool_result" {
                                     if let toolId = block.toolUseId {
                                         let output = block.content?.text ?? ""
-                                        continuation.yield(.toolResultReceived(id: toolId, output: output))
+                                        continuation.yield(.toolResultReceived(id: toolId, output: output, isError: block.isError ?? false))
                                     }
                                 }
                             }

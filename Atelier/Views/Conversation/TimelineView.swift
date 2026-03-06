@@ -4,11 +4,13 @@ import AtelierKit
 
 struct TimelineView: View {
     let session: Session
+    @Bindable var capabilityStore: CapabilityStore
     var selectedToolID: String?
     var onSelectTool: ((ToolUseEvent) -> Void)?
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
     var onAskUserResponse: ((String, Int, String?) -> Void)?
     var onPlanApprove: (() -> Void)?
+    var onEnableCapability: ((String) -> Void)?
 
     var body: some View {
         let items = session.visibleTimelineItems
@@ -25,11 +27,13 @@ struct TimelineView: View {
                     TimelineItemView(
                         item: item,
                         session: session,
+                        capabilityStore: capabilityStore,
                         selectedToolID: selectedToolID,
                         onSelectTool: onSelectTool,
                         onApprovalDecision: onApprovalDecision,
                         onAskUserResponse: onAskUserResponse,
                         onPlanApprove: onPlanApprove,
+                        onEnableCapability: onEnableCapability,
                         showsTail: showsTail
                     )
                     .padding(.bottom, bottomPadding)
@@ -79,11 +83,13 @@ private extension TimelineContent {
 private struct TimelineItemView: View {
     let item: TimelineItem
     let session: Session
+    @Bindable var capabilityStore: CapabilityStore
     let selectedToolID: String?
     let onSelectTool: ((ToolUseEvent) -> Void)?
     var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
     var onAskUserResponse: ((String, Int, String?) -> Void)?
     var onPlanApprove: (() -> Void)?
+    var onEnableCapability: ((String) -> Void)?
     var showsTail: Bool = true
 
     var body: some View {
@@ -92,7 +98,15 @@ private struct TimelineItemView: View {
             UserMessageCell(message: msg, isCancelled: session.cancelledItemIDs.contains(item.id), showsTail: showsTail)
         case .assistantMessage(let msg):
             if msg.isComplete {
-                AssistantMessageCell(message: msg, streamingText: nil, showsTail: showsTail)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    AssistantMessageCell(message: msg, streamingText: nil, showsTail: showsTail)
+
+                    let suggested = capabilityStore.disabledCapabilities(mentionedIn: msg.text)
+                    if !suggested.isEmpty {
+                        CapabilitySuggestionBar(capabilities: suggested, onEnable: onEnableCapability)
+                            .transition(Motion.approvalAppear)
+                    }
+                }
             } else {
                 AssistantMessageCell(
                     message: msg,

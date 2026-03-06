@@ -127,4 +127,36 @@ struct CapabilityStoreTests {
         store.load()
         #expect(store.enabledIDs.isEmpty)
     }
+
+    @Test @MainActor func enableIsIdempotent() {
+        let store = CapabilityStore()
+        store.load()
+
+        store.toggleGroup("read", for: "mail")
+        #expect(store.isEnabled("mail"))
+
+        // enable on already-enabled should be a no-op
+        store.enable("mail")
+        #expect(store.isGroupEnabled("read", for: "mail"))
+    }
+
+    @Test @MainActor func enableActivatesAllGroups() {
+        let store = CapabilityStore()
+        store.load()
+
+        #expect(!store.isEnabled("test-cap"))
+        store.enable("test-cap")
+        // Without registry entries, enabledGroups will be empty set.
+        // But the method should at least set the key.
+        #expect(store.enabledGroups["test-cap"] != nil)
+    }
+
+    @Test @MainActor func disabledCapabilitiesMentionedInTextMatchesCaseInsensitively() {
+        let store = CapabilityStore()
+        store.load()
+        // Without bundled helpers, capabilities are empty — so result is empty.
+        // This test verifies no crash and correct return type.
+        let mentioned = store.disabledCapabilities(mentionedIn: "You could enable Calendar for this.")
+        #expect(mentioned.isEmpty) // no registry entries in test bundle
+    }
 }

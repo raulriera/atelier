@@ -130,6 +130,24 @@ func jxaEscape(_ s: String) -> String {
      .replacingOccurrences(of: "\t", with: "\\t")
 }
 
+/// Generates a JXA snippet that looks up a calendar by name and throws
+/// a descriptive error listing available calendars if it doesn't exist.
+/// - Parameters:
+///   - name: The calendar name to look up (already jxaEscaped).
+///   - target: The JXA variable to assign the result to ("cal" or "cals").
+///   - asArray: If true, wraps the result in an array: `cals = [found]`.
+func calendarLookupScript(name: String, target: String, asArray: Bool) -> String {
+    let assignment = asArray ? "\(target) = [app.calendars.byName(\"\(name)\")]; \(target)[0].name();" : "\(target) = app.calendars.byName(\"\(name)\"); \(target).name();"
+    return """
+    try { \(assignment) } catch(e) {
+        var names = [];
+        var all = app.calendars();
+        for (var i = 0; i < all.length; i++) { names.push(all[i].name()); }
+        throw new Error("Calendar \\"\(name)\\" not found. Available calendars: " + names.join(", "));
+    }
+    """
+}
+
 // MARK: - Tool Definitions
 
 struct ToolDefinition {
@@ -304,7 +322,7 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
         }
         let calFilter: String
         if let calendar = args["calendar"]?.stringValue {
-            calFilter = "cals = [app.calendars.byName(\"\(jxaEscape(calendar))\")];"
+            calFilter = calendarLookupScript(name: jxaEscape(calendar), target: "cals", asArray: true)
         } else {
             calFilter = ""
         }
@@ -414,11 +432,11 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
             endDateExpr = "new Date(startDate.getTime() + 60*60*1000)"
         }
 
-        let calSelector: String
+        let calLookup: String
         if let calendar = args["calendar"]?.stringValue {
-            calSelector = "app.calendars.byName(\"\(jxaEscape(calendar))\")"
+            calLookup = calendarLookupScript(name: jxaEscape(calendar), target: "cal", asArray: false)
         } else {
-            calSelector = "app.defaultCalendar()"
+            calLookup = ""
         }
 
         var extraProps = ""
@@ -433,7 +451,8 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
         var app = Application("Calendar");
         var startDate = new Date("\(safeStartDate)");
         var endDate = \(endDateExpr);
-        var cal = \(calSelector);
+        var cal = app.calendars[0];
+        \(calLookup)
         var e = app.Event({
             summary: "\(safeTitle)",
             startDate: startDate,
@@ -472,16 +491,17 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
             dateFilter = ""
         }
 
-        let calScope: String
+        let calLookup: String
         if let calendar = args["calendar"]?.stringValue {
-            calScope = "[app.calendars.byName(\"\(jxaEscape(calendar))\")]"
+            calLookup = calendarLookupScript(name: jxaEscape(calendar), target: "cals", asArray: true)
         } else {
-            calScope = "app.calendars()"
+            calLookup = ""
         }
 
         let script = """
         var app = Application("Calendar");
-        var cals = \(calScope);
+        var cals = app.calendars();
+        \(calLookup)
         var found = false;
         for (var c = 0; c < cals.length; c++) {
             var events = cals[c].events.whose({summary: "\(safeTitle)"})();

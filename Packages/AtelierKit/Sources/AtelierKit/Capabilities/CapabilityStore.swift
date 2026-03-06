@@ -62,9 +62,7 @@ public final class CapabilityStore {
             // Store empty set to distinguish "user disabled" from "never seen"
             enabledGroups[id] = []
         } else {
-            let cap = capabilities.first { $0.id == id }
-            let allGroupIDs = Set(cap?.toolGroups.map(\.id) ?? [])
-            enabledGroups[id] = allGroupIDs
+            enableAllGroups(for: id)
         }
         persist()
     }
@@ -144,7 +142,7 @@ public final class CapabilityStore {
             lines.append("# Available capabilities (not yet enabled)")
             lines.append(contentsOf: disabledLines)
             lines.append("")
-            lines.append("If the user's request would benefit from a disabled capability, let them know it's available and ask them to enable it using the Capabilities button (puzzle piece icon) in the toolbar.")
+            lines.append("If the user's request would benefit from a disabled capability, mention it by name (e.g. \"I could help with that if you enable Calendar\"). The app will automatically show an inline Enable button next to your message.")
         }
 
         return lines.isEmpty ? nil : lines.joined(separator: "\n")
@@ -157,12 +155,38 @@ public final class CapabilityStore {
     private func applyDefaults() {
         var changed = false
         for cap in capabilities where cap.defaultEnabled && enabledGroups[cap.id] == nil {
-            enabledGroups[cap.id] = Set(cap.toolGroups.map(\.id))
+            enableAllGroups(for: cap.id)
             changed = true
         }
         if changed {
             persist()
         }
+    }
+
+    /// Returns disabled capabilities whose names appear in the given text
+    /// as whole words (word-boundary matching to avoid false positives like
+    /// "email" matching "Mail" or "footnotes" matching "Notes").
+    public func disabledCapabilities(mentionedIn text: String) -> [Capability] {
+        return capabilities.filter { cap in
+            guard !isEnabled(cap.id) else { return false }
+            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: cap.name))\\b"
+            return text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+        }
+    }
+
+    /// Enables a capability (all groups) by ID, persisting the change.
+    ///
+    /// Unlike ``toggle(_:)``, this is idempotent — calling it on an
+    /// already-enabled capability is a no-op.
+    public func enable(_ id: String) {
+        guard !isEnabled(id) else { return }
+        enableAllGroups(for: id)
+        persist()
+    }
+
+    private func enableAllGroups(for id: String) {
+        let cap = capabilities.first { $0.id == id }
+        enabledGroups[id] = Set(cap?.toolGroups.map(\.id) ?? [])
     }
 
     private func persist() {

@@ -8,7 +8,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 40 |
+| **Total opportunities** | 41 |
 | **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -86,6 +86,7 @@ The features that make Atelier smart — embedded Claude Code, approval gates, c
 | 4.4 | Capabilities | New | 🔨 In progress | [→](opportunities/hub/03-plugin-management.md) |
 | 4.5 | Cloud Connectors | New | 🔲 Not started | [→](opportunities/hub/06-cloud-connectors.md) |
 | 4.6 | Prompt Injection Defense | New | 🔲 Not started | [→](opportunities/security/03-prompt-injection-defense.md) |
+| 4.7 | MCP Helper Kit | Improvement | 🔲 Not started | [→](opportunities/architecture/08-mcp-helper-kit.md) |
 | 4.P | **Polish:** ~~Evaluate system Liquid Glass button styles for approval actions~~ | HIG | ✅ Done | — |
 
 ---
@@ -142,6 +143,8 @@ The foundation — native app shell, VM execution, file sharing, sessions, memor
 | [04-session-persistence.md](opportunities/architecture/04-session-persistence.md) | M2 |
 | [05-memory-management.md](opportunities/architecture/05-memory-management.md) | M4 |
 | [06-conversation-model.md](opportunities/architecture/06-conversation-model.md) | M0 |
+| [07-async-file-io.md](opportunities/architecture/07-async-file-io.md) | — |
+| [08-mcp-helper-kit.md](opportunities/architecture/08-mcp-helper-kit.md) | M3 |
 
 ### Security (`opportunities/security/`)
 Network isolation, file permissions, prompt injection, credentials, audit, deletion safety.
@@ -224,7 +227,9 @@ atelier/
     │   ├── 03-file-sharing.md
     │   ├── 04-session-persistence.md
     │   ├── 05-memory-management.md
-    │   └── 06-conversation-model.md
+    │   ├── 06-conversation-model.md
+    │   ├── 07-async-file-io.md
+    │   └── 08-mcp-helper-kit.md
     ├── security/
     │   ├── 01-network-isolation.md
     │   ├── 02-file-access-permissions.md

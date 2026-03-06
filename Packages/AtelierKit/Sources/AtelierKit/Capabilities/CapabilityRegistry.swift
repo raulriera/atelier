@@ -15,6 +15,7 @@ public enum CapabilityRegistry {
             calendarCapability(),
             notesCapability(),
             finderCapability(),
+            previewCapability(),
         ].compactMap { $0 }
     }
 
@@ -229,7 +230,8 @@ public enum CapabilityRegistry {
                     ]
                 ),
                 // calendar_delete_event is still available but requires user approval
-            ]
+            ],
+            systemPromptHint: "When creating or searching calendar events, use calendar_list_calendars first to discover the exact calendar names available. Never guess calendar names like \"Personal\" — they vary per user."
         )
     }
 
@@ -302,6 +304,38 @@ public enum CapabilityRegistry {
             ],
             systemPromptHint: "IMPORTANT: When deleting files, ALWAYS use finder_trash instead of the rm command. finder_trash moves files to the Trash (recoverable), while rm permanently deletes them. Never use Bash rm, rmdir, or unlink for file deletion when Finder is enabled.",
             defaultEnabled: true
+        )
+    }
+
+    // MARK: - Preview / PDF
+
+    static func previewCapability() -> Capability? {
+        capability(
+            id: "preview",
+            name: "Preview",
+            description: "Read, merge, split, and extract text from PDF documents.",
+            iconSystemName: "doc.text.magnifyingglass",
+            helperName: "atelier-preview-mcp",
+            toolGroups: [
+                ToolGroup(
+                    id: "read",
+                    name: "Read",
+                    description: "Get PDF info and extract text content",
+                    tools: [
+                        "pdf_info",
+                        "pdf_extract_text",
+                    ]
+                ),
+                ToolGroup(
+                    id: "transform",
+                    name: "Transform",
+                    description: "Merge multiple PDFs or extract pages into a new PDF",
+                    tools: [
+                        "pdf_merge",
+                        "pdf_split",
+                    ]
+                ),
+            ]
         )
     }
 }
