@@ -349,14 +349,20 @@ public final class Session {
         invalidateTaskCache()
     }
 
+    /// Caches input properties once the input JSON is fully streamed (content_block_stop)
+    /// while keeping the tool in `.running` state until the result arrives.
+    @MainActor
+    public func finalizeToolInput(id: String) {
+        guard let index = activeToolIndices[id],
+              case .toolUse(var event) = items[index].content else { return }
+        event.cacheInputProperties()
+        items[index].content = .toolUse(event)
+    }
+
     @MainActor
     public func applyToolResult(id: String, output: String) {
-        // Tool results arrive after content_block_stop, so the tool is no longer
-        // in activeToolIndices. Scan items from the end (most recent first).
-        guard let index = items.lastIndex(where: {
-            if case .toolUse(let event) = $0.content { return event.id == id }
-            return false
-        }), case .toolUse(var event) = items[index].content else { return }
+        guard let index = toolIndex(for: id),
+              case .toolUse(var event) = items[index].content else { return }
         event.resultOutput += output
         items[index].content = .toolUse(event)
         invalidateTaskCache()
@@ -364,13 +370,25 @@ public final class Session {
 
     @MainActor
     public func completeToolUse(id: String) {
-        guard let index = activeToolIndices[id],
+        guard let index = toolIndex(for: id),
               case .toolUse(var event) = items[index].content else { return }
         event.status = .completed
         event.cacheInputProperties()
         items[index].content = .toolUse(event)
         activeToolIndices.removeValue(forKey: id)
         invalidateTaskCache()
+    }
+
+    /// Looks up a tool event index by checking `activeToolIndices` first, falling back
+    /// to a reverse scan. The fallback is needed because `finalizeToolInput` keeps tools
+    /// in the dictionary, but `completeToolUse` removes them — so a subsequent
+    /// `applyToolResult` for the same tool must scan.
+    private func toolIndex(for id: String) -> Int? {
+        if let index = activeToolIndices[id] { return index }
+        return items.lastIndex(where: {
+            if case .toolUse(let event) = $0.content { return event.id == id }
+            return false
+        })
     }
 
     /// Returns the file path of the plan written before a given ExitPlanMode event.
@@ -416,6 +434,34 @@ public final class Session {
             }
         }
         return nil
+    }
+
+    /// Returns the status of the most recent approval for the given tool, if resolved.
+    @MainActor
+    public func resolvedApprovalStatus(toolName: String) -> ApprovalEvent.Status? {
+        for item in items.reversed() {
+            if case .approval(let event) = item.content,
+               event.toolName == toolName,
+               event.status != .pending {
+                return event.status
+            }
+        }
+        return nil
+    }
+
+    /// Denies the pending ExitPlanMode approval if one exists, using the
+    /// given message as the denial reason. Called when the user sends a
+    /// message while a plan review is waiting — the message serves as
+    /// their feedback.
+    ///
+    /// - Returns: The approval ID that was denied, or `nil` if no pending
+    ///   plan approval existed.
+    @MainActor
+    @discardableResult
+    public func denyPendingPlanApproval(reason: String) -> String? {
+        guard let approval = pendingApproval(toolName: "ExitPlanMode") else { return nil }
+        resolveApproval(id: approval.id, decision: .deny(reason: reason))
+        return approval.id
     }
 
     @MainActor
@@ -468,7 +514,7 @@ public final class Session {
         for index in items.indices {
             switch items[index].content {
             case .approval(var event) where event.status == .pending:
-                event.status = .denied
+                event.status = .dismissed
                 event.decidedAt = now
                 items[index].content = .approval(event)
             case .askUser(var event) where event.status == .pending:

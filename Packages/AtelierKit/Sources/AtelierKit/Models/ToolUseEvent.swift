@@ -12,6 +12,11 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
 
     public let id: String
     public var name: String
+
+    /// When the tool started running. Not persisted — defaults to `Date()` on
+    /// creation and decoding. Decoded events get a fresh timestamp, which is fine
+    /// since elapsed time only matters for actively running tools.
+    public let startedAt: Date
     public var inputJSON: String
     public var status: Status
     public var resultOutput: String
@@ -43,6 +48,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
     ) {
         self.id = id
         self.name = name
+        self.startedAt = Date()
         self.inputJSON = inputJSON
         self.status = status
         self.resultOutput = resultOutput
@@ -55,6 +61,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
+        startedAt = Date()
         inputJSON = try container.decode(String.self, forKey: .inputJSON)
         status = try container.decode(Status.self, forKey: .status)
         resultOutput = try container.decodeIfPresent(String.self, forKey: .resultOutput) ?? ""

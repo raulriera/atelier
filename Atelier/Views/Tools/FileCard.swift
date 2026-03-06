@@ -75,6 +75,7 @@ struct FileCard: View {
                 Spacer()
 
                 if event.status == .running {
+                    ElapsedTimeLabel(since: event.startedAt)
                     ProgressView()
                         .controlSize(.mini)
                 } else if isWriteOnly {

@@ -244,6 +244,15 @@ struct ConversationWindow: View {
         guard !text.isEmpty else { return }
         draft = ""
 
+        // If there's a pending plan approval, auto-deny it — the user's message
+        // serves as their feedback on the plan. This must happen before the
+        // streaming check because the CLI blocks while waiting for the approval.
+        if let deniedID = session.denyPendingPlanApproval(reason: text) {
+            if let server = approvalServer {
+                Task { await server.respond(requestId: deniedID, decision: .deny(reason: text)) }
+            }
+        }
+
         if session.isStreaming {
             withAnimation(Motion.appear) {
                 session.enqueuePendingMessage(text)
@@ -313,9 +322,12 @@ struct ConversationWindow: View {
         case .toolInputDelta(let id, let json):
             session.applyToolInputDelta(id: id, json: json)
         case .toolUseFinished(let id):
-            session.completeToolUse(id: id)
+            // Don't complete yet — the tool is still executing server-side.
+            // Cache input properties now so cards can display descriptions while running.
+            session.finalizeToolInput(id: id)
         case .toolResultReceived(let id, let output):
             session.applyToolResult(id: id, output: output)
+            session.completeToolUse(id: id)
         case .messageComplete(let usage):
             handleMessageComplete(usage: usage)
         case .error(let engineError):
@@ -376,7 +388,6 @@ struct ConversationWindow: View {
     }
 
     private func handlePlanApprove() {
-        // Find the pending ExitPlanMode approval and approve it.
         guard let approval = session.pendingApproval(toolName: "ExitPlanMode") else { return }
         handleApprovalDecision(id: approval.id, decision: .allow)
     }
