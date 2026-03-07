@@ -164,6 +164,7 @@
 				4CA1B0052F70000000000005 /* Compile Calendar MCP Helper */,
 				4CA1B0062F70000000000006 /* Compile Notes MCP Helper */,
 				4CA1B0072F70000000000007 /* Compile Finder MCP Helper */,
+				4CA1B0082F70000000000008 /* Compile Hooks Helper */,
 				4C0BECEA2F52B10000A608CC /* Embed XPC Services */,
 			);
 			buildRules = (
@@ -469,6 +470,22 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-finder-mcp\" \"$SRCROOT/Helpers/atelier-finder-mcp.swift\"\n";
+		};
+		4CA1B0082F70000000000008 /* Compile Hooks Helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Helpers/atelier-hooks.swift",
+			);
+			name = "Compile Hooks Helper";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Helpers/atelier-hooks",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-hooks\" \"$SRCROOT/Helpers/atelier-hooks.swift\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
