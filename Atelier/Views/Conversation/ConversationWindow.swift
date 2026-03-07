@@ -25,7 +25,7 @@ struct ConversationWindow: View {
     @State private var approvalServer: ApprovalServer?
     @State private var approvalObserverTask: Task<Void, Never>?
     @State private var askUserObserverTask: Task<Void, Never>?
-    @State private var distillationTask: Task<Void, Never>?
+
 
     private let engine: CLIEngine = CLIEngine()
 
@@ -227,9 +227,6 @@ struct ConversationWindow: View {
             if let captured = session.snapshot(wasInterrupted: wasStreaming) {
                 try? sessionPersistence.saveImmediately(captured)
             }
-            // Clean up distillation
-            distillationTask?.cancel()
-            distillationTask = nil
             // Clean up approval server
             approvalObserverTask?.cancel()
             approvalObserverTask = nil
@@ -390,7 +387,6 @@ struct ConversationWindow: View {
         Task {
             try? await session.save(to: sessionPersistence)
         }
-        triggerDistillation()
     }
 
     private func stopGeneration() {
@@ -439,43 +435,6 @@ struct ConversationWindow: View {
         }
         if let server = approvalServer {
             Task { await server.respondAskUser(requestId: id, selectedIndex: selectedIndex, selectedLabel: selectedLabel) }
-        }
-    }
-
-    /// Minimum meaningful items before distillation is worth running.
-    private static let minimumItemsForDistillation = 4
-
-    private func triggerDistillation() {
-        guard let cwd = workingDirectory else { return }
-        guard session.pendingMessages.isEmpty else { return }
-
-        let items = session.items
-        var meaningfulCount = 0
-        for item in items {
-            switch item.content {
-            case .userMessage, .assistantMessage, .toolUse:
-                meaningfulCount += 1
-                if meaningfulCount >= Self.minimumItemsForDistillation { break }
-            case .system, .approval, .askUser:
-                continue
-            }
-        }
-        guard meaningfulCount >= Self.minimumItemsForDistillation else { return }
-        guard let summary = ConversationSummarizer.summarize(items) else { return }
-
-        distillationTask?.cancel()
-        distillationTask = Task.detached {
-            let store = MemoryStore(projectRoot: cwd)
-            let existing = store.readLearnings()
-            let engine = DistillationEngine()
-            let result = await engine.distill(
-                conversationSummary: summary,
-                existingLearnings: existing,
-                workingDirectory: cwd
-            )
-            if let result {
-                try? store.writeLearnings(result)
-            }
         }
     }
 
