@@ -355,8 +355,8 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case "WebFetch":
             if let url = parsedInput?["url"] as? String,
                let host = URL(string: url)?.host {
-                raw = "Fetching a page from \(host)"
-            } else { raw = "Fetching a web page" }
+                raw = "Reading a page from \(host)"
+            } else { raw = "Reading a webpage" }
 
         case "Agent":
             if let desc = parsedInput?["description"] as? String, !desc.isEmpty {
@@ -391,7 +391,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         case "Edit": "Edit File"
         case "Glob": "Search Files"
         case "Grep": "Search Content"
-        case "WebFetch": "Fetch Web Page"
+        case "WebFetch": "Read Webpage"
         case "WebSearch": "Web Search"
         case "Agent": "Sub-agent"
         case "Task", "TaskCreate", "TodoWrite": "Tasks"

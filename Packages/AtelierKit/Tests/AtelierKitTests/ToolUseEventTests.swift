@@ -119,7 +119,7 @@ struct ToolUseEventTests {
             ("Edit", "Edit File"),
             ("Glob", "Search Files"),
             ("Grep", "Search Content"),
-            ("WebFetch", "Fetch Web Page"),
+            ("WebFetch", "Read Webpage"),
             ("WebSearch", "Web Search"),
             ("Agent", "Sub-agent"),
         ])

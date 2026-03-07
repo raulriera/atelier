@@ -56,6 +56,19 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
         case "NotebookEdit":
             return "Edit a notebook"
 
+        case "WebFetch":
+            if let url = dict["url"] as? String,
+               let host = URL(string: url)?.host {
+                return "Reading a page from \(host)"
+            }
+            return "Read a webpage"
+
+        case "WebSearch":
+            if let query = dict["query"] as? String, !query.isEmpty {
+                return "Searching the web for \"\(query)\""
+            }
+            return "Search the web"
+
         default:
             return MCPToolMetadata.displayName(for: toolName) ?? "Use \(toolName)"
         }
@@ -68,6 +81,8 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
         case "Write": "Write File"
         case "Edit": "Edit File"
         case "NotebookEdit": "Edit Notebook"
+        case "WebFetch": "Read Webpage"
+        case "WebSearch": "Web Search"
         default: MCPToolMetadata.displayName(for: toolName) ?? "Use \(toolName)"
         }
     }
@@ -79,6 +94,7 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
         case "Edit": "pencil"
         case "Bash": "terminal"
         case "NotebookEdit": "book"
+        case "WebFetch", "WebSearch": "globe"
         default:
             if let mcpIcon = MCPToolMetadata.iconName(for: toolName) { mcpIcon }
             else if toolName.hasPrefix("mcp__") { "puzzlepiece.extension" }
