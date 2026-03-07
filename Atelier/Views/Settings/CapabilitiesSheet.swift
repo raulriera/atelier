@@ -17,7 +17,7 @@ struct CapabilitiesSheet: View {
                     }
                 }
         }
-        .frame(minWidth: 400, idealWidth: 400, minHeight: 200, idealHeight: 360)
+        .frame(minWidth: 440, idealWidth: 480, minHeight: 300, idealHeight: 440)
     }
 
     @ViewBuilder
@@ -30,13 +30,13 @@ struct CapabilitiesSheet: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: Spacing.xs) {
+        VStack(spacing: Spacing.sm) {
             Image(systemName: "puzzlepiece.extension")
-                .font(.title2)
+                .font(.largeTitle)
                 .foregroundStyle(.contentTertiary)
 
             Text("No capabilities available in this build")
-                .font(.metadata)
+                .font(.cardBody)
                 .foregroundStyle(.contentTertiary)
                 .multilineTextAlignment(.center)
         }
@@ -45,16 +45,16 @@ struct CapabilitiesSheet: View {
 
     private var capabilityList: some View {
         List {
-            Text("Let Claude work with apps on your Mac. Each capability connects to an app and can be customized to control exactly what actions are allowed.")
-                .font(.metadata)
+            Text("Let Claude work with apps on your Mac. Each capability connects to an app and can be customized.")
+                .font(.cardBody)
                 .foregroundStyle(.contentSecondary)
                 .listRowSeparator(.hidden)
 
             ForEach(capabilityStore.capabilities) { capability in
-            CapabilityRow(
-                capability: capability,
-                capabilityStore: capabilityStore
-            )
+                CapabilityRow(
+                    capability: capability,
+                    capabilityStore: capabilityStore
+                )
             }
         }
     }
@@ -85,9 +85,11 @@ private struct CapabilityRow: View {
     }
 
     private var row: some View {
-        HStack(spacing: Spacing.xs) {
+        HStack(spacing: Spacing.sm) {
             Image(systemName: capability.iconSystemName)
+                .font(.title2)
                 .foregroundStyle(.contentAccent)
+                .frame(width: 28)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(capability.name)
@@ -109,7 +111,6 @@ private struct CapabilityRow: View {
             ))
             .labelsHidden()
             .toggleStyle(.switch)
-            .controlSize(.small)
         }
     }
 }
@@ -121,7 +122,7 @@ private struct CapabilityDetail: View {
 
     var body: some View {
         List(capability.toolGroups) { group in
-            HStack(spacing: Spacing.xs) {
+            HStack(spacing: Spacing.sm) {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(group.name)
                         .font(.cardBody)
@@ -130,7 +131,7 @@ private struct CapabilityDetail: View {
 
                     Text(group.description)
                         .font(.metadata)
-                        .foregroundStyle(.contentTertiary)
+                        .foregroundStyle(.contentSecondary)
                         .lineLimit(2)
                 }
 
@@ -142,7 +143,6 @@ private struct CapabilityDetail: View {
                 ))
                 .labelsHidden()
                 .toggleStyle(.switch)
-                .controlSize(.small)
             }
         }
         .navigationTitle(capability.name)

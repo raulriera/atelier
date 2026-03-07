@@ -11,14 +11,15 @@ extension Font {
     public static let cardTitle: Font = .title3
 
     /// Card descriptions, secondary card content.
-    public static let cardBody: Font = .body
+    /// Matches conversation body so cards feel part of the same flow.
+    public static let cardBody: Font = .title3
 
     /// Section labels in the conversation.
     public static let sectionTitle: Font = .title3
 
     /// Token counts, cost display — monospaced digits for alignment.
-    public static let tokenCount: Font = .caption2.monospacedDigit()
+    public static let tokenCount: Font = .callout.monospacedDigit()
 
-    /// Timestamps, secondary metadata.
-    public static let metadata: Font = .callout
+    /// Timestamps, secondary metadata, captions.
+    public static let metadata: Font = .body
 }
