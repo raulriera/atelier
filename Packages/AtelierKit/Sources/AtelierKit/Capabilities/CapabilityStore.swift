@@ -190,6 +190,61 @@ public final class CapabilityStore {
         enabledGroups[id] = Set(cap?.toolGroups.map(\.id) ?? [])
     }
 
+    /// Sample store populated with preview capabilities (no persistence, no bundle lookup).
+    @MainActor
+    public static var preview: CapabilityStore {
+        let store = CapabilityStore()
+        let config = MCPServerConfig(command: "/usr/bin/true", serverName: "preview")
+        store.capabilities = [
+            Capability(
+                id: "mail", name: "Mail", description: "Read, manage, and send email using the Mail app.",
+                iconSystemName: "envelope", serverConfig: config,
+                toolGroups: [
+                    ToolGroup(id: "read", name: "Read", description: "Search and read email messages", tools: ["mail_search"]),
+                    ToolGroup(id: "manage", name: "Manage", description: "Move, flag, and mark messages as read", tools: ["mail_move"]),
+                    ToolGroup(id: "send", name: "Send", description: "Create email drafts", tools: ["mail_send"]),
+                ]
+            ),
+            Capability(
+                id: "reminders", name: "Reminders", description: "Create, complete, and manage reminders and lists.",
+                iconSystemName: "checklist", serverConfig: config,
+                toolGroups: [
+                    ToolGroup(id: "manage", name: "Manage", description: "Create and complete reminders", tools: ["reminders_create"]),
+                ]
+            ),
+            Capability(
+                id: "calendar", name: "Calendar", description: "View and create calendar events.",
+                iconSystemName: "calendar", serverConfig: config,
+                toolGroups: [
+                    ToolGroup(id: "read", name: "Read", description: "View upcoming events", tools: ["calendar_list"]),
+                    ToolGroup(id: "create", name: "Create", description: "Create new events", tools: ["calendar_create"]),
+                ]
+            ),
+            Capability(
+                id: "notes", name: "Notes", description: "Search, read, and create notes.",
+                iconSystemName: "note.text", serverConfig: config,
+                toolGroups: [
+                    ToolGroup(id: "read", name: "Read", description: "Search and read notes", tools: ["notes_search"]),
+                    ToolGroup(id: "create", name: "Create", description: "Create new notes", tools: ["notes_create"]),
+                ]
+            ),
+            Capability(
+                id: "safari", name: "Safari", description: "Browse the web, read page content, and manage tabs.",
+                iconSystemName: "safari", serverConfig: config,
+                toolGroups: [
+                    ToolGroup(id: "browse", name: "Browse", description: "Open URLs and read page content", tools: ["safari_open"]),
+                    ToolGroup(id: "tabs", name: "Tabs", description: "List and manage open tabs", tools: ["safari_tabs"]),
+                ]
+            ),
+        ]
+        // Enable a couple for visual variety
+        store.enabledGroups = [
+            "mail": Set(["read", "send"]),
+            "safari": Set(["browse", "tabs"]),
+        ]
+        return store
+    }
+
     private func persist() {
         guard let url = persistenceURL else { return }
         // Encode as [String: [String]] — group IDs as sorted arrays for stable output
