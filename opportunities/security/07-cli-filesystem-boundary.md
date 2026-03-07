@@ -118,12 +118,13 @@ Non-technical users never see this config. Their projects default to `restricted
 
 ## Implementation
 
-### Phase 1 — Path-scoped CLI flags (M1)
+### Phase 1 — Path-scoped CLI flags (M1) ✅
 
-- Modify `CLIEngine.buildArguments()` to scope `Read`/`Glob`/`Grep` to the project path
-- Add sensitive path denylist via `--disallowedTools`
-- Remove `Agent` and `WebFetch` from `silentTools`
-- No new UI, no new binaries — purely argument changes
+- ✅ `silentTools` reduced to `["WebSearch"]` — `Read`/`Glob`/`Grep`/`WebFetch`/`Agent` removed from blanket approval
+- ✅ `Read`/`Glob`/`Grep` scoped to project working directory via `--allowedTools Tool(/abs/path/*)`
+- ✅ Sensitive path denylist via `--disallowedTools` using absolute paths (`.ssh`, `.aws`, `.gnupg`, `Library/Keychains`, `.config`, `.netrc`, `.env*`, `*.keychain-db`)
+- ✅ `SensitivePathPolicy` defense-in-depth layer in `ApprovalServer` auto-denies file tools targeting sensitive paths before they reach the UI
+- No new UI, no new binaries — argument changes + approval server guard
 
 ### Phase 2 — PreToolUse path guard hook (M1)
 

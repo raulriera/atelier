@@ -191,6 +191,13 @@ public actor ApprovalServer {
 
         Self.logger.debug("Received approval request: \(request.id, privacy: .public) tool=\(request.toolName, privacy: .public)")
 
+        // Defense-in-depth: auto-deny requests targeting sensitive paths
+        if let denialReason = SensitivePathPolicy.denyReason(for: request) {
+            Self.logger.notice("Auto-denied sensitive path: tool=\(request.toolName, privacy: .public)")
+            sendResponse(fd: fd, ApprovalResponse(behavior: "deny", message: denialReason))
+            return
+        }
+
         // Publish request to the UI
         requestContinuation?.yield(request)
 

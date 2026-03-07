@@ -54,7 +54,7 @@ Stand up the sandbox and lock it down. Get the container running, file sharing w
 | 2.4 | File Access Permissions | Improvement | 🔲 Not started | [→](opportunities/security/02-file-access-permissions.md) |
 | 2.5 | File Deletion Safety | New | 🔲 Not started | [→](opportunities/security/06-file-deletion-safety.md) |
 | 2.6 | Credential Storage | Improvement | 🔲 Not started | [→](opportunities/security/04-credential-storage.md) |
-| 2.7 | CLI Filesystem Boundary | New | 🔲 Not started | [→](opportunities/security/07-cli-filesystem-boundary.md) |
+| 2.7 | CLI Filesystem Boundary | New | 🔨 In progress (Phase 1 ✅) | [→](opportunities/security/07-cli-filesystem-boundary.md) |
 
 ---
 

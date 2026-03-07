@@ -110,6 +110,25 @@ struct CLIEngineTests {
             }
         }
 
+        @Test("WebFetch and Agent are not in silentTools")
+        func webFetchAndAgentExcluded() {
+            #expect(!CLIEngine.silentTools.contains("WebFetch"))
+            #expect(!CLIEngine.silentTools.contains("Agent"))
+        }
+
+        @Test("Read, Glob, Grep are not blanket-allowed")
+        func fileToolsNotBlanketAllowed() {
+            let args = CLIEngine.buildArguments(
+                message: "hello", modelAlias: "opus", sessionId: nil,
+                mcpConfigPath: "/tmp/test-config.json"
+            )
+            // These should only appear as scoped rules, not bare tool names
+            let allowedValues = values(after: "--allowedTools", in: args)
+            #expect(!allowedValues.contains("Read"))
+            #expect(!allowedValues.contains("Glob"))
+            #expect(!allowedValues.contains("Grep"))
+        }
+
         @Test("No MCP config omits all approval flags")
         func noMcpConfigOmitsFlags() {
             let args = CLIEngine.buildArguments(
@@ -119,6 +138,46 @@ struct CLIEngineTests {
             #expect(!args.contains("--mcp-config"))
             #expect(!args.contains("--permission-prompt-tool"))
             #expect(!args.contains("--allowedTools"))
+        }
+    }
+
+    @Suite("Filesystem boundary")
+    struct FilesystemBoundary {
+        @Test("Scoped allow rules generated for working directory")
+        func scopedAllowRulesForWorkingDir() {
+            let args = CLIEngine.buildArguments(
+                message: "hello", modelAlias: "opus", sessionId: nil,
+                mcpConfigPath: "/tmp/test-config.json",
+                workingDirectoryPath: "/Users/test/project"
+            )
+            let allowedValues = values(after: "--allowedTools", in: args)
+            #expect(allowedValues.contains("Read(/Users/test/project/*)"))
+            #expect(allowedValues.contains("Glob(/Users/test/project/*)"))
+            #expect(allowedValues.contains("Grep(/Users/test/project/*)"))
+        }
+
+        @Test("scopedRoot normalizes path")
+        func scopedRootNormalizes() {
+            let root = CLIEngine.scopedRoot(workingDirectoryPath: "/Users/test/other/../other")
+            #expect(root == "/Users/test/other")
+        }
+
+        @Test("scopedRoot returns nil when no working directory")
+        func scopedRootNilWithoutCwd() {
+            #expect(CLIEngine.scopedRoot(workingDirectoryPath: nil) == nil)
+        }
+
+        @Test("Sensitive deny rules use absolute paths")
+        func sensitiveDenyRulesUseAbsolutePaths() {
+            let rules = CLIEngine.sensitivePathDenyRules()
+            // All deny rules should contain absolute paths, not ~
+            for rule in rules {
+                #expect(!rule.contains("~"), "Deny rule should not contain ~: \(rule)")
+            }
+            // Should contain the real home directory path
+            let home = CLIDiscovery.realHomeDirectory
+            let hasAbsolutePath = rules.contains { $0.contains(home) }
+            #expect(hasAbsolutePath, "Deny rules should contain absolute home path")
         }
     }
 
@@ -148,5 +207,12 @@ struct CLIEngineTests {
             )
             #expect(!args.contains("--append-system-prompt"))
         }
+    }
+}
+
+/// Extracts all values that follow a given flag in an arguments array.
+private func values(after flag: String, in args: [String]) -> [String] {
+    args.indices.compactMap { i in
+        args[i] == flag && args.indices.contains(i + 1) ? args[i + 1] : nil
     }
 }

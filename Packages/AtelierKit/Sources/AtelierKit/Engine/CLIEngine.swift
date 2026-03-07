@@ -43,7 +43,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
                         message: message, modelAlias: alias, sessionId: sessionId,
                         appendSystemPrompt: appendSystemPrompt,
                         mcpConfigPath: mcpConfigPath,
-                        capabilityConfigs: enabledCapabilities
+                        capabilityConfigs: enabledCapabilities,
+                        workingDirectoryPath: cwd.path
                     )
 
                     // Use the project's root directory so the CLI can see project files,
@@ -208,7 +209,64 @@ public final class CLIEngine: ConversationEngine, Sendable {
     // MARK: - Argument Building
 
     /// Tools that are pre-approved and never require user confirmation.
-    static let silentTools = ["Read", "Glob", "Grep", "WebSearch", "WebFetch", "Agent"]
+    ///
+    /// File-reading tools (`Read`, `Glob`, `Grep`) are scoped to the project directory
+    /// and user-granted paths via `projectScopedAllowRules`. `WebFetch` and `Agent` are
+    /// excluded to prevent exfiltration chains from prompt injection.
+    static let silentTools = ["WebSearch"]
+
+    /// Paths under the real home directory that must never be auto-approved for file access.
+    static let sensitiveRelativePaths = [
+        ".ssh/*",
+        ".aws/*",
+        ".gnupg/*",
+        "Library/Keychains/*",
+        ".config/*",
+        ".netrc",
+        ".env*",
+    ]
+
+    /// Suffix patterns that are denied regardless of location.
+    static let sensitiveGlobalPatterns = [
+        "*.keychain-db",
+    ]
+
+    /// Normalizes the working directory path for scoped auto-approval.
+    static func scopedRoot(workingDirectoryPath: String?) -> String? {
+        guard let cwd = workingDirectoryPath else { return nil }
+        return URL(fileURLWithPath: cwd).standardizedFileURL.path
+    }
+
+    /// Generates `--allowedTools` rules that scope file-reading tools to specific directories.
+    static func projectScopedAllowRules(for roots: [String]) -> [String] {
+        let fileTools = ["Read", "Glob", "Grep"]
+        var args: [String] = []
+        for root in roots {
+            for tool in fileTools {
+                args += ["--allowedTools", "\(tool)(\(root)/*)"]
+            }
+        }
+        return args
+    }
+
+    /// Generates `--disallowedTools` rules that block file tools from accessing sensitive paths.
+    static func sensitivePathDenyRules() -> [String] {
+        let home = CLIDiscovery.realHomeDirectory
+        let fileTools = ["Read", "Glob", "Grep"]
+        var args: [String] = []
+        for relativePath in sensitiveRelativePaths {
+            let absolutePath = "\(home)/\(relativePath)"
+            for tool in fileTools {
+                args += ["--disallowedTools", "\(tool)(\(absolutePath))"]
+            }
+        }
+        for pattern in sensitiveGlobalPatterns {
+            for tool in fileTools {
+                args += ["--disallowedTools", "\(tool)(\(pattern))"]
+            }
+        }
+        return args
+    }
 
     static func buildArguments(
         message: String,
@@ -216,7 +274,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
         sessionId: String?,
         appendSystemPrompt: String? = nil,
         mcpConfigPath: String? = nil,
-        capabilityConfigs: [EnabledCapability] = []
+        capabilityConfigs: [EnabledCapability] = [],
+        workingDirectoryPath: String? = nil
     ) -> [String] {
         var args = [
             "-p",
@@ -240,6 +299,12 @@ public final class CLIEngine: ConversationEngine, Sendable {
             for tool in silentTools {
                 args += ["--allowedTools", tool]
             }
+            // Scope file-reading tools to the project directory
+            if let root = scopedRoot(workingDirectoryPath: workingDirectoryPath) {
+                args += projectScopedAllowRules(for: [root])
+            }
+            // Deny file tools from accessing sensitive paths
+            args += sensitivePathDenyRules()
             // Auto-approve our MCP ask_user tool
             args += ["--allowedTools", "mcp__atelier__ask_user"]
             // Block the built-in AskUserQuestion (relies on stdin we don't pipe)
