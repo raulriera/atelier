@@ -7,6 +7,7 @@ import os
 /// - Re-inject learnings after context compaction (`SessionStart[compact/startup/resume]`)
 /// - Distill learnings when Claude finishes responding (`Stop`)
 /// - Distill learnings before context compresses (`PreCompact`)
+/// - Validate file tool paths against the project boundary (`PreToolUse`)
 ///
 /// The manager merges Atelier's hooks with any user-defined hooks already in
 /// the file, and can cleanly remove only Atelier's hooks on uninstall.
@@ -149,6 +150,21 @@ public struct HooksManager: Sendable {
             ],
         ]
 
+        // Path guard hook validates file tool paths (defense-in-depth)
+        if let guardCommand = pathGuardCommandString() {
+            hooks["PreToolUse"] = [
+                [
+                    "matcher": "Read|Glob|Grep|Write|Edit|MultiEdit|NotebookEdit",
+                    "hooks": [[
+                        "type": "command",
+                        "command": guardCommand,
+                        "timeout": 5,
+                        "statusMessage": "\(Self.statusMessagePrefix) Validating file access",
+                    ] as [String: Any]],
+                ] as [String: Any],
+            ]
+        }
+
         // File tracking and distillation hooks require the helper binary
         if let trackCommand = trackFileCommandString() {
             hooks["PostToolUse"] = [
@@ -230,6 +246,12 @@ public struct HooksManager: Sendable {
     func trackFileCommandString() -> String? {
         guard let helper = helperPath else { return nil }
         return "'\(helper)' track-file"
+    }
+
+    /// Builds the path-guard command string, or nil if the helper binary is unavailable.
+    func pathGuardCommandString() -> String? {
+        guard let helper = helperPath else { return nil }
+        return "'\(helper)' path-guard"
     }
 
     // MARK: - Settings File I/O

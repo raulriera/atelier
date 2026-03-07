@@ -54,7 +54,7 @@ Stand up the sandbox and lock it down. Get the container running, file sharing w
 | 2.4 | File Access Permissions | Improvement | 🔲 Not started | [→](opportunities/security/02-file-access-permissions.md) |
 | 2.5 | File Deletion Safety | New | 🔲 Not started | [→](opportunities/security/06-file-deletion-safety.md) |
 | 2.6 | Credential Storage | Improvement | 🔲 Not started | [→](opportunities/security/04-credential-storage.md) |
-| 2.7 | CLI Filesystem Boundary | New | 🔨 In progress (Phase 1 ✅) | [→](opportunities/security/07-cli-filesystem-boundary.md) |
+| 2.7 | CLI Filesystem Boundary | New | 🔨 In progress (Phase 1–2 ✅) | [→](opportunities/security/07-cli-filesystem-boundary.md) |
 
 ---
 
@@ -137,7 +137,7 @@ Opportunities tracked in the repo but not yet assigned to a numbered milestone.
 |---|-----------|------|--------|------|
 | U1 | Async File I/O on Hot Paths | Technical Debt | 🔲 Not started | [→](opportunities/architecture/07-async-file-io.md) |
 | U2 | Task Tracking (TodoWrite) | Bug | 🔴 Broken | [→](opportunities/hub/07-task-tracking.md) |
-| U3 | Multi-Window Session Isolation | Bug | 🔴 Broken | [→](opportunities/architecture/10-multi-window-isolation.md) |
+| U3 | Multi-Window Session Isolation | Bug | 🔨 In progress (fix implemented) | [→](opportunities/architecture/10-multi-window-isolation.md) |
 
 ---
 

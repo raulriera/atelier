@@ -126,12 +126,14 @@ Non-technical users never see this config. Their projects default to `restricted
 - ✅ `SensitivePathPolicy` defense-in-depth layer in `ApprovalServer` auto-denies file tools targeting sensitive paths before they reach the UI
 - No new UI, no new binaries — argument changes + approval server guard
 
-### Phase 2 — PreToolUse path guard hook (M1)
+### Phase 2 — PreToolUse path guard hook (M1) ✅
 
-- Write a hook script that validates file paths against granted folders
-- Generate hook config dynamically in `CLIEngine` when launching the CLI
-- Pass granted folder paths via environment variable (`ATELIER_GRANTED_PATHS`)
-- Deny with user-visible reason for sensitive paths
+- ✅ `path-guard` subcommand added to `atelier-hooks` helper binary
+- ✅ Validates file paths are within the project directory (`cwd`), exits 2 to deny
+- ✅ Checks against sensitive path denylist (`.ssh`, `.aws`, `.gnupg`, etc.)
+- ✅ `PreToolUse[Read|Glob|Grep|Write|Edit|MultiEdit|NotebookEdit]` hook registered in `HooksManager`
+- ✅ Uses real home directory via `getpwuid` (not `$HOME` or `NSHomeDirectory`)
+- No environment variables needed — hook receives `cwd` in stdin JSON
 
 ### Phase 3 — Security profiles (M2)
 

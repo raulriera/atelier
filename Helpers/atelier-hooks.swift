@@ -13,6 +13,10 @@
 //   track-file — Records file paths modified by Claude into .atelier/structure.json.
 //                Used by PostToolUse[Write|Edit] hook.
 //
+//   path-guard — Validates file tool paths against the project boundary and
+//                sensitive path denylist. Exits 2 to deny, 0 to allow.
+//                Used by PreToolUse[Read|Glob|Grep|Write|Edit|MultiEdit|NotebookEdit] hook.
+//
 
 import Foundation
 
@@ -20,9 +24,20 @@ import Foundation
 
 struct ToolInput: Decodable {
     let filePath: String?
+    let path: String?
+    let pattern: String?
+    let directory: String?
 
     enum CodingKeys: String, CodingKey {
         case filePath = "file_path"
+        case path
+        case pattern
+        case directory
+    }
+
+    /// Returns the first non-nil path-like value from the tool input.
+    var anyPath: String? {
+        filePath ?? path ?? pattern ?? directory
     }
 }
 
@@ -448,11 +463,113 @@ func handleReinject(input: HookInput) {
     print("</project-memory>")
 }
 
+// MARK: - Path Guard
+
+/// Paths under the home directory that must never be accessed without explicit approval.
+/// Keep in sync with `CLIEngine.sensitiveRelativePaths` (different syntax, same intent).
+let sensitivePathPrefixes = [
+    ".ssh/",
+    ".aws/",
+    ".gnupg/",
+    "Library/Keychains/",
+    ".config/",
+]
+
+/// Exact filenames (or prefixes for dot-env variants) under $HOME that are sensitive.
+/// `.env` matches `.env`, `.env.local`, `.env.production`, etc.
+let sensitivePathExact = [
+    ".netrc",
+]
+
+/// Prefix matches under $HOME — any file starting with this is denied.
+let sensitivePathDotEnvPrefix = ".env"
+
+/// Suffix patterns denied regardless of location.
+let sensitiveGlobalSuffixes = [
+    ".keychain-db",
+]
+
+/// Resolves symlinks and `..` components to produce a canonical path.
+func normalizePath(_ path: String) -> String {
+    URL(fileURLWithPath: path).standardizedFileURL.path
+}
+
+/// Writes a JSON deny reason to stdout and exits with code 2 (block).
+func denyAndExit(_ reason: String) -> Never {
+    let response = ["reason": reason]
+    if let data = try? JSONSerialization.data(withJSONObject: response) {
+        FileHandle.standardOutput.write(data)
+        FileHandle.standardOutput.write(Data("\n".utf8))
+    }
+    exit(2)
+}
+
+/// Returns a denial reason if the path targets a sensitive location, or nil if allowed.
+func sensitivePathReason(_ normalizedPath: String, home: String) -> String? {
+    let relativeToHome: String? = normalizedPath.hasPrefix(home + "/")
+        ? String(normalizedPath.dropFirst(home.count + 1))
+        : nil
+
+    if let rel = relativeToHome {
+        for prefix in sensitivePathPrefixes {
+            if rel.hasPrefix(prefix) || rel == String(prefix.dropLast()) {
+                return "Access denied: path is in a protected location (\(prefix.dropLast()))"
+            }
+        }
+        for exact in sensitivePathExact {
+            if rel == exact {
+                return "Access denied: path is a protected file (\(exact))"
+            }
+        }
+        if rel == sensitivePathDotEnvPrefix || rel.hasPrefix(sensitivePathDotEnvPrefix + ".") {
+            return "Access denied: path is a protected file (.env)"
+        }
+    }
+
+    for suffix in sensitiveGlobalSuffixes {
+        if normalizedPath.hasSuffix(suffix) {
+            return "Access denied: path is a protected file type"
+        }
+    }
+
+    return nil
+}
+
+func handlePathGuard(input: HookInput) {
+    guard let rawPath = input.toolInput?.anyPath, !rawPath.isEmpty else {
+        exit(0)
+    }
+
+    let home: String
+    if let pw = getpwuid(getuid()) {
+        home = String(cString: pw.pointee.pw_dir)
+    } else {
+        home = ProcessInfo.processInfo.environment["HOME"] ?? NSHomeDirectory()
+    }
+
+    let normalizedPath = normalizePath(rawPath)
+
+    // Check sensitive paths first — these are always denied
+    if let reason = sensitivePathReason(normalizedPath, home: home) {
+        denyAndExit(reason)
+    }
+
+    // Check if path is within the project directory
+    guard let cwd = input.cwd else { exit(0) }
+    let normalizedCwd = normalizePath(cwd)
+
+    if !normalizedPath.hasPrefix(normalizedCwd + "/") && normalizedPath != normalizedCwd {
+        denyAndExit("Access denied: \(rawPath) is outside the project directory")
+    }
+
+    exit(0)
+}
+
 // MARK: - Main
 
 let args = CommandLine.arguments
 guard args.count >= 2 else {
-    FileHandle.standardError.write(Data("Usage: atelier-hooks <distill|reinject>\n".utf8))
+    FileHandle.standardError.write(Data("Usage: atelier-hooks <distill|reinject|track-file|path-guard>\n".utf8))
     exit(1)
 }
 
@@ -469,6 +586,8 @@ case "reinject":
     handleReinject(input: input)
 case "track-file":
     handleTrackFile(input: input)
+case "path-guard":
+    handlePathGuard(input: input)
 default:
     FileHandle.standardError.write(Data("Unknown subcommand: \(args[1])\n".utf8))
     exit(1)

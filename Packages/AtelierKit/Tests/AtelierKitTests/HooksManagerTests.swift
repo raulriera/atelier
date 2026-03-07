@@ -226,6 +226,40 @@ struct HooksManagerTests {
         #expect((preCompact[0]["matcher"] as? String) == "auto")
     }
 
+    @Test func preToolUsePathGuardRegisteredWithHelper() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        try manager.install()
+
+        let settings = try readJSON(at: manager.settingsURL)
+        let hooks = try #require(settings["hooks"] as? [String: Any])
+        let preToolUse = try #require(hooks["PreToolUse"] as? [[String: Any]])
+
+        #expect(preToolUse.count == 1)
+        #expect((preToolUse[0]["matcher"] as? String) == "Read|Glob|Grep|Write|Edit|MultiEdit|NotebookEdit")
+        let preHooks = try #require(preToolUse[0]["hooks"] as? [[String: Any]])
+        #expect((preHooks[0]["command"] as? String)?.contains("path-guard") == true)
+    }
+
+    @Test func pathGuardReturnsNilWithoutHelper() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManager(root: root)
+        #expect(manager.pathGuardCommandString() == nil)
+    }
+
+    @Test func noPreToolUseHookWithoutHelper() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManager(root: root)
+        let hooks = manager.buildAtelierHooks()
+        #expect(hooks["PreToolUse"] == nil)
+    }
+
     @Test func postToolUseHookRegisteredWithHelper() throws {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -294,12 +328,13 @@ struct HooksManagerTests {
         let sessionStart = hooks["SessionStart"] as! [[String: Any]]
         let stop = hooks["Stop"] as! [[String: Any]]
         let preCompact = hooks["PreCompact"] as! [[String: Any]]
-
+        let preToolUse = hooks["PreToolUse"] as! [[String: Any]]
         let postToolUse = hooks["PostToolUse"] as! [[String: Any]]
 
         #expect(sessionStart.count == 3)
         #expect(stop.count == 1)
         #expect(preCompact.count == 1)
+        #expect(preToolUse.count == 1)
         #expect(postToolUse.count == 1)
     }
 
@@ -527,6 +562,7 @@ struct HooksManagerTests {
         // Atelier events fully removed
         #expect(hooks["Stop"] == nil)
         #expect(hooks["PreCompact"] == nil)
+        #expect(hooks["PreToolUse"] == nil)
         #expect(hooks["PostToolUse"] == nil)
     }
 

@@ -33,18 +33,16 @@ The Claude CLI itself supports concurrent instances — multiple `claude` proces
 
 ## Investigation Areas
 
-1. **Main-actor starvation.** All streaming tasks inherit the main actor. If one task's `for try await` loop or approval handling monopolizes the main actor, other windows' tasks can't make progress. Consider whether streaming should use `Task.detached` or a custom executor.
+1. **Main-actor starvation.** All streaming tasks inherit the main actor via `Task { }` in SwiftUI's `.task` modifier. If one task's `for try await` loop or approval handling monopolizes the main actor, other windows' tasks can't make progress. Consider whether streaming should use `Task.detached` or a custom executor.
 2. **Shared CLI state.** The CLI may use a shared lock file, config directory, or API session that serializes concurrent `claude -p` processes launched from the same app bundle. Check `~/.claude/` for lock files during concurrent runs.
 3. **GCD / dispatch source contention.** `ApprovalServer` uses `DispatchSource.makeReadSource` on a global queue. Verify that blocking in `handleConnection` (which awaits user decisions) doesn't starve the GCD pool for other servers.
 4. **Process launch serialization.** Check if `Process.run()` or pipe setup has any app-wide serialization on macOS 26.
 
-## Solution
+## Ruled Out
 
-TBD — root cause must be identified first. Likely candidates:
-
-- Move streaming work off the main actor (e.g. `@ModelActor`, `Task.detached`, or a dedicated serial executor per window)
-- Ensure approval server socket handling doesn't block shared GCD resources
-- Add logging to identify exactly where the blocking occurs
+- **MCP server naming.** Each window already has an isolated `ApprovalServer` with a unique UUID-based socket path. The MCP server key (`"atelier"`) is local to each CLI process's config — two processes with the same key but different sockets cannot interfere. Generating unique server names per window was tested and did not resolve the issue.
+- **`Task.yield()` in streaming loop.** Adding cooperative yielding between stream events did not resolve the issue. The main-actor cooperative scheduler already yields between `for try await` iterations.
+- **No CLI lock files** found in `~/.claude/`.
 
 ## Dependencies
 

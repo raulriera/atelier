@@ -231,6 +231,9 @@ public final class CLIEngine: ConversationEngine, Sendable {
         "*.keychain-db",
     ]
 
+    /// File-reading tools that get scoped allow/deny rules.
+    private static let readOnlyFileTools = ["Read", "Glob", "Grep"]
+
     /// Normalizes the working directory path for scoped auto-approval.
     static func scopedRoot(workingDirectoryPath: String?) -> String? {
         guard let cwd = workingDirectoryPath else { return nil }
@@ -239,10 +242,9 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
     /// Generates `--allowedTools` rules that scope file-reading tools to specific directories.
     static func projectScopedAllowRules(for roots: [String]) -> [String] {
-        let fileTools = ["Read", "Glob", "Grep"]
         var args: [String] = []
         for root in roots {
-            for tool in fileTools {
+            for tool in readOnlyFileTools {
                 args += ["--allowedTools", "\(tool)(\(root)/*)"]
             }
         }
@@ -252,16 +254,15 @@ public final class CLIEngine: ConversationEngine, Sendable {
     /// Generates `--disallowedTools` rules that block file tools from accessing sensitive paths.
     static func sensitivePathDenyRules() -> [String] {
         let home = CLIDiscovery.realHomeDirectory
-        let fileTools = ["Read", "Glob", "Grep"]
         var args: [String] = []
         for relativePath in sensitiveRelativePaths {
             let absolutePath = "\(home)/\(relativePath)"
-            for tool in fileTools {
+            for tool in readOnlyFileTools {
                 args += ["--disallowedTools", "\(tool)(\(absolutePath))"]
             }
         }
         for pattern in sensitiveGlobalPatterns {
-            for tool in fileTools {
+            for tool in readOnlyFileTools {
                 args += ["--disallowedTools", "\(tool)(\(pattern))"]
             }
         }
