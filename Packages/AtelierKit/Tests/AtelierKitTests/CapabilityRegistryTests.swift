@@ -45,4 +45,27 @@ struct CapabilityRegistryTests {
         }
     }
 
+    @Test("Destructive tools are never auto-approved")
+    func destructiveToolsRequireApproval() {
+        let destructiveTools = ["finder_trash"]
+        let allAutoApproved = CapabilityRegistry.allCapabilities()
+            .flatMap { $0.toolGroups.flatMap(\.tools) }
+
+        for tool in destructiveTools {
+            #expect(!allAutoApproved.contains(tool), "\(tool) must not be auto-approved — it should require an approval card")
+        }
+    }
+
+    @Test("Finder capability includes system prompt hint about safe deletion")
+    func finderHasDeletionSafetyHint() throws {
+        // Finder capability requires the helper binary in the app bundle.
+        // In test bundles it may not resolve — skip gracefully.
+        guard let finder = CapabilityRegistry.allCapabilities().first(where: { $0.id == "finder" }) else {
+            return // Helper not in test bundle — can't validate
+        }
+        let hint = try #require(finder.systemPromptHint)
+        #expect(hint.contains("finder_trash"))
+        #expect(hint.contains("rm"))
+    }
+
 }
