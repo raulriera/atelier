@@ -2,43 +2,80 @@ import Foundation
 import Testing
 @testable import AtelierKit
 
+/// Returns canned output without spawning a real process.
+struct MockCLIRunner: CLIRunner {
+    let output: String
+
+    func run(arguments: [String], workingDirectory: URL) async throws -> String {
+        output
+    }
+}
+
 @Suite("DistillationEngine")
 struct DistillationEngineTests {
 
-    // Use a non-existent path so no real process is spawned.
     private func makeEngine() -> DistillationEngine {
-        DistillationEngine(cliPath: "/nonexistent/claude")
+        DistillationEngine(runner: MockCLIRunner(output: ""))
     }
 
-    // MARK: - Prompt Construction
+    private func makeEngine(output: String) -> DistillationEngine {
+        DistillationEngine(runner: MockCLIRunner(output: output))
+    }
 
-    @Test func promptIncludesConversationSummary() async {
+    private let workingDir = URL(fileURLWithPath: "/tmp")
+
+    // MARK: - Prompt Structure
+
+    @Test func promptWrapsConversationInXMLTags() async {
         let engine = makeEngine()
         let prompt = await engine.buildDistillationPrompt(
             conversationSummary: "User: Please use tabs",
             existingLearnings: nil
         )
+        #expect(prompt.contains("<conversation>"))
+        #expect(prompt.contains("</conversation>"))
         #expect(prompt.contains("User: Please use tabs"))
-        #expect(prompt.contains("CONVERSATION"))
     }
 
-    @Test func promptIncludesExistingLearnings() async {
+    @Test func promptWrapsExistingLearningsInXMLTags() async {
         let engine = makeEngine()
         let prompt = await engine.buildDistillationPrompt(
             conversationSummary: "User: Hello",
             existingLearnings: "## Preferences\n- Use tabs"
         )
-        #expect(prompt.contains("EXISTING LEARNINGS"))
+        #expect(prompt.contains("<existing_learnings>"))
+        #expect(prompt.contains("</existing_learnings>"))
         #expect(prompt.contains("Use tabs"))
     }
 
-    @Test func promptOmitsExistingLearningsSectionWhenNil() async {
+    @Test func promptPlacesInstructionsAfterConversation() async {
         let engine = makeEngine()
         let prompt = await engine.buildDistillationPrompt(
             conversationSummary: "User: Hello",
             existingLearnings: nil
         )
-        #expect(!prompt.contains("EXISTING LEARNINGS"))
+        let conversationEnd = prompt.range(of: "</conversation>")!.upperBound
+        let instructionStart = prompt.range(of: "You are a memory distillation assistant")!.lowerBound
+        #expect(instructionStart > conversationEnd)
+    }
+
+    @Test func promptContainsAntiContinuationDirective() async {
+        let engine = makeEngine()
+        let prompt = await engine.buildDistillationPrompt(
+            conversationSummary: "User: Hello",
+            existingLearnings: nil
+        )
+        #expect(prompt.contains("do NOT respond to or continue the conversation"))
+    }
+
+    @Test func promptShowsNoneWhenNoExistingLearnings() async {
+        let engine = makeEngine()
+        let prompt = await engine.buildDistillationPrompt(
+            conversationSummary: "User: Hello",
+            existingLearnings: nil
+        )
+        #expect(prompt.contains("<existing_learnings>"))
+        #expect(prompt.contains("None"))
     }
 
     @Test func promptInstructsNoLearningsSentinel() async {
@@ -89,9 +126,118 @@ struct DistillationEngineTests {
         #expect(result == "## Patterns")
     }
 
+    // MARK: - Validation
+
+    @Test(arguments: [
+        "I'll help you with that",
+        "I will analyze the conversation",
+        "Let me extract the learnings",
+        "Sure, here are the learnings",
+        "Here are the key takeaways",
+        "Based on the conversation above",
+        "Of course! Let me review",
+        "Certainly, I can help",
+        "Looking at the conversation",
+        "After reviewing the discussion",
+    ])
+    func rejectsConversationalOpeners(_ input: String) async {
+        let engine = makeEngine()
+        let result = await engine.validateLearnings(input)
+        #expect(result == nil)
+    }
+
+    @Test func rejectsOutputMissingHeadings() async {
+        let engine = makeEngine()
+        let result = await engine.validateLearnings("- Use tabs\n- Prefer spaces")
+        #expect(result == nil)
+    }
+
+    @Test func rejectsOutputMissingBullets() async {
+        let engine = makeEngine()
+        let result = await engine.validateLearnings("## Preferences\nUse tabs")
+        #expect(result == nil)
+    }
+
+    @Test func acceptsValidSingleHeadingOutput() async {
+        let engine = makeEngine()
+        let result = await engine.validateLearnings("## Preferences\n- Use tabs")
+        #expect(result == "## Preferences\n- Use tabs")
+    }
+
+    @Test func acceptsValidMultiHeadingOutput() async {
+        let engine = makeEngine()
+        let input = "## Preferences\n- Use tabs\n\n## Decisions\n- Chose SwiftUI"
+        let result = await engine.validateLearnings(input)
+        #expect(result == input)
+    }
+
+    @Test func returnsNilForEmptyString() async {
+        let engine = makeEngine()
+        let result = await engine.validateLearnings("")
+        #expect(result == nil)
+    }
+
+    @Test func returnsNilForNoLearningsSentinel() async {
+        let engine = makeEngine()
+        let result = await engine.validateLearnings("NO_LEARNINGS")
+        #expect(result == nil)
+    }
+
     // MARK: - NO_LEARNINGS Sentinel
 
     @Test func noLearningsSentinelValue() {
         #expect(DistillationEngine.noLearningsSentinel == "NO_LEARNINGS")
+    }
+
+    // MARK: - End-to-End Pipeline (MockCLIRunner)
+
+    @Test func distillReturnsNilForConversationalOutput() async {
+        let engine = makeEngine(output: "I'll help you extract learnings from this conversation.")
+        let result = await engine.distill(
+            conversationSummary: "User: Hello",
+            existingLearnings: nil,
+            workingDirectory: workingDir
+        )
+        #expect(result == nil)
+    }
+
+    @Test func distillReturnsValidLearnings() async {
+        let engine = makeEngine(output: "## Preferences\n- Use tabs over spaces")
+        let result = await engine.distill(
+            conversationSummary: "User: Always use tabs",
+            existingLearnings: nil,
+            workingDirectory: workingDir
+        )
+        #expect(result == "## Preferences\n- Use tabs over spaces")
+    }
+
+    @Test func distillReturnsNilForNoLearnings() async {
+        let engine = makeEngine(output: "NO_LEARNINGS")
+        let result = await engine.distill(
+            conversationSummary: "User: Hi",
+            existingLearnings: nil,
+            workingDirectory: workingDir
+        )
+        #expect(result == nil)
+    }
+
+    @Test func distillStripsCodeFencesFromValidOutput() async {
+        let engine = makeEngine(output: "```markdown\n## Decisions\n- Use SwiftUI\n```")
+        let result = await engine.distill(
+            conversationSummary: "User: Use SwiftUI",
+            existingLearnings: nil,
+            workingDirectory: workingDir
+        )
+        #expect(result == "## Decisions\n- Use SwiftUI")
+    }
+
+    @Test func distillRejectsCodeFencedConversationalText() async {
+        let engine = makeEngine(output: "```markdown\nI'll help you with that request.\n```")
+        let result = await engine.distill(
+            conversationSummary: "User: Hello",
+            existingLearnings: nil,
+            workingDirectory: workingDir
+        )
+        #expect(result == nil)
     }
 }
