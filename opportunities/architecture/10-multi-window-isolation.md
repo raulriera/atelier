@@ -31,18 +31,30 @@ Each `ConversationWindow` creates independent instances of:
 
 The Claude CLI itself supports concurrent instances — multiple `claude` processes run fine in separate terminal tabs.
 
-## Investigation Areas
+## Remaining Investigation Areas
 
-1. **Main-actor starvation.** All streaming tasks inherit the main actor via `Task { }` in SwiftUI's `.task` modifier. If one task's `for try await` loop or approval handling monopolizes the main actor, other windows' tasks can't make progress. Consider whether streaming should use `Task.detached` or a custom executor.
-2. **Shared CLI state.** The CLI may use a shared lock file, config directory, or API session that serializes concurrent `claude -p` processes launched from the same app bundle. Check `~/.claude/` for lock files during concurrent runs.
-3. **GCD / dispatch source contention.** `ApprovalServer` uses `DispatchSource.makeReadSource` on a global queue. Verify that blocking in `handleConnection` (which awaits user decisions) doesn't starve the GCD pool for other servers.
-4. **Process launch serialization.** Check if `Process.run()` or pipe setup has any app-wide serialization on macOS 26.
+1. **SwiftUI view update starvation.** The standalone reproduction uses raw `Task` / `withTaskGroup`, not SwiftUI's rendering pipeline. SwiftUI may throttle or batch `@Observable` mutations. If Window A's approval card triggers high-frequency view updates, SwiftUI's rendering pass could delay Window B's event processing. Profile with Instruments (SwiftUI template) during reproduction.
+2. **`@Observable` / `withAnimation` contention.** Each `handleStreamEvent` call mutates `Session` (an `@Observable`). If SwiftUI's observation tracking or animation batching serializes across windows, one window's mutations could delay another's.
+3. **`Task { await server.respond(...) }` blocking main actor.** The approval response path hops to the `ApprovalServer` actor, which then does blocking `send()` on the socket. If this blocks a main-actor `Task` longer than expected, it could delay the next iteration of another window's streaming loop.
+4. **Approval observer tasks.** Each window's `approvalObserverTask` and streaming task both run on the main actor. Check if `for await request in server.requests` creates contention when one AsyncStream has a pending value.
 
 ## Ruled Out
 
+- **Claude CLI serialization.** Standalone reproduction confirmed two concurrent `claude -p --permission-prompt-tool` processes work independently from the same Swift process. One waiting 15s for approval does not block the other. Tested both off-main-actor and on-`@MainActor` consumption — no interference. The CLI is **not** the cause.
+- **`FileHandle.bytes.lines` (AsyncBytes).** Standalone test confirmed two concurrent Pipe reads via `handle.bytes.lines` in the same process work independently. One blocked pipe does not stall another.
+- **Main-actor starvation from stream consumption.** Reproduction with both streams consumed on `@MainActor` via `AsyncThrowingStream` + `Task.detached` producers (same architecture as `CLIEngine.send()`) showed no blocking.
 - **MCP server naming.** Each window already has an isolated `ApprovalServer` with a unique UUID-based socket path. The MCP server key (`"atelier"`) is local to each CLI process's config — two processes with the same key but different sockets cannot interfere. Generating unique server names per window was tested and did not resolve the issue.
 - **`Task.yield()` in streaming loop.** Adding cooperative yielding between stream events did not resolve the issue. The main-actor cooperative scheduler already yields between `for try await` iterations.
 - **No CLI lock files** found in `~/.claude/`.
+
+## Reproduction Scripts
+
+Standalone Swift scripts in `/tmp/` confirm the CLI and Foundation layers work correctly:
+- `/tmp/concurrent-pipe-test.swift` — proves `bytes.lines` is not serialized
+- `/tmp/concurrent-cli-approval-test.swift` — proves two `claude -p --permission-prompt-tool` don't block each other
+- `/tmp/concurrent-cli-mainactor-test.swift` — proves `@MainActor` consumption doesn't cause starvation
+
+The bug is specific to something in the Atelier app layer, not in Foundation or the CLI.
 
 ## Dependencies
 

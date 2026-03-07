@@ -60,6 +60,25 @@ public final class CLIEngine: ConversationEngine, Sendable {
                     try process.run()
                     processLock.withLock { $0 = process }
 
+                    // Read stderr concurrently to prevent a pipe buffer deadlock.
+                    //
+                    // macOS pipes have a ~64 KB kernel buffer. If the CLI writes enough
+                    // to stderr to fill that buffer, the write blocks and the process
+                    // stalls — it can't produce more stdout either. Reading stderr only
+                    // after `waitUntilExit()` (the previous approach) means the buffer
+                    // is never drained while the process is alive, creating a deadlock:
+                    //
+                    //   Process blocked on stderr write → can't produce stdout →
+                    //   bytes.lines never ends → waitUntilExit never reached →
+                    //   stderr never read → deadlock
+                    //
+                    // Draining stderr in a detached task breaks the cycle.
+                    let stderrHandle = stderr.fileHandleForReading
+                    let stderrTask = Task.detached { () -> String in
+                        let data = stderrHandle.readDataToEndOfFile()
+                        return String(data: data, encoding: .utf8) ?? ""
+                    }
+
                     let handle = stdout.fileHandleForReading
                     var activeToolBlocks: [Int: String] = [:]
                     var receivedResult = false
@@ -127,10 +146,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
                     }
 
                     process.waitUntilExit()
-
-                    let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
-                    let stderrText = String(data: stderrData, encoding: .utf8) ?? ""
                     let exitCode = Int(process.terminationStatus)
+                    let stderrText = await stderrTask.value
 
                     if !stderrText.isEmpty {
                         Self.logger.warning("CLI stderr: \(stderrText, privacy: .public)")

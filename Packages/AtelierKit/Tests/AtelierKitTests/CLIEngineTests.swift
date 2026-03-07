@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import AtelierKit
 
@@ -207,6 +208,49 @@ struct CLIEngineTests {
             )
             #expect(!args.contains("--append-system-prompt"))
         }
+    }
+}
+
+@Suite("Concurrent stderr reading")
+struct ConcurrentStderrTests {
+
+    @Test("Stdout completes when stderr is large")
+    func stdoutCompletesWithLargeStderr() async throws {
+        // Launches a subprocess that writes >64 KB to stderr (exceeding the
+        // macOS pipe buffer) while also writing to stdout. If stderr isn't
+        // drained concurrently, the process deadlocks and the test times out.
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        // Write 100 KB to stderr, then one line to stdout.
+        process.arguments = ["-c", """
+            python3 -c "import sys; sys.stderr.write('x' * 102400); sys.stderr.flush(); print('done')"
+            """]
+
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+
+        try process.run()
+
+        // Drain stderr concurrently — same pattern as CLIEngine.send()
+        let stderrHandle = stderr.fileHandleForReading
+        let stderrTask = Task.detached { () -> Data in
+            stderrHandle.readDataToEndOfFile()
+        }
+
+        let handle = stdout.fileHandleForReading
+        var lines: [String] = []
+        for try await line in handle.bytes.lines {
+            lines.append(line)
+        }
+
+        process.waitUntilExit()
+        let stderrData = await stderrTask.value
+
+        #expect(process.terminationStatus == 0)
+        #expect(lines == ["done"])
+        #expect(stderrData.count == 102_400, "All stderr bytes should be captured")
     }
 }
 
