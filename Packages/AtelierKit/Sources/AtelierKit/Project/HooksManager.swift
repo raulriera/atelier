@@ -42,10 +42,11 @@ public struct HooksManager: Sendable {
             .appendingPathComponent("settings.local.json")
     }
 
-    /// Path to `.atelier/memory/learnings.md` within the project.
-    private var learningsPath: String {
+    /// Path to `.atelier/memory/` within the project.
+    private var memoryDirPath: String {
         projectRoot
-            .appendingPathComponent(".atelier/memory/learnings.md")
+            .appendingPathComponent(".atelier", isDirectory: true)
+            .appendingPathComponent("memory", isDirectory: true)
             .path
     }
 
@@ -181,21 +182,25 @@ public struct HooksManager: Sendable {
 
     /// Builds the reinject command string.
     ///
-    /// Prefers the bundled helper binary; falls back to inline shell.
+    /// Prefers the bundled helper binary; falls back to inline shell that reads
+    /// all `.md` files from the memory directory.
     func reinjectCommandString() -> String {
         if let helper = helperPath {
             return "'\(helper)' reinject"
         }
 
-        let path = learningsPath
+        let dir = memoryDirPath
         return """
-        if [ -f '\(path)' ]; then \
+        if [ -d '\(dir)' ]; then \
+        files=$(find '\(dir)' -name '*.md' -type f 2>/dev/null | sort); \
+        if [ -n "$files" ]; then \
         echo '<project-memory>'; \
         echo 'The following learnings are automatically managed by Atelier.'; \
         echo 'Do NOT read, edit, or write these files with tools.'; \
         echo ''; \
-        cat '\(path)'; \
+        for f in $files; do cat "$f"; echo ''; done; \
         echo '</project-memory>'; \
+        fi; \
         fi
         """
     }

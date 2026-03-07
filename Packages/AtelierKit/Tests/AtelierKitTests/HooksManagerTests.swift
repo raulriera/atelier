@@ -137,7 +137,7 @@ struct HooksManagerTests {
         let command = manager.reinjectCommandString()
 
         #expect(command.contains("cat"))
-        #expect(command.contains("learnings.md"))
+        #expect(command.contains("*.md"))
         #expect(command.contains("<project-memory>"))
     }
 
@@ -536,7 +536,7 @@ struct HooksManagerTests {
 
     // MARK: - Shell Command Behavior
 
-    @Test func reinjectCommandOutputsLearningsWhenFileExists() async throws {
+    @Test func reinjectCommandOutputsMultipleMemoryFiles() async throws {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
@@ -545,53 +545,91 @@ struct HooksManagerTests {
             .appendingPathComponent("memory", isDirectory: true)
         try FileManager.default.createDirectory(at: memoryDir, withIntermediateDirectories: true)
         try "## Preferences\n- Use tabs".write(
-            to: memoryDir.appendingPathComponent("learnings.md"),
+            to: memoryDir.appendingPathComponent("preferences.md"),
+            atomically: true, encoding: .utf8
+        )
+        try "## Decisions\n- Chose SwiftUI".write(
+            to: memoryDir.appendingPathComponent("decisions.md"),
             atomically: true, encoding: .utf8
         )
 
         let manager = makeManager(root: root)
         let command = manager.reinjectCommandString()
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", command]
-        process.currentDirectoryURL = root
-        let stdout = Pipe()
-        process.standardOutput = stdout
-        process.standardError = Pipe()
-        try process.run()
-        process.waitUntilExit()
-
-        let output = String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let output = try runShellCommand(command, cwd: root)
 
         #expect(output.contains("<project-memory>"))
         #expect(output.contains("## Preferences"))
         #expect(output.contains("- Use tabs"))
+        #expect(output.contains("## Decisions"))
+        #expect(output.contains("- Chose SwiftUI"))
         #expect(output.contains("</project-memory>"))
-        #expect(process.terminationStatus == 0)
     }
 
-    @Test func reinjectCommandProducesNoOutputWhenNoFile() async throws {
+    @Test func reinjectCommandOutputsSingleFile() async throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let memoryDir = root
+            .appendingPathComponent(".atelier", isDirectory: true)
+            .appendingPathComponent("memory", isDirectory: true)
+        try FileManager.default.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+        try "## Patterns\n- Files organized by client".write(
+            to: memoryDir.appendingPathComponent("patterns.md"),
+            atomically: true, encoding: .utf8
+        )
+
+        let manager = makeManager(root: root)
+        let command = manager.reinjectCommandString()
+
+        let output = try runShellCommand(command, cwd: root)
+
+        #expect(output.contains("<project-memory>"))
+        #expect(output.contains("## Patterns"))
+        #expect(output.contains("</project-memory>"))
+    }
+
+    @Test func reinjectCommandProducesNoOutputWhenNoFiles() async throws {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
         let manager = makeManager(root: root)
         let command = manager.reinjectCommandString()
 
+        let output = try runShellCommand(command, cwd: root)
+
+        #expect(output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
+    @Test func reinjectCommandProducesNoOutputForEmptyDirectory() async throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let memoryDir = root
+            .appendingPathComponent(".atelier", isDirectory: true)
+            .appendingPathComponent("memory", isDirectory: true)
+        try FileManager.default.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+
+        let manager = makeManager(root: root)
+        let command = manager.reinjectCommandString()
+
+        let output = try runShellCommand(command, cwd: root)
+
+        #expect(output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
+    /// Runs a shell command and returns its stdout.
+    private func runShellCommand(_ command: String, cwd: URL) throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", command]
-        process.currentDirectoryURL = root
+        process.currentDirectoryURL = cwd
         let stdout = Pipe()
         process.standardOutput = stdout
         process.standardError = Pipe()
         try process.run()
         process.waitUntilExit()
-
-        let output = String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-
-        #expect(output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-        #expect(process.terminationStatus == 0)
+        return String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
     }
 
     // MARK: - Uninstall

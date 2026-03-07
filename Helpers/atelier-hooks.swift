@@ -231,6 +231,72 @@ func distill(summary: String, existingLearnings: String?, cliPath: String) -> St
 
 // MARK: - Subcommands
 
+/// Known memory file categories and their filenames.
+let memoryCategories: [(heading: String, filename: String)] = [
+    ("## Preferences", "preferences.md"),
+    ("## Decisions", "decisions.md"),
+    ("## Patterns", "patterns.md"),
+    ("## Corrections", "corrections.md"),
+]
+
+/// Splits distilled output by `## ` headings into separate file contents.
+func splitByHeading(_ content: String) -> [String: String] {
+    var result: [String: String] = [:]
+    var currentHeading: String?
+    var currentLines: [String] = []
+
+    for line in content.components(separatedBy: .newlines) {
+        if line.hasPrefix("## ") {
+            // Save previous section
+            if let heading = currentHeading {
+                let body = currentLines.joined(separator: "\n")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !body.isEmpty {
+                    result[heading] = body
+                }
+            }
+            currentHeading = line
+            currentLines = []
+        } else if currentHeading != nil {
+            currentLines.append(line)
+        }
+    }
+
+    // Save last section
+    if let heading = currentHeading {
+        let body = currentLines.joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !body.isEmpty {
+            result[heading] = body
+        }
+    }
+
+    return result
+}
+
+/// Returns the filename for a given heading, or nil if unrecognized.
+func filenameForHeading(_ heading: String) -> String? {
+    memoryCategories.first { $0.heading == heading }?.filename
+}
+
+/// Reads all memory files and combines them into a single string for the prompt.
+func readAllMemoryFiles(memoryDir: String) -> String? {
+    let manager = FileManager.default
+    guard let files = try? manager.contentsOfDirectory(atPath: memoryDir) else { return nil }
+
+    var parts: [String] = []
+    for file in files.sorted() where file.hasSuffix(".md") {
+        let path = "\(memoryDir)/\(file)"
+        guard let content = try? String(contentsOfFile: path, encoding: .utf8),
+              !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { continue }
+        parts.append(content)
+    }
+
+    guard !parts.isEmpty else { return nil }
+    return parts.joined(separator: "\n\n")
+}
+
 func handleDistill(input: HookInput) {
     guard let transcriptPath = input.transcriptPath else {
         FileHandle.standardError.write(Data("No transcript_path in hook input\n".utf8))
@@ -247,49 +313,52 @@ func handleDistill(input: HookInput) {
         exit(1)
     }
 
-    // Read existing learnings
-    let learningsPath = "\(cwd)/.atelier/memory/learnings.md"
-    let existing = try? String(contentsOfFile: learningsPath, encoding: .utf8)
-
-    // Summarize transcript
-    guard let summary = summarizeTranscript(at: transcriptPath) else {
-        // Nothing to distill
-        exit(0)
-    }
-
-    // Distill
-    guard let result = distill(summary: summary, existingLearnings: existing, cliPath: cliPath) else {
-        // No learnings or validation failed
-        exit(0)
-    }
-
-    // Write to disk
     let memoryDir = "\(cwd)/.atelier/memory"
     try? FileManager.default.createDirectory(
         atPath: memoryDir,
         withIntermediateDirectories: true
     )
-    do {
-        try result.write(toFile: learningsPath, atomically: true, encoding: .utf8)
-    } catch {
-        FileHandle.standardError.write(Data("Failed to write learnings: \(error)\n".utf8))
-        exit(1)
+
+    // Read all existing memory files
+    let existing = readAllMemoryFiles(memoryDir: memoryDir)
+
+    // Summarize transcript
+    guard let summary = summarizeTranscript(at: transcriptPath) else {
+        exit(0)
+    }
+
+    // Distill
+    guard let result = distill(summary: summary, existingLearnings: existing, cliPath: cliPath) else {
+        exit(0)
+    }
+
+    // Split by heading and write to separate files
+    let sections = splitByHeading(result)
+    guard !sections.isEmpty else { exit(0) }
+
+    for (heading, body) in sections {
+        guard let filename = filenameForHeading(heading) else { continue }
+        let filePath = "\(memoryDir)/\(filename)"
+        let fileContent = "\(heading)\n\(body)\n"
+        do {
+            try fileContent.write(toFile: filePath, atomically: true, encoding: .utf8)
+        } catch {
+            FileHandle.standardError.write(Data("Failed to write \(filename): \(error)\n".utf8))
+        }
     }
 }
 
 func handleReinject(input: HookInput) {
     guard let cwd = input.cwd else { exit(0) }
 
-    let learningsPath = "\(cwd)/.atelier/memory/learnings.md"
-    guard let content = try? String(contentsOfFile: learningsPath, encoding: .utf8),
-          !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    else { exit(0) }
+    let memoryDir = "\(cwd)/.atelier/memory"
+    guard let combined = readAllMemoryFiles(memoryDir: memoryDir) else { exit(0) }
 
     print("<project-memory>")
     print("The following learnings are automatically managed by Atelier.")
     print("Do NOT read, edit, or write these files with tools.")
     print("")
-    print(content)
+    print(combined)
     print("</project-memory>")
 }
 
