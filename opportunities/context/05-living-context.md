@@ -240,21 +240,53 @@ The CLI doesn't need to know about living context. It just receives a system pro
 
 ## Implementation
 
-### Phase 1 — Session-Boundary Distillation ✅
+### Phase 1 — Session-Boundary Distillation ✅ → migrating to hooks
 
-Single `learnings.md` file, injected into the system prompt via `--append-system-prompt`. This is acceptable because one small file doesn't waste the context window — the "Smart loading" optimization matters when there are many files.
+Single `learnings.md` file, injected into the system prompt via `--append-system-prompt`. This was an acceptable starting point but has critical gaps: distillation only fires when a response finishes (app-side trigger), compaction events are invisible, and the `ConversationSummarizer` produces a lossy summary when the CLI already has the full transcript.
 
-**What's built:**
-- `MemoryStore` — reads/writes `.atelier/memory/learnings.md` on disk
-- `ConversationSummarizer` — converts timeline items to plain-text summary
-- `DistillationEngine` — spawns background haiku CLI process to extract learnings
-- `ContextFileLoader` — discovers memory files at project root, injects with `<project-memory>` wrapper
-- Session-boundary trigger in `ConversationWindow` — fires after response completion when idle
+**What's built (app-side, to be replaced):**
+- `MemoryStore` — reads/writes `.atelier/memory/learnings.md` on disk (keeps)
+- `ConversationSummarizer` — converts timeline items to plain-text summary (remove)
+- `DistillationEngine` — spawns background haiku CLI process to extract learnings (move to hook helper)
+- `ContextFileLoader` — discovers memory files at project root, injects with `<project-memory>` wrapper (keeps)
+- Session-boundary trigger in `ConversationWindow` — fires after response completion when idle (remove)
 
-**What's deferred to Phase 2:**
-- Compaction-event distillation (CLI doesn't expose compaction events yet — using session-boundary as a proxy)
-- Manifest-based discovery (see "Smart loading" section — not needed until multiple memory files exist)
-- Attention-aware ordering and KV-cache optimization
+**Migration to hook-based distillation (see architecture/09-hooks-infrastructure.md):**
+
+The CLI's hook system provides the lifecycle events this system needs. Moving distillation from app-side code to CLI hooks gives us:
+
+1. **Compaction awareness** — `PreCompact` fires before context is lost, `SessionStart[compact]` re-injects learnings after
+2. **Full transcript access** — every hook receives `transcript_path`, far richer than the summarizer's truncated output
+3. **Works outside Atelier** — hooks live in `.claude/settings.local.json`, so the user's project gets smarter even when using the CLI directly
+4. **Simpler app code** — remove `ConversationSummarizer`, `triggerDistillation()`, the detached Task in `ConversationWindow`
+
+**Hook-based distillation pipeline:**
+
+```
+Stop hook fires (Claude finished responding)
+        ↓
+atelier-hooks binary reads transcript_path
+        ↓
+Calls Haiku to distill learnings (same as DistillationEngine)
+        ↓
+Writes to .atelier/memory/learnings.md
+        ↓
+(async, no user-visible delay)
+
+PreCompact hook fires (context about to compress)
+        ↓
+atelier-hooks triggers distillation immediately
+        ↓
+Learnings saved before context is lost
+
+SessionStart[compact] hook fires (fresh context after compaction)
+        ↓
+atelier-hooks reads .atelier/memory/learnings.md
+        ↓
+Writes to stdout → CLI re-injects as context
+        ↓
+Claude continues with accumulated knowledge intact
+```
 
 ### Phase 2 — Multi-File Memory + Smart Loading
 
@@ -263,6 +295,7 @@ Single `learnings.md` file, injected into the system prompt via `--append-system
 - Implement merge logic: new entries augment existing ones, contradictions replace old entries
 - Add file size monitoring — split a file when it exceeds ~100 lines
 - **Switch from injection to manifest-based discovery** — always load `context.md` + `preferences.md`, everything else via one-line manifest read on demand (see "Smart loading" section)
+- `PostToolUse[Write|Edit]` hook tracks file changes → updates project structure map automatically
 
 ### Phase 3 — Project Fingerprinting
 
@@ -270,6 +303,7 @@ Single `learnings.md` file, injected into the system prompt via `--append-system
 - Identify primary domain(s) based on file types, names, and directory patterns
 - Generate initial `context.md` with inferred project identity
 - Present to user for confirmation: "I think this is a [type] project. Does this look right?"
+- `SessionStart[startup]` hook on first session triggers fingerprinting
 
 ### Phase 4 — Proactive Suggestions
 
@@ -277,6 +311,7 @@ Single `learnings.md` file, injected into the system prompt via `--append-system
 - After confidence threshold is met (3+ consistent signals), offer to save
 - UI for viewing and managing suggestions (dismiss, accept, modify)
 - Respect dismissals permanently — never re-suggest the same thing
+- `PostToolUseFailure` hook records failed approaches automatically
 
 ### Phase 5 — Context Health
 
@@ -284,10 +319,12 @@ Single `learnings.md` file, injected into the system prompt via `--append-system
 - Staleness detection — flag entries that haven't been relevant in N sessions
 - Conflict detection — flag contradictions between context files
 - Token budget visualization — "Your context uses X of Y available tokens"
+- `InstructionsLoaded` hook verifies memory files are being read and tracks load order
 
 ## Dependencies
 
-- context/01-project-context-files.md (discovery and loading — the foundation)
+- architecture/09-hooks-infrastructure.md (hook management — the foundation for all of this)
+- context/01-project-context-files.md (discovery and loading)
 - architecture/04-session-persistence.md (session history feeds distillation)
 - experience/03-conversational-flow.md (inline suggestions for proactive offers)
 

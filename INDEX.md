@@ -8,7 +8,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 41 |
+| **Total opportunities** | 42 |
 | **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -69,7 +69,8 @@ With a working conversation (M0) and a safe sandbox (M1), this is where Atelier 
 | 3.3 | Session Persistence | New | ✅ Done | [→](opportunities/architecture/04-session-persistence.md) |
 | 3.4 | Conversational Flow | New | 🔨 In progress | [→](opportunities/experience/03-conversational-flow.md) |
 | 3.5 | Living Context | New | 🔨 In progress | [→](opportunities/context/05-living-context.md) |
-| 3.6 | Session Browser | New | 🔲 Not started | [→](opportunities/experience/05-session-browser.md) |
+| 3.6 | Hooks Infrastructure | New | 🔲 Not started | [→](opportunities/architecture/09-hooks-infrastructure.md) |
+| 3.7 | Session Browser | New | 🔲 Not started | [→](opportunities/experience/05-session-browser.md) |
 | 3.P | **Polish:** ~~Status icon pairings~~ | HIG | ✅ Done | — |
 
 ---
@@ -145,6 +146,7 @@ The foundation — native app shell, VM execution, file sharing, sessions, memor
 | [06-conversation-model.md](opportunities/architecture/06-conversation-model.md) | M0 |
 | [07-async-file-io.md](opportunities/architecture/07-async-file-io.md) | — |
 | [08-mcp-helper-kit.md](opportunities/architecture/08-mcp-helper-kit.md) | M3 |
+| [09-hooks-infrastructure.md](opportunities/architecture/09-hooks-infrastructure.md) | M2 |
 
 ### Security (`opportunities/security/`)
 Network isolation, file permissions, prompt injection, credentials, audit, deletion safety.
@@ -229,7 +231,8 @@ atelier/
     │   ├── 05-memory-management.md
     │   ├── 06-conversation-model.md
     │   ├── 07-async-file-io.md
-    │   └── 08-mcp-helper-kit.md
+    │   ├── 08-mcp-helper-kit.md
+    │   └── 09-hooks-infrastructure.md
     ├── security/
     │   ├── 01-network-isolation.md
     │   ├── 02-file-access-permissions.md

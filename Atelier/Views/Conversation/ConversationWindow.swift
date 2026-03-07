@@ -214,6 +214,7 @@ struct ConversationWindow: View {
             }
             if let cwd = workingDirectory {
                 activeContextFiles = ContextFileLoader.discover(from: cwd)
+                try? HooksManager(projectRoot: cwd).install()
             }
         }
         .onDisappear {
