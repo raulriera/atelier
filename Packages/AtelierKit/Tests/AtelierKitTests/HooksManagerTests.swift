@@ -158,6 +158,15 @@ struct HooksManagerTests {
 
         #expect(hooks["Stop"] == nil)
         #expect(hooks["PreCompact"] == nil)
+        #expect(hooks["PostToolUse"] == nil)
+    }
+
+    @Test func trackFileReturnsNilWithoutHelper() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManager(root: root)
+        #expect(manager.trackFileCommandString() == nil)
     }
 
     // MARK: - Hook Content (with helper binary)
@@ -217,6 +226,36 @@ struct HooksManagerTests {
         #expect((preCompact[0]["matcher"] as? String) == "auto")
     }
 
+    @Test func postToolUseHookRegisteredWithHelper() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        try manager.install()
+
+        let settings = try readJSON(at: manager.settingsURL)
+        let hooks = settings["hooks"] as! [String: Any]
+        let postToolUse = hooks["PostToolUse"] as! [[String: Any]]
+
+        #expect(postToolUse.count == 1)
+        #expect((postToolUse[0]["matcher"] as? String) == "Write|Edit")
+        let postHooks = postToolUse[0]["hooks"] as! [[String: Any]]
+        #expect((postHooks[0]["async"] as? Bool) == true)
+        #expect((postHooks[0]["command"] as? String)?.contains("track-file") == true)
+    }
+
+    @Test func trackFileUsesHelper() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        let command = manager.trackFileCommandString()
+
+        #expect(command != nil)
+        #expect(command!.contains("atelier-hooks"))
+        #expect(command!.contains("track-file"))
+    }
+
     @Test func stopHookIsAsync() throws {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -256,9 +295,12 @@ struct HooksManagerTests {
         let stop = hooks["Stop"] as! [[String: Any]]
         let preCompact = hooks["PreCompact"] as! [[String: Any]]
 
+        let postToolUse = hooks["PostToolUse"] as! [[String: Any]]
+
         #expect(sessionStart.count == 3)
         #expect(stop.count == 1)
         #expect(preCompact.count == 1)
+        #expect(postToolUse.count == 1)
     }
 
     // MARK: - Status Messages
@@ -485,6 +527,7 @@ struct HooksManagerTests {
         // Atelier events fully removed
         #expect(hooks["Stop"] == nil)
         #expect(hooks["PreCompact"] == nil)
+        #expect(hooks["PostToolUse"] == nil)
     }
 
     @Test func userHooksWithStatusMessageNotMistakenForAtelier() throws {

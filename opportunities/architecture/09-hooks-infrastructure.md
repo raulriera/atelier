@@ -150,11 +150,18 @@ For distillation, `command` hooks calling the bundled helper are the right choic
 
 **Deferred:** `SessionEnd` hook for final distillation (low priority — `Stop` already fires on last response)
 
-### Phase 3 — File tracking + project awareness
+### Phase 3 — File tracking + project awareness ✅
 
-10. Register `PostToolUse[Write|Edit]` hook to track file changes
-11. Build project structure map from accumulated file operations
-12. Feed into living context system (context/05-living-context.md)
+10. ~~Register `PostToolUse[Write|Edit]` hook to track file changes~~
+11. ~~Build project structure map from accumulated file operations~~
+12. ~~Feed into living context system (context/05-living-context.md)~~
+
+**What's built:**
+- `PostToolUse[Write|Edit]` hook registered in `HooksManager` (async, 5s timeout)
+- `atelier-hooks track-file` subcommand extracts `file_path` from tool input
+- Stores unique file paths in `.atelier/structure.json` (sorted, relative to project root)
+- Skips files inside `.atelier/` to avoid tracking our own memory files
+- Reinject handler includes project files list in `<project-memory>` output
 
 ### Phase 4 — Observability hooks
 

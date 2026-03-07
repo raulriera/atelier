@@ -4,26 +4,41 @@
 //
 // Called by the CLI's hook system with JSON on stdin. Subcommands:
 //
-//   distill   — Reads transcript, distills learnings via Haiku, writes to disk.
-//               Used by Stop, PreCompact, and SessionEnd hooks.
+//   distill    — Reads transcript, distills learnings via Haiku, writes to disk.
+//                Used by Stop, PreCompact, and SessionEnd hooks.
 //
-//   reinject  — Reads learnings from disk and writes to stdout for context injection.
-//               Used by SessionStart[compact/startup/resume] hooks.
+//   reinject   — Reads learnings from disk and writes to stdout for context injection.
+//                Used by SessionStart[compact/startup/resume] hooks.
+//
+//   track-file — Records file paths modified by Claude into .atelier/structure.json.
+//                Used by PostToolUse[Write|Edit] hook.
 //
 
 import Foundation
 
 // MARK: - Hook Input
 
+struct ToolInput: Decodable {
+    let filePath: String?
+
+    enum CodingKeys: String, CodingKey {
+        case filePath = "file_path"
+    }
+}
+
 struct HookInput: Decodable {
     let sessionId: String?
     let transcriptPath: String?
     let cwd: String?
+    let toolName: String?
+    let toolInput: ToolInput?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case cwd
+        case toolName = "tool_name"
+        case toolInput = "tool_input"
     }
 }
 
@@ -348,17 +363,88 @@ func handleDistill(input: HookInput) {
     }
 }
 
+// MARK: - Structure Map
+
+/// Reads the structure map (list of files Claude has modified).
+func readStructureMap(at path: String) -> [String] {
+    guard let data = FileManager.default.contents(atPath: path),
+          let array = try? JSONDecoder().decode([String].self, from: data)
+    else { return [] }
+    return array
+}
+
+/// Writes the structure map to disk.
+func writeStructureMap(_ paths: [String], to filePath: String) {
+    guard let data = try? JSONEncoder().encode(paths) else { return }
+    try? data.write(to: URL(fileURLWithPath: filePath), options: .atomic)
+}
+
+func handleTrackFile(input: HookInput) {
+    guard let cwd = input.cwd else { exit(0) }
+    guard let filePath = input.toolInput?.filePath
+    else { exit(0) }
+
+    // Make the path relative to cwd for portability
+    let relativePath: String
+    if filePath.hasPrefix(cwd) {
+        var path = String(filePath.dropFirst(cwd.count))
+        if path.hasPrefix("/") { path = String(path.dropFirst()) }
+        relativePath = path
+    } else {
+        relativePath = filePath
+    }
+
+    // Skip files inside .atelier/ — those are our own memory files
+    if relativePath.hasPrefix(".atelier/") { exit(0) }
+
+    let atelierDir = "\(cwd)/.atelier"
+    try? FileManager.default.createDirectory(
+        atPath: atelierDir,
+        withIntermediateDirectories: true
+    )
+
+    let mapPath = "\(atelierDir)/structure.json"
+    var existing = readStructureMap(at: mapPath)
+
+    // Add if not already tracked
+    if !existing.contains(relativePath) {
+        existing.append(relativePath)
+        existing.sort()
+        writeStructureMap(existing, to: mapPath)
+    }
+}
+
 func handleReinject(input: HookInput) {
     guard let cwd = input.cwd else { exit(0) }
 
     let memoryDir = "\(cwd)/.atelier/memory"
-    guard let combined = readAllMemoryFiles(memoryDir: memoryDir) else { exit(0) }
+    let combined = readAllMemoryFiles(memoryDir: memoryDir)
+
+    // Read structure map
+    let mapPath = "\(cwd)/.atelier/structure.json"
+    let structureMap = readStructureMap(at: mapPath)
+
+    // Need at least one of memory or structure to output anything
+    guard combined != nil || !structureMap.isEmpty else { exit(0) }
 
     print("<project-memory>")
     print("The following learnings are automatically managed by Atelier.")
     print("Do NOT read, edit, or write these files with tools.")
-    print("")
-    print(combined)
+
+    if let combined {
+        print("")
+        print(combined)
+    }
+
+    if !structureMap.isEmpty {
+        print("")
+        print("## Project Files")
+        print("Files modified in previous sessions:")
+        for path in structureMap {
+            print("- \(path)")
+        }
+    }
+
     print("</project-memory>")
 }
 
@@ -373,7 +459,7 @@ guard args.count >= 2 else {
 // Read hook input from stdin
 let stdinData = FileHandle.standardInput.readDataToEndOfFile()
 let input = (try? JSONDecoder().decode(HookInput.self, from: stdinData)) ?? HookInput(
-    sessionId: nil, transcriptPath: nil, cwd: nil
+    sessionId: nil, transcriptPath: nil, cwd: nil, toolName: nil, toolInput: nil
 )
 
 switch args[1] {
@@ -381,6 +467,8 @@ case "distill":
     handleDistill(input: input)
 case "reinject":
     handleReinject(input: input)
+case "track-file":
+    handleTrackFile(input: input)
 default:
     FileHandle.standardError.write(Data("Unknown subcommand: \(args[1])\n".utf8))
     exit(1)
