@@ -69,6 +69,54 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
             }
             return "Search the web"
 
+        case "Read":
+            if let path = dict["file_path"] as? String, !path.isEmpty {
+                return "Read \((path as NSString).lastPathComponent)"
+            }
+            return "Read a file"
+
+        case "Glob":
+            if let pattern = dict["pattern"] as? String, !pattern.isEmpty {
+                return "Search for files matching \(pattern)"
+            }
+            return "Search for files"
+
+        case "Grep":
+            if let pattern = dict["pattern"] as? String, !pattern.isEmpty {
+                return "Search file contents for \"\(pattern)\""
+            }
+            return "Search file contents"
+
+        case "Agent":
+            if let desc = dict["description"] as? String, !desc.isEmpty {
+                return desc.count <= 60 ? desc : String(desc.prefix(57)) + "..."
+            }
+            return "Work on a subtask"
+
+        case "Skill":
+            if let skill = dict["skill"] as? String, !skill.isEmpty {
+                return "Run \(skill)"
+            }
+            return "Run a skill"
+
+        case "ToolSearch":
+            return "Search for tools"
+
+        case "Task", "TaskCreate", "TodoWrite":
+            return "Create a task"
+
+        case "TaskUpdate":
+            return "Update a task"
+
+        case "TaskList", "TaskGet", "TodoRead":
+            return "Check tasks"
+
+        case "TaskOutput":
+            return "Read task output"
+
+        case "TaskStop":
+            return "Stop a task"
+
         default:
             return MCPToolMetadata.displayName(for: toolName) ?? "Use \(toolName)"
         }
@@ -83,6 +131,17 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
         case "NotebookEdit": "Edit Notebook"
         case "WebFetch": "Read Webpage"
         case "WebSearch": "Web Search"
+        case "Read": "Read File"
+        case "Glob": "Search Files"
+        case "Grep": "Search Content"
+        case "Agent": "Sub-agent"
+        case "Skill": "Run Skill"
+        case "ToolSearch": "Search Tools"
+        case "Task", "TaskCreate", "TodoWrite": "Tasks"
+        case "TaskUpdate": "Update Task"
+        case "TaskList", "TaskGet", "TodoRead": "Tasks"
+        case "TaskOutput": "Task Output"
+        case "TaskStop": "Stop Task"
         default: MCPToolMetadata.displayName(for: toolName) ?? "Use \(toolName)"
         }
     }
@@ -95,6 +154,16 @@ public struct ApprovalEvent: Sendable, Codable, Identifiable {
         case "Bash": "terminal"
         case "NotebookEdit": "book"
         case "WebFetch", "WebSearch": "globe"
+        case "Read": "doc.text"
+        case "Glob", "ToolSearch": "magnifyingglass"
+        case "Grep": "text.magnifyingglass"
+        case "Agent": "person.2"
+        case "Skill": "wand.and.sparkles"
+        case "Task", "TaskCreate", "TodoWrite": "checklist"
+        case "TaskUpdate": "checklist.checked"
+        case "TaskList", "TaskGet", "TodoRead": "list.bullet"
+        case "TaskOutput": "text.page"
+        case "TaskStop": "stop.circle"
         default:
             if let mcpIcon = MCPToolMetadata.iconName(for: toolName) { mcpIcon }
             else if toolName.hasPrefix("mcp__") { "puzzlepiece.extension" }
