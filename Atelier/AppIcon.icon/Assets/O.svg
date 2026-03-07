@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="327px" height="326px" viewBox="0 0 327 326" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Path</title>
+    <g id="App-Icon" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" fill-opacity="0.85">
+        <g id="Atelier-Icon" transform="translate(-159, -534)" fill="color(display-p3 1.000 1.000 1.000)">
+            <g id="Group" transform="translate(159.9, 164.506)">
+                <path d="M163.031749,695 C252.847094,695 325.766439,622.387426 325.766439,532.289887 C325.766439,442.192349 252.847094,369.579774 163.031749,369.579774 C72.9197494,369.579774 0,442.192349 0,532.289887 C0,622.387426 72.9197494,695 163.031749,695 Z" id="Path"></path>
+            </g>
+        </g>
+    </g>
+</svg>

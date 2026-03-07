@@ -1,7 +1,17 @@
 {
-  "fill" : {
-    "automatic-gradient" : "display-p3:0.94279,0.90743,0.96783,1.00000"
-  },
+  "fill-specializations" : [
+    {
+      "value" : {
+        "automatic-gradient" : "extended-gray:1.00000,1.00000"
+      }
+    },
+    {
+      "appearance" : "dark",
+      "value" : {
+        "automatic-gradient" : "display-p3:0.07662,0.07559,0.07561,1.00000"
+      }
+    }
+  ],
   "groups" : [
     {
       "blur-material" : null,
@@ -9,9 +19,10 @@
         {
           "blend-mode" : "normal",
           "fill" : {
-            "automatic-gradient" : "display-p3:0.96783,0.44357,0.00000,1.00000"
+            "automatic-gradient" : "display-p3:0.26983,0.61988,0.96783,1.00000"
           },
           "glass" : true,
+          "hidden" : false,
           "image-name" : "scribble.svg",
           "name" : "Scribbble",
           "position" : {
@@ -21,10 +32,72 @@
               -43.5546875
             ]
           }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "display-p3:0.83930,0.44405,0.80352,1.00000"
+          },
+          "hidden" : true,
+          "image-name" : "D.svg",
+          "name" : "D",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              207.21486379203475,
+              208.07718850000003
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "extended-srgb:0.05991,0.85188,0.47743,1.00000"
+          },
+          "glass" : true,
+          "hidden" : true,
+          "image-name" : "O.svg",
+          "name" : "O",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -209.67746717135003,
+              207.984375
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "display-p3:0.85595,0.50996,0.28230,1.00000"
+          },
+          "hidden" : true,
+          "image-name" : "A.svg",
+          "name" : "A",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              207.35430789072893,
+              -146.1825601948923
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+          },
+          "hidden" : true,
+          "image-name" : "X.svg",
+          "name" : "X",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -209.640625,
+              -145.65173043963955
+            ]
+          }
         }
       ],
+      "lighting" : "individual",
       "shadow" : {
-        "kind" : "layer-color",
+        "kind" : "neutral",
         "opacity" : 1
       },
       "specular" : true,
@@ -34,20 +107,85 @@
       }
     },
     {
+      "blend-mode-specializations" : [
+        {
+          "appearance" : "dark",
+          "value" : "plus-darker"
+        },
+        {
+          "appearance" : "tinted",
+          "value" : "plus-darker"
+        }
+      ],
       "blur-material" : null,
       "hidden" : false,
       "layers" : [
         {
-          "image-name" : "Background.svg",
-          "name" : "Background"
+          "glass" : false,
+          "image-name" : "Line 4.svg",
+          "name" : "Line 4",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -279
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "Line 4.svg",
+          "name" : "Line 4",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -139
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "Line 4.svg",
+          "name" : "Line 4"
+        },
+        {
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "Line 4.svg",
+          "name" : "Line 4",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              280
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "Line 4.svg",
+          "name" : "Line 4",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              140
+            ]
+          }
         }
       ],
+      "lighting" : "combined",
       "shadow" : {
-        "kind" : "neutral",
+        "kind" : "none",
         "opacity" : 0.5
       },
+      "specular" : true,
       "translucency" : {
-        "enabled" : false,
+        "enabled" : true,
         "value" : 0.5
       }
     }
