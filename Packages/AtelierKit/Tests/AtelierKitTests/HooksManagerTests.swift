@@ -12,6 +12,16 @@ struct HooksManagerTests {
         return dir
     }
 
+    /// Creates a manager without a helper binary (shell fallback for reinject, no distill hooks).
+    private func makeManager(root: URL) -> HooksManager {
+        HooksManager(projectRoot: root, helperPath: nil)
+    }
+
+    /// Creates a manager with a fake helper path (enables distill hooks).
+    private func makeManagerWithHelper(root: URL) -> HooksManager {
+        HooksManager(projectRoot: root, helperPath: "/fake/atelier-hooks")
+    }
+
     private func readJSON(at url: URL) throws -> [String: Any] {
         let data = try Data(contentsOf: url)
         return try JSONSerialization.jsonObject(with: data) as! [String: Any]
@@ -23,7 +33,7 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
+        let manager = makeManager(root: root)
         try manager.install()
 
         #expect(FileManager.default.fileExists(atPath: manager.settingsURL.path))
@@ -33,7 +43,7 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
+        let manager = makeManager(root: root)
         try manager.install()
 
         let settings = try readJSON(at: manager.settingsURL)
@@ -50,7 +60,7 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
+        let manager = makeManager(root: root)
         try manager.install()
         try manager.install()
 
@@ -58,7 +68,6 @@ struct HooksManagerTests {
         let hooks = settings["hooks"] as! [String: Any]
         let sessionStart = hooks["SessionStart"] as! [[String: Any]]
 
-        // Should have exactly 3 entries (compact, startup, resume), not 6
         #expect(sessionStart.count == 3)
     }
 
@@ -66,8 +75,7 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        // Write a user hook first
-        let manager = HooksManager(projectRoot: root)
+        let manager = makeManager(root: root)
         let claudeDir = root.appendingPathComponent(".claude", isDirectory: true)
         try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
 
@@ -90,10 +98,9 @@ struct HooksManagerTests {
         let hooks = settings["hooks"] as! [String: Any]
         let sessionStart = hooks["SessionStart"] as! [[String: Any]]
 
-        // User hook + 3 Atelier hooks = 4 entries
+        // User hook + 3 Atelier hooks = 4
         #expect(sessionStart.count == 4)
 
-        // User hook still present
         let userEntry = sessionStart.first { entry in
             guard let entryHooks = entry["hooks"] as? [[String: Any]] else { return false }
             return entryHooks.contains { ($0["command"] as? String) == "echo user-hook" }
@@ -105,7 +112,7 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
+        let manager = makeManager(root: root)
         let claudeDir = root.appendingPathComponent(".claude", isDirectory: true)
         try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
 
@@ -120,55 +127,157 @@ struct HooksManagerTests {
         #expect(settings["hooks"] != nil)
     }
 
-    // MARK: - Hook Content
+    // MARK: - Hook Content (without helper binary)
 
-    @Test func compactHookReInjectsLearnings() throws {
+    @Test func reinjectFallsBackToShellWithoutHelper() throws {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
-        let hooks = manager.buildAtelierHooks()
+        let manager = makeManager(root: root)
+        let command = manager.reinjectCommandString()
 
-        let sessionStart = hooks["SessionStart"] as! [[String: Any]]
-        let compactEntry = sessionStart.first { ($0["matcher"] as? String) == "compact" }!
-        let compactHooks = compactEntry["hooks"] as! [[String: Any]]
-        let command = compactHooks[0]["command"] as! String
-
+        #expect(command.contains("cat"))
         #expect(command.contains("learnings.md"))
         #expect(command.contains("<project-memory>"))
-        #expect(command.contains("</project-memory>"))
     }
 
-    @Test func hooksHaveAtelierStatusMessage() throws {
+    @Test func distillReturnsNilWithoutHelper() throws {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
-        let hooks = manager.buildAtelierHooks()
-
-        let sessionStart = hooks["SessionStart"] as! [[String: Any]]
-        for entry in sessionStart {
-            let entryHooks = entry["hooks"] as! [[String: Any]]
-            for hook in entryHooks {
-                let message = hook["statusMessage"] as! String
-                #expect(message.hasPrefix(HooksManager.statusMessagePrefix))
-            }
-        }
+        let manager = makeManager(root: root)
+        #expect(manager.distillCommandString() == nil)
     }
 
-    @Test func hooksHaveShortTimeout() throws {
+    @Test func noDistillHooksWithoutHelper() throws {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
+        let manager = makeManager(root: root)
         let hooks = manager.buildAtelierHooks()
 
+        #expect(hooks["Stop"] == nil)
+        #expect(hooks["PreCompact"] == nil)
+    }
+
+    // MARK: - Hook Content (with helper binary)
+
+    @Test func reinjectUsesHelperWhenAvailable() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        let command = manager.reinjectCommandString()
+
+        #expect(command.contains("atelier-hooks"))
+        #expect(command.contains("reinject"))
+    }
+
+    @Test func distillUsesHelper() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        let command = manager.distillCommandString()
+
+        #expect(command != nil)
+        #expect(command!.contains("atelier-hooks"))
+        #expect(command!.contains("distill"))
+    }
+
+    @Test func stopHookRegisteredWithHelper() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        try manager.install()
+
+        let settings = try readJSON(at: manager.settingsURL)
+        let hooks = settings["hooks"] as! [String: Any]
+        let stop = hooks["Stop"] as! [[String: Any]]
+
+        #expect(stop.count == 1)
+        let stopHooks = stop[0]["hooks"] as! [[String: Any]]
+        #expect((stopHooks[0]["async"] as? Bool) == true)
+        #expect((stopHooks[0]["command"] as? String)?.contains("distill") == true)
+    }
+
+    @Test func preCompactHookRegisteredWithHelper() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        try manager.install()
+
+        let settings = try readJSON(at: manager.settingsURL)
+        let hooks = settings["hooks"] as! [String: Any]
+        let preCompact = hooks["PreCompact"] as! [[String: Any]]
+
+        #expect(preCompact.count == 1)
+        #expect((preCompact[0]["matcher"] as? String) == "auto")
+    }
+
+    @Test func stopHookIsAsync() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        let hooks = manager.buildAtelierHooks()
+        let stop = hooks["Stop"] as! [[String: Any]]
+        let stopHooks = stop[0]["hooks"] as! [[String: Any]]
+
+        #expect((stopHooks[0]["async"] as? Bool) == true)
+    }
+
+    @Test func preCompactHookIsNotAsync() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        let hooks = manager.buildAtelierHooks()
+        let preCompact = hooks["PreCompact"] as! [[String: Any]]
+        let preCompactHooks = preCompact[0]["hooks"] as! [[String: Any]]
+
+        // PreCompact must be synchronous — learnings need to be saved before compaction
+        #expect(preCompactHooks[0]["async"] == nil)
+    }
+
+    @Test func installWithHelperIsIdempotent() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        try manager.install()
+        try manager.install()
+
+        let settings = try readJSON(at: manager.settingsURL)
+        let hooks = settings["hooks"] as! [String: Any]
         let sessionStart = hooks["SessionStart"] as! [[String: Any]]
-        for entry in sessionStart {
-            let entryHooks = entry["hooks"] as! [[String: Any]]
-            for hook in entryHooks {
-                let timeout = hook["timeout"] as! Int
-                #expect(timeout <= 10)
+        let stop = hooks["Stop"] as! [[String: Any]]
+        let preCompact = hooks["PreCompact"] as! [[String: Any]]
+
+        #expect(sessionStart.count == 3)
+        #expect(stop.count == 1)
+        #expect(preCompact.count == 1)
+    }
+
+    // MARK: - Status Messages
+
+    @Test func allHooksHaveAtelierStatusMessage() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let manager = makeManagerWithHelper(root: root)
+        let hooks = manager.buildAtelierHooks()
+
+        for (_, entries) in hooks {
+            let eventEntries = entries as! [[String: Any]]
+            for entry in eventEntries {
+                let entryHooks = entry["hooks"] as! [[String: Any]]
+                for hook in entryHooks {
+                    let message = hook["statusMessage"] as! String
+                    #expect(message.hasPrefix(HooksManager.statusMessagePrefix))
+                }
             }
         }
     }
@@ -179,7 +288,6 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        // Create a learnings file
         let memoryDir = root
             .appendingPathComponent(".atelier", isDirectory: true)
             .appendingPathComponent("memory", isDirectory: true)
@@ -189,13 +297,9 @@ struct HooksManagerTests {
             atomically: true, encoding: .utf8
         )
 
-        let manager = HooksManager(projectRoot: root)
-        let hooks = manager.buildAtelierHooks()
-        let sessionStart = hooks["SessionStart"] as! [[String: Any]]
-        let compactEntry = sessionStart.first { ($0["matcher"] as? String) == "compact" }!
-        let command = (compactEntry["hooks"] as! [[String: Any]])[0]["command"] as! String
+        let manager = makeManager(root: root)
+        let command = manager.reinjectCommandString()
 
-        // Run the actual shell command
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", command]
@@ -219,11 +323,8 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
-        let hooks = manager.buildAtelierHooks()
-        let sessionStart = hooks["SessionStart"] as! [[String: Any]]
-        let compactEntry = sessionStart.first { ($0["matcher"] as? String) == "compact" }!
-        let command = (compactEntry["hooks"] as! [[String: Any]])[0]["command"] as! String
+        let manager = makeManager(root: root)
+        let command = manager.reinjectCommandString()
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -247,11 +348,10 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
+        let manager = makeManagerWithHelper(root: root)
         try manager.install()
         try manager.uninstall()
 
-        // File should be removed since no other settings remain
         #expect(!FileManager.default.fileExists(atPath: manager.settingsURL.path))
     }
 
@@ -259,11 +359,10 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
+        let manager = makeManagerWithHelper(root: root)
         let claudeDir = root.appendingPathComponent(".claude", isDirectory: true)
         try FileManager.default.createDirectory(at: claudeDir, withIntermediateDirectories: true)
 
-        // Write user hook + install Atelier hooks
         let userSettings: [String: Any] = [
             "hooks": [
                 "Stop": [
@@ -283,10 +382,9 @@ struct HooksManagerTests {
         let settings = try readJSON(at: manager.settingsURL)
         let hooks = settings["hooks"] as! [String: Any]
 
-        // Atelier's SessionStart hooks should be gone
         #expect(hooks["SessionStart"] == nil)
+        #expect(hooks["Stop"] != nil)
 
-        // User's Stop hook should remain
         let stopHooks = hooks["Stop"] as! [[String: Any]]
         #expect(stopHooks.count == 1)
     }
@@ -295,17 +393,17 @@ struct HooksManagerTests {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
+        let manager = makeManager(root: root)
         try manager.install()
         try manager.uninstall()
-        try manager.uninstall() // Should not throw
+        try manager.uninstall()
     }
 
     @Test func uninstallWithNoFileDoesNotThrow() throws {
         let root = try makeTempDir()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let manager = HooksManager(projectRoot: root)
-        try manager.uninstall() // No file exists — should be a no-op
+        let manager = makeManager(root: root)
+        try manager.uninstall()
     }
 }

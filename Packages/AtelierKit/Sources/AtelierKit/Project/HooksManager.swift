@@ -4,8 +4,9 @@ import os
 /// Manages Atelier's hook registration in `.claude/settings.local.json`.
 ///
 /// Hooks are the CLI's lifecycle event system. Atelier registers hooks to:
-/// - Re-inject learnings after context compaction (`SessionStart[compact]`)
-/// - Inject learnings on new sessions (`SessionStart[startup]`)
+/// - Re-inject learnings after context compaction (`SessionStart[compact/startup/resume]`)
+/// - Distill learnings when Claude finishes responding (`Stop`)
+/// - Distill learnings before context compresses (`PreCompact`)
 ///
 /// The manager merges Atelier's hooks with any user-defined hooks already in
 /// the file, and can cleanly remove only Atelier's hooks on uninstall.
@@ -15,11 +16,23 @@ public struct HooksManager: Sendable {
     /// Marker to identify Atelier-managed hooks.
     static let statusMessagePrefix = "[Atelier]"
 
+    /// Name of the bundled hooks helper binary in `Contents/Helpers/`.
+    static let helperName = "atelier-hooks"
+
     /// The project root containing `.claude/`.
     public let projectRoot: URL
 
+    /// Absolute path to the hooks helper binary, if found in the app bundle.
+    let helperPath: String?
+
     public init(projectRoot: URL) {
         self.projectRoot = projectRoot
+        self.helperPath = CLIEngine.bundledHelperPath(named: Self.helperName)
+    }
+
+    init(projectRoot: URL, helperPath: String?) {
+        self.projectRoot = projectRoot
+        self.helperPath = helperPath
     }
 
     /// Path to `.claude/settings.local.json` within the project.
@@ -100,22 +113,10 @@ public struct HooksManager: Sendable {
     // MARK: - Hook Definitions
 
     func buildAtelierHooks() -> [String: Any] {
-        let path = learningsPath
+        let reinjectCommand = reinjectCommandString()
+        let distillCommand = distillCommandString()
 
-        // The re-inject command: reads learnings and wraps in <project-memory> tags.
-        // Uses a shell script inline to handle the missing-file case gracefully.
-        let reinjectCommand = """
-        if [ -f '\(path)' ]; then \
-        echo '<project-memory>'; \
-        echo 'The following learnings are automatically managed by Atelier.'; \
-        echo 'Do NOT read, edit, or write these files with tools.'; \
-        echo ''; \
-        cat '\(path)'; \
-        echo '</project-memory>'; \
-        fi
-        """
-
-        return [
+        var hooks: [String: Any] = [
             "SessionStart": [
                 [
                     "matcher": "compact",
@@ -146,6 +147,63 @@ public struct HooksManager: Sendable {
                 ] as [String: Any],
             ],
         ]
+
+        // Distillation hooks require the helper binary
+        if distillCommand != nil {
+            hooks["Stop"] = [
+                [
+                    "matcher": "",
+                    "hooks": [[
+                        "type": "command",
+                        "command": distillCommand!,
+                        "timeout": 30,
+                        "async": true,
+                        "statusMessage": "\(Self.statusMessagePrefix) Distilling learnings",
+                    ] as [String: Any]],
+                ] as [String: Any],
+            ]
+
+            hooks["PreCompact"] = [
+                [
+                    "matcher": "auto",
+                    "hooks": [[
+                        "type": "command",
+                        "command": distillCommand!,
+                        "timeout": 30,
+                        "statusMessage": "\(Self.statusMessagePrefix) Saving learnings before compaction",
+                    ] as [String: Any]],
+                ] as [String: Any],
+            ]
+        }
+
+        return hooks
+    }
+
+    /// Builds the reinject command string.
+    ///
+    /// Prefers the bundled helper binary; falls back to inline shell.
+    func reinjectCommandString() -> String {
+        if let helper = helperPath {
+            return "'\(helper)' reinject"
+        }
+
+        let path = learningsPath
+        return """
+        if [ -f '\(path)' ]; then \
+        echo '<project-memory>'; \
+        echo 'The following learnings are automatically managed by Atelier.'; \
+        echo 'Do NOT read, edit, or write these files with tools.'; \
+        echo ''; \
+        cat '\(path)'; \
+        echo '</project-memory>'; \
+        fi
+        """
+    }
+
+    /// Builds the distill command string, or nil if the helper binary is unavailable.
+    func distillCommandString() -> String? {
+        guard let helper = helperPath else { return nil }
+        return "'\(helper)' distill"
     }
 
     // MARK: - Settings File I/O
