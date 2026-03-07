@@ -23,7 +23,6 @@ struct ProjectWindow: View {
             if let project {
                 if project.rootURL != nil {
                     ConversationWindow(
-                        fileAccessStore: project.fileAccessStore,
                         capabilityStore: project.capabilityStore,
                         sessionPersistence: project.sessionPersistence,
                         workingDirectory: project.rootURL
