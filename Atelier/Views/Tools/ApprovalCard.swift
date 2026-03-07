@@ -11,7 +11,7 @@ struct ApprovalCard: View {
     /// The approval event to display.
     let event: ApprovalEvent
     /// Called when the user approves or denies the request.
-    var onDecision: ((String, ApprovalDecision) -> Void)?
+    var onDecision: ((String, String, ApprovalDecision) -> Void)?
 
     var body: some View {
         switch event.status {
@@ -57,13 +57,20 @@ struct ApprovalCard: View {
             }
 
             HStack(spacing: Spacing.xs) {
-                Button("Approve") {
-                    onDecision?(event.id, .allow)
+                Menu {
+                    Button("Remember approval for the conversation") {
+                        onDecision?(event.id, event.toolName, .allowForSession)
+                    }
+                } label: {
+                    Text("Approve")
+                } primaryAction: {
+                    onDecision?(event.id, event.toolName, .allow)
                 }
-                .buttonStyle(.glassProminent)
+                .menuStyle(.glassProminent)
+                .menuIndicator(.visible)
 
                 Button("Deny") {
-                    onDecision?(event.id, .deny(reason: "User denied"))
+                    onDecision?(event.id, event.toolName, .deny(reason: "User denied"))
                 }
                 .buttonStyle(.glass(.clear))
             }

@@ -23,6 +23,7 @@ struct ConversationWindow: View {
     @State private var approvalServer: ApprovalServer?
     @State private var approvalObserverTask: Task<Void, Never>?
     @State private var askUserObserverTask: Task<Void, Never>?
+    @State private var sessionApprovedTools: Set<String> = []
 
 
     private let engine: CLIEngine = CLIEngine()
@@ -36,8 +37,8 @@ struct ConversationWindow: View {
                         selectedToolEvent = event
                         showInspector = true
                     }
-                }, onApprovalDecision: { id, decision in
-                    handleApprovalDecision(id: id, decision: decision)
+                }, onApprovalDecision: { id, toolName, decision in
+                    handleApprovalDecision(id: id, toolName: toolName, decision: decision)
                 }, onAskUserResponse: { id, selectedIndex, customText in
                     handleAskUserResponse(id: id, selectedIndex: selectedIndex, customText: customText)
                 }, onPlanApprove: {
@@ -155,6 +156,11 @@ struct ConversationWindow: View {
             // Observe incoming approval requests
             approvalObserverTask = Task {
                 for await request in await server.requests {
+                    // Auto-approve tools the user has approved for the session
+                    if sessionApprovedTools.contains(request.toolName) {
+                        await server.respond(requestId: request.id, decision: .allow)
+                        continue
+                    }
                     withAnimation(Motion.appear) {
                         session.beginApproval(
                             id: request.id,
@@ -394,7 +400,11 @@ struct ConversationWindow: View {
         }
     }
 
-    private func handleApprovalDecision(id: String, decision: ApprovalDecision) {
+    private func handleApprovalDecision(id: String, toolName: String, decision: ApprovalDecision) {
+        if case .allowForSession = decision {
+            sessionApprovedTools.insert(toolName)
+        }
+
         withAnimation(Motion.morph) {
             session.resolveApproval(id: id, decision: decision)
         }
@@ -405,7 +415,7 @@ struct ConversationWindow: View {
 
     private func handlePlanApprove() {
         guard let approval = session.pendingApproval(toolName: ApprovalEvent.exitPlanModeToolName) else { return }
-        handleApprovalDecision(id: approval.id, decision: .allow)
+        handleApprovalDecision(id: approval.id, toolName: approval.toolName, decision: .allow)
     }
 
     private func handleAskUserResponse(id: String, selectedIndex: Int, customText: String? = nil) {
@@ -437,6 +447,7 @@ struct ConversationWindow: View {
         streamingTask?.cancel()
         streamingTask = nil
         let captured = session.snapshot()
+        sessionApprovedTools.removeAll()
         withAnimation(Motion.appear) {
             session.reset()
             capabilityHealthMonitor.reset()

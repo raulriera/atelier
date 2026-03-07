@@ -202,7 +202,7 @@ public actor ApprovalServer {
         // Send response
         let response: ApprovalResponse
         switch decision {
-        case .allow:
+        case .allow, .allowForSession:
             response = ApprovalResponse(behavior: "allow", message: nil)
         case .deny(let reason):
             response = ApprovalResponse(behavior: "deny", message: reason)

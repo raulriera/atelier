@@ -7,7 +7,7 @@ struct TimelineView: View {
     let capabilityStore: CapabilityStore
     var selectedToolID: String?
     var onSelectTool: ((ToolUseEvent) -> Void)?
-    var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
+    var onApprovalDecision: ((String, String, ApprovalDecision) -> Void)?
     var onAskUserResponse: ((String, Int, String?) -> Void)?
     var onPlanApprove: (() -> Void)?
     var onEnableCapability: ((String) -> Void)?
@@ -86,7 +86,7 @@ private struct TimelineItemView: View {
     let capabilityStore: CapabilityStore
     let selectedToolID: String?
     let onSelectTool: ((ToolUseEvent) -> Void)?
-    var onApprovalDecision: ((String, ApprovalDecision) -> Void)?
+    var onApprovalDecision: ((String, String, ApprovalDecision) -> Void)?
     var onAskUserResponse: ((String, Int, String?) -> Void)?
     var onPlanApprove: (() -> Void)?
     var onEnableCapability: ((String) -> Void)?

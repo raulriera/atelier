@@ -504,7 +504,7 @@ public final class Session {
         }), case .approval(var event) = items[index].content else { return }
 
         switch decision {
-        case .allow:
+        case .allow, .allowForSession:
             event.status = .approved
         case .deny:
             event.status = .denied
