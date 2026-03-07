@@ -69,7 +69,7 @@ With a working conversation (M0) and a safe sandbox (M1), this is where Atelier 
 | 3.3 | Session Persistence | New | ✅ Done | [→](opportunities/architecture/04-session-persistence.md) |
 | 3.4 | Conversational Flow | New | 🔨 In progress | [→](opportunities/experience/03-conversational-flow.md) |
 | 3.5 | Living Context | New | 🔨 In progress | [→](opportunities/context/05-living-context.md) |
-| 3.6 | Hooks Infrastructure | New | 🔲 Not started | [→](opportunities/architecture/09-hooks-infrastructure.md) |
+| 3.6 | Hooks Infrastructure | New | 🔨 In progress | [→](opportunities/architecture/09-hooks-infrastructure.md) |
 | 3.7 | Session Browser | New | 🔲 Not started | [→](opportunities/experience/05-session-browser.md) |
 | 3.P | **Polish:** ~~Status icon pairings~~ | HIG | ✅ Done | — |
 

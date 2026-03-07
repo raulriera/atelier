@@ -132,20 +132,23 @@ For distillation, `command` hooks calling the bundled helper are the right choic
 
 ## Implementation
 
-### Phase 1 — HooksManager + compaction hook
+### Phase 1 — HooksManager + compaction hook ✅
 
-1. Create `HooksManager` in AtelierKit — reads/writes `.claude/settings.local.json`
-2. Bundle `atelier-hooks` helper binary with `compact-reinject` subcommand
-3. Register `SessionStart[compact]` hook on project open
-4. The hook reads `.atelier/memory/learnings.md` and writes to stdout → CLI re-injects as context
+1. ~~Create `HooksManager` in AtelierKit — reads/writes `.claude/settings.local.json`~~
+2. ~~Bundle `atelier-hooks` helper binary with `reinject` subcommand~~
+3. ~~Register `SessionStart[compact/startup/resume]` hooks on project open~~
+4. ~~The hook reads `.atelier/memory/learnings.md` and writes to stdout → CLI re-injects as context~~
+5. ~~Coexistence with user-defined hooks — Atelier hooks identified by `[Atelier]` statusMessage prefix~~
 
-### Phase 2 — Hook-based distillation
+### Phase 2 — Hook-based distillation ✅
 
-5. Register `Stop` hook for incremental distillation (replaces app-side `triggerDistillation`)
-6. Register `PreCompact[auto]` hook for pre-compaction distillation
-7. Register `SessionEnd` hook for final distillation
-8. Remove `ConversationSummarizer`, `triggerDistillation()` from app-side code
-9. The helper binary reads `transcript_path` directly — richer than summarizer output
+6. ~~Register `Stop` hook for async incremental distillation~~
+7. ~~Register `PreCompact[auto]` hook for sync pre-compaction distillation~~
+8. ~~`atelier-hooks distill` subcommand reads `transcript_path` directly — richer than summarizer~~
+9. ~~Remove `ConversationSummarizer`, `triggerDistillation()` from app-side code~~
+10. ~~Xcode build phase compiles helper into `Contents/Helpers/atelier-hooks`~~
+
+**Deferred:** `SessionEnd` hook for final distillation (low priority — `Stop` already fires on last response)
 
 ### Phase 3 — File tracking + project awareness
 

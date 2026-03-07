@@ -240,16 +240,25 @@ The CLI doesn't need to know about living context. It just receives a system pro
 
 ## Implementation
 
-### Phase 1 — Session-Boundary Distillation ✅ → migrating to hooks
+### Phase 1 — Hook-Based Distillation ✅
 
-Single `learnings.md` file, injected into the system prompt via `--append-system-prompt`. This was an acceptable starting point but has critical gaps: distillation only fires when a response finishes (app-side trigger), compaction events are invisible, and the `ConversationSummarizer` produces a lossy summary when the CLI already has the full transcript.
+Distillation fully migrated from app-side code to CLI hooks via `atelier-hooks` helper binary.
 
-**What's built (app-side, to be replaced):**
-- `MemoryStore` — reads/writes `.atelier/memory/learnings.md` on disk (keeps)
-- `ConversationSummarizer` — converts timeline items to plain-text summary (remove)
-- `DistillationEngine` — spawns background haiku CLI process to extract learnings (move to hook helper)
-- `ContextFileLoader` — discovers memory files at project root, injects with `<project-memory>` wrapper (keeps)
-- Session-boundary trigger in `ConversationWindow` — fires after response completion when idle (remove)
+**What's built:**
+- `HooksManager` — registers hooks in `.claude/settings.local.json`, coexists with user hooks
+- `atelier-hooks` helper binary — `distill` and `reinject` subcommands, compiled into `Contents/Helpers/`
+- `DistillationEngine` — prompt construction + output validation (canonical logic, reused by helper)
+- `MemoryStore` — reads/writes `.atelier/memory/learnings.md` on disk
+- `ContextFileLoader` — discovers memory files at project root, injects with `<project-memory>` wrapper
+
+**Hooks registered:**
+- `Stop` (async) — distills learnings after each response
+- `PreCompact[auto]` (sync) — saves learnings before context compresses
+- `SessionStart[compact/startup/resume]` — re-injects learnings into fresh context
+
+**What was removed:**
+- `ConversationSummarizer` — replaced by transcript-based summarization in helper binary
+- `triggerDistillation()` in `ConversationWindow` — replaced by `Stop` hook
 
 **Migration to hook-based distillation (see architecture/09-hooks-infrastructure.md):**
 
