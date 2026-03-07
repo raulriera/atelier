@@ -67,9 +67,9 @@ With a working conversation (M0) and a safe sandbox (M1), this is where Atelier 
 | 3.1 | Project Workspace | New | ✅ Done | [→](opportunities/experience/02-project-workspace.md) |
 | 3.2 | Project Context Files | New | ✅ Done | [→](opportunities/context/01-project-context-files.md) |
 | 3.3 | Session Persistence | New | ✅ Done | [→](opportunities/architecture/04-session-persistence.md) |
-| 3.4 | Conversational Flow | New | 🔨 In progress | [→](opportunities/experience/03-conversational-flow.md) |
-| 3.5 | Living Context | New | 🔨 In progress | [→](opportunities/context/05-living-context.md) |
-| 3.6 | Hooks Infrastructure | New | 🔨 In progress | [→](opportunities/architecture/09-hooks-infrastructure.md) |
+| 3.4 | Conversational Flow | New | ✅ Done | [→](opportunities/experience/03-conversational-flow.md) |
+| 3.5 | Living Context | New | 🔨 In progress (Phase 1–2 ✅) | [→](opportunities/context/05-living-context.md) |
+| 3.6 | Hooks Infrastructure | New | 🔨 In progress (Phase 1–3 ✅) | [→](opportunities/architecture/09-hooks-infrastructure.md) |
 | 3.7 | Session Browser | New | 🔲 Not started | [→](opportunities/experience/05-session-browser.md) |
 | 3.P | **Polish:** ~~Status icon pairings~~ | HIG | ✅ Done | — |
 
