@@ -137,7 +137,7 @@ Opportunities tracked in the repo but not yet assigned to a numbered milestone.
 |---|-----------|------|--------|------|
 | U1 | Async File I/O on Hot Paths | Technical Debt | 🔲 Not started | [→](opportunities/architecture/07-async-file-io.md) |
 | U2 | Task Tracking (TodoWrite) | Bug | 🔴 Broken | [→](opportunities/hub/07-task-tracking.md) |
-| U3 | Multi-Window Session Isolation | Bug | 🔴 Broken | [→](opportunities/architecture/10-multi-window-isolation.md) |
+| U3 | Multi-Window Session Isolation | Bug | ✅ Done | [→](opportunities/architecture/10-multi-window-isolation.md) |
 
 ---
 

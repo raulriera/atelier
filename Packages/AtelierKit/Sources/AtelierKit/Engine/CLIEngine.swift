@@ -79,12 +79,17 @@ public final class CLIEngine: ConversationEngine, Sendable {
                         return String(data: data, encoding: .utf8) ?? ""
                     }
 
-                    let handle = stdout.fileHandleForReading
+                    // Read stdout lines on a dedicated thread using blocking
+                    // POSIX read(). Foundation's FileHandle.bytes.lines (AsyncBytes)
+                    // stalls when multiple pipes are read concurrently within a
+                    // SwiftUI app — likely a run-loop or internal scheduling issue.
+                    // A raw read loop on a detached thread avoids this entirely.
+                    let fd = stdout.fileHandleForReading.fileDescriptor
                     var activeToolBlocks: [Int: String] = [:]
                     var receivedResult = false
                     let decoder = JSONDecoder()
 
-                    for try await line in handle.bytes.lines {
+                    for try await line in Self.lines(from: fd) {
                         if Task.isCancelled { break }
 
                         guard let data = line.data(using: .utf8) else { continue }
@@ -220,6 +225,51 @@ public final class CLIEngine: ConversationEngine, Sendable {
 
         default:
             break
+        }
+    }
+
+    // MARK: - Line Reading
+
+    /// Reads newline-delimited strings from a file descriptor using blocking
+    /// POSIX `read()` on a dedicated thread, yielded as an `AsyncStream`.
+    ///
+    /// This replaces `FileHandle.bytes.lines` which stalls when multiple pipes
+    /// are read concurrently within a SwiftUI process (likely an internal
+    /// run-loop or `DispatchSource` scheduling issue in Foundation's AsyncBytes).
+    static func lines(from fd: Int32) -> AsyncStream<String> {
+        AsyncStream { continuation in
+            // Use a detached task with a blocking read loop. The cooperative
+            // thread pool handles this correctly — the thread blocks in the
+            // kernel on read(), freeing the pool to schedule other work.
+            Task.detached {
+                var buffer = Data()
+                let chunkSize = 4096
+                let chunk = UnsafeMutablePointer<UInt8>.allocate(capacity: chunkSize)
+                defer { chunk.deallocate() }
+
+                while true {
+                    let bytesRead = read(fd, chunk, chunkSize)
+                    if bytesRead <= 0 { break }
+
+                    buffer.append(chunk, count: bytesRead)
+
+                    // Extract complete lines
+                    while let newlineIndex = buffer.firstIndex(of: UInt8(ascii: "\n")) {
+                        let lineData = buffer[buffer.startIndex..<newlineIndex]
+                        buffer = Data(buffer[(newlineIndex + 1)...])
+                        if let line = String(data: Data(lineData), encoding: .utf8) {
+                            continuation.yield(line)
+                        }
+                    }
+                }
+
+                // Yield any remaining data without a trailing newline
+                if !buffer.isEmpty, let line = String(data: buffer, encoding: .utf8) {
+                    continuation.yield(line)
+                }
+
+                continuation.finish()
+            }
         }
     }
 

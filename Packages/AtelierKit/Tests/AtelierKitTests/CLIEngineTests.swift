@@ -211,8 +211,8 @@ struct CLIEngineTests {
     }
 }
 
-@Suite("Concurrent stderr reading")
-struct ConcurrentStderrTests {
+@Suite("Pipe reading")
+struct PipeReadingTests {
 
     @Test("Stdout completes when stderr is large")
     func stdoutCompletesWithLargeStderr() async throws {
@@ -221,7 +221,6 @@ struct ConcurrentStderrTests {
         // drained concurrently, the process deadlocks and the test times out.
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        // Write 100 KB to stderr, then one line to stdout.
         process.arguments = ["-c", """
             python3 -c "import sys; sys.stderr.write('x' * 102400); sys.stderr.flush(); print('done')"
             """]
@@ -233,15 +232,14 @@ struct ConcurrentStderrTests {
 
         try process.run()
 
-        // Drain stderr concurrently — same pattern as CLIEngine.send()
         let stderrHandle = stderr.fileHandleForReading
         let stderrTask = Task.detached { () -> Data in
             stderrHandle.readDataToEndOfFile()
         }
 
-        let handle = stdout.fileHandleForReading
+        let fd = stdout.fileHandleForReading.fileDescriptor
         var lines: [String] = []
-        for try await line in handle.bytes.lines {
+        for await line in CLIEngine.lines(from: fd) {
             lines.append(line)
         }
 
@@ -251,6 +249,48 @@ struct ConcurrentStderrTests {
         #expect(process.terminationStatus == 0)
         #expect(lines == ["done"])
         #expect(stderrData.count == 102_400, "All stderr bytes should be captured")
+    }
+
+    @Test("Lines reader handles multiple lines")
+    func linesReaderMultipleLines() async throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", "echo 'line1'; echo 'line2'; echo 'line3'"]
+
+        let stdout = Pipe()
+        process.standardOutput = stdout
+
+        try process.run()
+
+        let fd = stdout.fileHandleForReading.fileDescriptor
+        var lines: [String] = []
+        for await line in CLIEngine.lines(from: fd) {
+            lines.append(line)
+        }
+
+        process.waitUntilExit()
+        #expect(lines == ["line1", "line2", "line3"])
+    }
+
+    @Test("Lines reader handles empty output")
+    func linesReaderEmptyOutput() async throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", "true"]
+
+        let stdout = Pipe()
+        process.standardOutput = stdout
+
+        try process.run()
+
+        let fd = stdout.fileHandleForReading.fileDescriptor
+        var lines: [String] = []
+        for await line in CLIEngine.lines(from: fd) {
+            lines.append(line)
+        }
+
+        process.waitUntilExit()
+        #expect(lines.isEmpty)
     }
 }
 
