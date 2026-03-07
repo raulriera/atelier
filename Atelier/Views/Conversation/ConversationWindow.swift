@@ -20,8 +20,6 @@ struct ConversationWindow: View {
     @State private var selectedToolEvent: ToolUseEvent?
     @State private var showComposeField = false
     @State private var toolPayloads: [String: ToolPayload] = [:]
-    @Environment(\.controlActiveState) private var controlActiveState
-    @State private var unreadCount = 0
     @State private var approvalServer: ApprovalServer?
     @State private var approvalObserverTask: Task<Void, Never>?
     @State private var askUserObserverTask: Task<Void, Never>?
@@ -164,6 +162,7 @@ struct ConversationWindow: View {
                             inputJSON: request.inputJSON
                         )
                     }
+                    requestUserAttentionIfNeeded()
                 }
             }
 
@@ -180,6 +179,7 @@ struct ConversationWindow: View {
                             options: options
                         )
                     }
+                    requestUserAttentionIfNeeded()
                 }
             }
 
@@ -234,12 +234,6 @@ struct ConversationWindow: View {
             askUserObserverTask = nil
             if let server = approvalServer {
                 Task { await server.denyAllPending(); await server.stop() }
-            }
-        }
-        .onChange(of: controlActiveState) { _, newState in
-            if newState == .key {
-                unreadCount = 0
-                NSApp.dockTile.badgeLabel = nil
             }
         }
     }
@@ -366,12 +360,7 @@ struct ConversationWindow: View {
 
     private func handleMessageComplete(usage: TokenUsage) {
         session.completeAssistantMessage(usage: usage)
-
-        if controlActiveState != .key {
-            unreadCount += 1
-            NSApp.requestUserAttention(.informationalRequest)
-            NSApp.dockTile.badgeLabel = "\(unreadCount)"
-        }
+        requestUserAttentionIfNeeded()
 
         // Dispatch queued message before saving — the save
         // suspends the main actor, which could let user input
@@ -436,6 +425,12 @@ struct ConversationWindow: View {
         if let server = approvalServer {
             Task { await server.respondAskUser(requestId: id, selectedIndex: selectedIndex, selectedLabel: selectedLabel) }
         }
+    }
+
+    /// Bounces the dock icon when the app is not frontmost.
+    private func requestUserAttentionIfNeeded() {
+        guard !NSApp.isActive else { return }
+        NSApp.requestUserAttention(.informationalRequest)
     }
 
     private func startNewConversation() {
