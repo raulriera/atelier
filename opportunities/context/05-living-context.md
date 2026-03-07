@@ -248,7 +248,7 @@ Distillation fully migrated from app-side code to CLI hooks via `atelier-hooks` 
 - `HooksManager` — registers hooks in `.claude/settings.local.json`, coexists with user hooks
 - `atelier-hooks` helper binary — `distill` and `reinject` subcommands, compiled into `Contents/Helpers/`
 - `DistillationEngine` — prompt construction + output validation (canonical logic, reused by helper)
-- `MemoryStore` — reads/writes `.atelier/memory/learnings.md` on disk
+- `MemoryStore` — reads/writes category files in `.atelier/memory/` on disk
 - `ContextFileLoader` — discovers memory files at project root, injects with `<project-memory>` wrapper
 
 **Hooks registered:**
@@ -260,53 +260,31 @@ Distillation fully migrated from app-side code to CLI hooks via `atelier-hooks` 
 - `ConversationSummarizer` — replaced by transcript-based summarization in helper binary
 - `triggerDistillation()` in `ConversationWindow` — replaced by `Stop` hook
 
-**Migration to hook-based distillation (see architecture/09-hooks-infrastructure.md):**
+### Phase 2 — Multi-File Memory ✅
 
-The CLI's hook system provides the lifecycle events this system needs. Moving distillation from app-side code to CLI hooks gives us:
+Memory split from a single `learnings.md` into separate category files that grow independently.
 
-1. **Compaction awareness** — `PreCompact` fires before context is lost, `SessionStart[compact]` re-injects learnings after
-2. **Full transcript access** — every hook receives `transcript_path`, far richer than the summarizer's truncated output
-3. **Works outside Atelier** — hooks live in `.claude/settings.local.json`, so the user's project gets smarter even when using the CLI directly
-4. **Simpler app code** — remove `ConversationSummarizer`, `triggerDistillation()`, the detached Task in `ConversationWindow`
+**What's built:**
+- `MemoryStore` rewritten with `read(category:)`, `write(category:)`, `readAll()`, `listFiles()`
+- `atelier-hooks distill` splits Haiku output by `## ` heading into separate files
+- `atelier-hooks reinject` reads all `.md` files from memory directory
+- `HooksManager` shell fallback updated to read all `*.md` files
 
-**Hook-based distillation pipeline:**
+**Category files:**
+- `preferences.md` — user preferences ("Use DD/MM/YYYY", "Prefers bullet points")
+- `decisions.md` — key decisions and rationale ("Chose Stripe because...")
+- `patterns.md` — recurring patterns ("Files organized by client name")
+- `corrections.md` — explicit corrections ("Don't use 'leverage', say 'use'")
 
-```
-Stop hook fires (Claude finished responding)
-        ↓
-atelier-hooks binary reads transcript_path
-        ↓
-Calls Haiku to distill learnings (same as DistillationEngine)
-        ↓
-Writes to .atelier/memory/learnings.md
-        ↓
-(async, no user-visible delay)
+**Merge strategy:** Haiku receives all existing category file contents and produces a merged update. New entries are added, contradicted entries are replaced, still-valid entries are preserved.
 
-PreCompact hook fires (context about to compress)
-        ↓
-atelier-hooks triggers distillation immediately
-        ↓
-Learnings saved before context is lost
+### Phase 3 — Smart Loading
 
-SessionStart[compact] hook fires (fresh context after compaction)
-        ↓
-atelier-hooks reads .atelier/memory/learnings.md
-        ↓
-Writes to stdout → CLI re-injects as context
-        ↓
-Claude continues with accumulated knowledge intact
-```
-
-### Phase 2 — Multi-File Memory + Smart Loading
-
-- Categorize learnings by type (preferences, decisions, patterns, vocabulary, corrections)
-- Write to separate files per category
-- Implement merge logic: new entries augment existing ones, contradictions replace old entries
 - Add file size monitoring — split a file when it exceeds ~100 lines
 - **Switch from injection to manifest-based discovery** — always load `context.md` + `preferences.md`, everything else via one-line manifest read on demand (see "Smart loading" section)
 - `PostToolUse[Write|Edit]` hook tracks file changes → updates project structure map automatically
 
-### Phase 3 — Project Fingerprinting
+### Phase 4 — Project Fingerprinting
 
 - On first session, scan project directory structure
 - Identify primary domain(s) based on file types, names, and directory patterns
@@ -314,7 +292,7 @@ Claude continues with accumulated knowledge intact
 - Present to user for confirmation: "I think this is a [type] project. Does this look right?"
 - `SessionStart[startup]` hook on first session triggers fingerprinting
 
-### Phase 4 — Proactive Suggestions
+### Phase 5 — Proactive Suggestions
 
 - Track patterns across sessions (corrections, repeated instructions, style preferences)
 - After confidence threshold is met (3+ consistent signals), offer to save
@@ -322,7 +300,7 @@ Claude continues with accumulated knowledge intact
 - Respect dismissals permanently — never re-suggest the same thing
 - `PostToolUseFailure` hook records failed approaches automatically
 
-### Phase 5 — Context Health
+### Phase 6 — Context Health
 
 - Dashboard showing active context files and their token cost
 - Staleness detection — flag entries that haven't been relevant in N sessions
