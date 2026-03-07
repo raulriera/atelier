@@ -2,6 +2,7 @@
 
 > **Category:** Security & Privacy
 > **Type:** Improvement · **Priority:** 🔴 Critical
+> **Milestone:** M1
 
 ---
 

@@ -2,6 +2,7 @@
 
 > **Category:** Architecture & Performance
 > **Type:** 🆕 New Capability · **Priority:** 🔴 Critical
+> **Milestone:** M2
 
 ---
 

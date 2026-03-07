@@ -2,6 +2,7 @@
 
 > **Category:** Experience
 > **Type:** 🆕 New Capability · **Priority:** 🔴 Critical
+> **Milestone:** M2
 
 ---
 
@@ -70,26 +71,24 @@ This is what makes Atelier feel like *your* workspace rather than a chat window 
 
 ## Current Implementation Status
 
-> ⚠️ **No Project model exists yet. Current implementation uses global state that doesn't support multiple projects.**
+> ✅ **Core project workspace architecture is implemented and in use.**
 
-What's been built (ahead of this opportunity, in M0/M2 work):
-- `WindowGroup` with a single `ConversationWindow` — opens new windows but each is identical
-- `FileAccessStore` for folder access grants — shared globally, not per-project
-- `DiskSessionPersistence` for saving/restoring sessions — shared globally, not per-project
-- `Session.reset()` and Cmd+Shift+N for new conversations within a window
+What's now implemented:
+- `Project` model and `ProjectStore` registry in AtelierKit
+- `WindowGroup(for: UUID.self)` with per-window project identity and restoration fallback
+- `Cmd+N` creates a new project window (scratch project), `Cmd+O` opens a folder as a project
+- Per-project scoped state and storage:
+  - Sessions in `Application Support/Atelier/projects/{projectID}/sessions/`
+  - File access bookmarks in `Application Support/Atelier/projects/{projectID}/bookmarks.json`
+  - Capability settings in `Application Support/Atelier/projects/{projectID}/capabilities.json`
+- `ProjectWindow` flow:
+  - No root folder yet → folder selection view
+  - Root folder set → conversation window with project-scoped dependencies
 
-What's wrong:
-- **No `Project` type:** There's no model connecting a window to a folder. Windows have no identity.
-- **Global `FileAccessStore`:** All folder grants are shared across every window. A folder granted in one project is visible in all others.
-- **Global `SessionPersistence`:** All sessions stored in one flat directory. `loadMostRecent()` returns the same session for every window.
-- **`WindowGroup` has no data binding:** New windows via Cmd+N are clones, not new projects. No `openWindow(value:)` with a project identifier.
-
-What needs to happen:
-1. Create `Project` model (root path, display name, detected type, creation/last-opened dates)
-2. Use `WindowGroup(for: Project.ID.self)` so each window carries its project identity
-3. Scope `SessionPersistence` and `FileAccessStore` per-project
-4. Add File → Open (Cmd+O) to select a folder and open as a new project window
-5. Cmd+N opens a fresh project window (no folder selected yet)
+Remaining polish from this opportunity:
+1. `Cmd+Shift+O` quick-open with fuzzy project search
+2. Export/import project configuration for sharing
+3. Additional project discovery UX polish
 
 ---
 

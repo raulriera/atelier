@@ -2,6 +2,7 @@
 
 > **Category:** Context Control & Agent Intelligence
 > **Type:** 🆕 New Capability · **Priority:** 🔴 Critical
+> **Milestone:** M2
 
 ---
 

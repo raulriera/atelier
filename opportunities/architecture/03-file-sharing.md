@@ -2,6 +2,7 @@
 
 > **Category:** Architecture & Performance
 > **Type:** Improvement · **Priority:** 🟠 High
+> **Milestone:** M1
 
 ---
 

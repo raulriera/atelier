@@ -2,6 +2,7 @@
 
 > **Category:** Hub / Unified Experience
 > **Type:** 🆕 New Capability · **Priority:** 🔴 Critical
+> **Milestone:** M3
 
 ---
 

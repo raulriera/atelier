@@ -8,8 +8,8 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 42 |
-| **Categories** | 5 (Architecture, Security, Experience, Context, macOS) |
+| **Total opportunities** | 45 |
+| **Categories** | 6 (Architecture, Security, Experience, Context, Hub, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
 ---
@@ -129,6 +129,18 @@ Expand the product surface. Chat integration, onboarding, workflows, and all the
 
 ---
 
+## Unscheduled / Cross-Cutting
+
+Opportunities tracked in the repo but not yet assigned to a numbered milestone.
+
+| # | Opportunity | Type | Status | Link |
+|---|-----------|------|--------|------|
+| U1 | Async File I/O on Hot Paths | Technical Debt | 🔲 Not started | [→](opportunities/architecture/07-async-file-io.md) |
+| U2 | Task Tracking (TodoWrite) | Bug | 🔴 Broken | [→](opportunities/hub/07-task-tracking.md) |
+| U3 | Multi-Window Session Isolation | Bug | 🔴 Broken | [→](opportunities/architecture/10-multi-window-isolation.md) |
+
+---
+
 ## Categories (by folder)
 
 For browsing by domain rather than build order.
@@ -147,6 +159,7 @@ The foundation — native app shell, VM execution, file sharing, sessions, memor
 | [07-async-file-io.md](opportunities/architecture/07-async-file-io.md) | — |
 | [08-mcp-helper-kit.md](opportunities/architecture/08-mcp-helper-kit.md) | M3 |
 | [09-hooks-infrastructure.md](opportunities/architecture/09-hooks-infrastructure.md) | M2 |
+| [10-multi-window-isolation.md](opportunities/architecture/10-multi-window-isolation.md) | — |
 
 ### Security (`opportunities/security/`)
 Network isolation, file permissions, prompt injection, credentials, audit, deletion safety.
@@ -189,10 +202,11 @@ Code integration, capabilities, capability health, token usage.
 | File | Milestone |
 |------|-----------|
 | [01-claude-code-integration.md](opportunities/hub/01-claude-code-integration.md) | M3 |
-| [03-plugin-management.md](opportunities/hub/03-plugin-management.md) | M5 |
+| [03-plugin-management.md](opportunities/hub/03-plugin-management.md) | M3 |
 | [04-mcp-connector-health.md](opportunities/hub/04-mcp-connector-health.md) | M5 |
 | [05-token-usage-visibility.md](opportunities/hub/05-token-usage-visibility.md) | M3 |
 | [06-cloud-connectors.md](opportunities/hub/06-cloud-connectors.md) | M3 |
+| [07-task-tracking.md](opportunities/hub/07-task-tracking.md) | — |
 
 ### macOS Integration (`opportunities/macos/`)
 System services, Spotlight, drag-drop, menu bar, Shortcuts, FSEvents, clipboard, document generation, widgets, Focus filters.
@@ -232,7 +246,8 @@ atelier/
     │   ├── 06-conversation-model.md
     │   ├── 07-async-file-io.md
     │   ├── 08-mcp-helper-kit.md
-    │   └── 09-hooks-infrastructure.md
+    │   ├── 09-hooks-infrastructure.md
+    │   └── 10-multi-window-isolation.md
     ├── security/
     │   ├── 01-network-isolation.md
     │   ├── 02-file-access-permissions.md
@@ -258,7 +273,8 @@ atelier/
     │   ├── 03-plugin-management.md
     │   ├── 04-mcp-connector-health.md
     │   ├── 05-token-usage-visibility.md
-    │   └── 06-cloud-connectors.md
+    │   ├── 06-cloud-connectors.md
+    │   └── 07-task-tracking.md
     └── macos/
         ├── 01-system-services.md
         ├── 02-spotlight-search.md

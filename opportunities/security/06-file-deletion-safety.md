@@ -2,6 +2,7 @@
 
 > **Category:** Security & Privacy
 > **Type:** 🆕 New Capability · **Priority:** 🔴 Critical
+> **Milestone:** M1
 
 ---
 

@@ -2,6 +2,7 @@
 
 > **Category:** Experience
 > **Type:** 🆕 New Capability · **Priority:** 🟠 High
+> **Milestone:** M5
 
 ---
 

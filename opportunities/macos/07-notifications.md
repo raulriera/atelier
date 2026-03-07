@@ -2,6 +2,7 @@
 
 > **Category:** macOS Integration
 > **Type:** Improvement · **Priority:** 🟡 Medium
+> **Milestone:** M4
 
 ---
 

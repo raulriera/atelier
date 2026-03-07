@@ -2,6 +2,7 @@
 
 > **Category:** Architecture
 > **Type:** Improvement · **Priority:** 🟡 Medium
+> **Milestone:** M3
 
 ---
 

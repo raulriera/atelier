@@ -2,6 +2,7 @@
 
 > **Category:** Security & Privacy
 > **Type:** 🆕 New Capability · **Priority:** 🟠 High
+> **Milestone:** M5
 
 ---
 

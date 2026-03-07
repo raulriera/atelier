@@ -2,6 +2,7 @@
 
 > **Category:** Hub / Unified Experience
 > **Type:** Improvement · **Priority:** 🟠 High
+> **Milestone:** M5
 
 ---
 

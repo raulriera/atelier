@@ -2,6 +2,7 @@
 
 > **Category:** macOS Integration
 > **Type:** 🆕 New Capability · **Priority:** 🟡 Medium
+> **Milestone:** M5
 
 ---
 
