@@ -103,7 +103,7 @@ macOS differentiation. These are the features that make people say "this could o
 | 5.3 | Rich Notifications | Improvement | 🔲 Not started | [→](opportunities/macos/07-notifications.md) |
 | 5.4 | Shortcuts & Automation | New | 🔲 Not started | [→](opportunities/macos/06-shortcuts-automation.md) |
 | 5.5 | Memory Management | Improvement | 🔲 Not started | [→](opportunities/architecture/05-memory-management.md) |
-| 5.6 | Scheduled Tasks & Templates | New | 🔲 Not started | [→](opportunities/context/02-task-templates-workflows.md) |
+| 5.6 | Scheduled Tasks & Templates | New | 🔨 In progress | [→](opportunities/context/02-task-templates-workflows.md) |
 
 ---
 
