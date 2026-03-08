@@ -12,7 +12,7 @@ A native macOS application replacing Claude Cowork's Electron shell. A single ad
 
 - `INDEX.md` — Master index organized by milestones (M0–M5), with status tracking
 - `opportunities/` — Detailed write-ups for each opportunity, grouped by domain:
-  - `architecture/` — App shell, VM execution, file sharing, sessions, memory, conversation model
+  - `architecture/` — App shell, sessions, memory, conversation model
   - `security/` — Network isolation, file permissions, prompt injection, credentials, audit, deletion safety
   - `experience/` — Window & conversation, project workspace, conversational flow, onboarding
   - `context/` — Project context files, templates, multi-agent visibility, approvals
@@ -62,20 +62,31 @@ Atelier/
 
 - **macOS 26+** (Tahoe), Apple Silicon only
 - **Swift 6.2+**, Xcode 26
-- Containerization via [apple/containerization](https://github.com/apple/containerization) Swift package (VM-per-container, OCI images, sub-second startup)
+
+## Competitive context
+
+Cowork (Anthropic's Electron app) already has: scheduled tasks with full MCP access, cloud connectors (Google Calendar, Gmail, Drive, DocuSign, etc.), and a growing plugin marketplace. Atelier's moat is **not features** — it's the native experience:
+
+- **Speed**: Native SwiftUI vs Electron/Chromium. Measurably faster scrolling, rendering, and interaction
+- **Resource efficiency**: No Chromium overhead. Less RAM, less battery
+- **macOS integration**: System Services, Shortcuts, Spotlight, widgets, Focus filters — things Electron cannot do
+- **Background execution**: launchd scheduling runs without the app open (Cowork requires app running)
+- **Native capabilities**: Direct EventKit/Contacts/Mail APIs — faster and more private than MCP server processes
+
+If it's not faster or more native than Cowork, it has no reason to exist.
 
 ## Current status
 
-Design system (`AtelierDesign`) implemented. Package builds and tests pass. Next: Xcode project + M0 app shell.
+M0–M3 substantially complete. M1 security shipped (file scoping, path guard, sensitive denials — containers deferred for now). Key gaps: living context bugs, scheduled task execution (needs MCP capabilities), more capabilities (Calendar, Mail, Reminders).
 
 ## Milestones (build order)
 
 - **M0 — Conversation:** Native window + API connection + basic conversation
-- **M1 — Safe foundation:** Sandboxed execution + file sharing + network isolation + permissions + credentials
+- **M1 — Safe foundation:** CLI filesystem boundary + file permissions + hooks + path guard
 - **M2 — The product:** Project model + context files + session persistence + conversational flow
-- **M3 — Intelligence:** Code integration + approval flow + token visibility + prompt injection defense
-- **M4 — Native power:** System services + menu bar + notifications + Shortcuts + memory management
-- **M5 — Growth & polish:** Chat integration, onboarding, workflows, Spotlight, drag-drop, and remaining items
+- **M3 — Intelligence:** Code integration + approval flow + token visibility + capabilities + prompt injection defense
+- **M4 — Native power:** System services + menu bar + notifications + Shortcuts + scheduled tasks
+- **M5 — Growth & polish:** Onboarding, Spotlight, drag-drop, widgets, and remaining items
 
 ## Conventions
 

@@ -309,29 +309,16 @@ Smart loading reduces token waste; compaction snapshots preserve work state acro
 - Snapshot rotation: keeps only the 5 most recent snapshots, prunes older ones automatically
 - The user never loses their thread of work — compaction becomes invisible
 
-### Phase 4 — Project Fingerprinting
+### Future — Project Fingerprinting
 
 - On first session, scan project directory structure
 - Identify primary domain(s) based on file types, names, and directory patterns
 - Generate initial `context.md` with inferred project identity
-- Present to user for confirmation: "I think this is a [type] project. Does this look right?"
-- `SessionStart[startup]` hook on first session triggers fingerprinting
 
-### Phase 5 — Proactive Suggestions
+### Future — Proactive Suggestions
 
-- Track patterns across sessions (corrections, repeated instructions, style preferences)
-- After confidence threshold is met (3+ consistent signals), offer to save
-- UI for viewing and managing suggestions (dismiss, accept, modify)
-- Respect dismissals permanently — never re-suggest the same thing
-- `PostToolUseFailure` hook records failed approaches automatically
-
-### Phase 6 — Context Health
-
-- Dashboard showing active context files and their token cost
-- Staleness detection — flag entries that haven't been relevant in N sessions
-- Conflict detection — flag contradictions between context files
-- Token budget visualization — "Your context uses X of Y available tokens"
-- `InstructionsLoaded` hook verifies memory files are being read and tracks load order
+- Track patterns across sessions, offer to save after confidence threshold
+- Respect dismissals permanently
 
 ## Dependencies
 

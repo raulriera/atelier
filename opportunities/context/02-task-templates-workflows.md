@@ -237,6 +237,7 @@ The Shortcuts integration is the key to workflows. We don't build a workflow bui
 ## Gaps
 
 - **Open Recent menu:** When all project windows are closed, scheduled tasks for those projects are invisible. Need File → Open Recent populated from `ProjectStore` so users can reopen any project and see its automations. Standard macOS `CommandGroup(replacing: .recentFiles)` pattern.
+- **`atelier-scheduler` helper binary not implemented:** The `LaunchAgentManager` installs a launchd plist pointing to `Contents/Helpers/atelier-scheduler`, but the binary doesn't exist — no source file, no Xcode target, no build phase. launchd fires on schedule but silently fails because there's nothing to execute. `runNow()` works because it calls `executeProcess` in-process; the launchd path is dead. Need to create the helper as a command-line tool target in Xcode, have it read `schedules.json`, match due tasks to the current time, and run `claude -p` for each (same logic as `ScheduleStore.executeProcess`).
 - **Relocated toolbar items need a new home:** The inspector redesign removed three toolbar items that still need to be accessible somewhere:
   - **New session button** (plus.message, Cmd+Shift+T) — could move to File menu or compose field area
   - **Context files popover** (doc.text) — could move to a menu or become part of the inspector
