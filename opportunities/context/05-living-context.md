@@ -241,9 +241,9 @@ The CLI doesn't need to know about living context. It just receives a system pro
 
 ## Implementation
 
-### Phase 1 — Hook-Based Distillation ✅
+### Phase 1 — Hook-Based Distillation 🔨
 
-Distillation fully migrated from app-side code to CLI hooks via `atelier-hooks` helper binary.
+Distillation migrated from app-side code to CLI hooks via `atelier-hooks` helper binary. Hooks are registered and the binary is compiled, but **distillation is not functioning in production** due to bugs in the helper binary.
 
 **What's built:**
 - `HooksManager` — registers hooks in `.claude/settings.local.json`, coexists with user hooks
@@ -261,9 +261,23 @@ Distillation fully migrated from app-side code to CLI hooks via `atelier-hooks` 
 - `ConversationSummarizer` — replaced by transcript-based summarization in helper binary
 - `triggerDistillation()` in `ConversationWindow` — replaced by `Stop` hook
 
-### Phase 2 — Multi-File Memory ✅
+**Known bugs (blocking distillation):**
 
-Memory split from a single `learnings.md` into separate category files that grow independently.
+1. **CLI path not found** (`atelier-hooks.swift:215`): `findCLI()` is missing `~/.local/bin/claude` from its candidate list — the primary install location for the Claude CLI. `CLIDiscovery.findCLI()` in AtelierKit checks this path first, but the helper binary's copy doesn't. Every `distill` call exits with "Claude CLI not found". This is the root cause of memory never updating.
+
+2. **HOME resolution inconsistency** (`atelier-hooks.swift:216`): Uses `ProcessInfo.processInfo.environment["HOME"]` instead of `getpwuid(getuid())`. In sandboxed or nested process contexts, `$HOME` may not resolve correctly. `CLIDiscovery` uses `getpwuid` — the helper should match.
+
+3. **Missing process working directory** (`atelier-hooks.swift:229`): The `Process` spawned by `distill()` doesn't set `currentDirectoryURL`, unlike `ProcessCLIRunner` in AtelierKit. May break relative path resolution in the CLI.
+
+4. **Silent process failures** (`atelier-hooks.swift:244-251`): No check of `process.terminationStatus` after `waitUntilExit()`. If `claude -p` exits non-zero (auth failure, model unavailable, timeout), the empty stdout is treated as "no learnings" and distillation silently succeeds with no output.
+
+5. **Tight timeout** (`HooksManager.swift:191`): The `Stop` hook has `"timeout": 30` with `"async": true`. The distill command must parse stdin, find the CLI binary, spawn `claude -p --model haiku`, wait for API response, parse output, and write files — all within 30 seconds. On slow networks this may be exceeded, causing silent failure.
+
+**Fix approach:** Align `findCLI()` in `atelier-hooks.swift` with `CLIDiscovery.findCLI()` — same candidate list, same `getpwuid` resolution, same `which` fallback. Add process exit status checking and stderr logging. Consider increasing the distill timeout to 60 seconds.
+
+### Phase 2 — Multi-File Memory 🔨
+
+Memory split from a single `learnings.md` into separate category files that grow independently. Architecture is correct but **no category files have been written** because Phase 1 distillation is broken.
 
 **What's built:**
 - `MemoryStore` rewritten with `read(category:)`, `write(category:)`, `readAll()`, `listFiles()`
@@ -278,6 +292,8 @@ Memory split from a single `learnings.md` into separate category files that grow
 - `corrections.md` — explicit corrections ("Don't use 'leverage', say 'use'")
 
 **Merge strategy:** Haiku receives all existing category file contents and produces a merged update. New entries are added, contradicted entries are replaced, still-valid entries are preserved.
+
+**No known bugs** — once Phase 1 distillation is fixed, category files will be written correctly.
 
 ### Gap — Infinite Session via Compaction Index
 

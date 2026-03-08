@@ -68,7 +68,7 @@ With a working conversation (M0) and a safe sandbox (M1), this is where Atelier 
 | 3.2 | Project Context Files | New | ✅ Done | [→](opportunities/context/01-project-context-files.md) |
 | 3.3 | Session Persistence | New | ✅ Done | [→](opportunities/architecture/04-session-persistence.md) |
 | 3.4 | Conversational Flow | New | ✅ Done | [→](opportunities/experience/03-conversational-flow.md) |
-| 3.5 | Living Context | New | 🔨 In progress (Phase 1–2 ✅) | [→](opportunities/context/05-living-context.md) |
+| 3.5 | Living Context | New | 🔨 In progress (Phase 1–2 blocked by bugs) | [→](opportunities/context/05-living-context.md) |
 | 3.6 | Hooks Infrastructure | New | 🔨 In progress (Phase 1–3 ✅) | [→](opportunities/architecture/09-hooks-infrastructure.md) |
 | 3.7 | Session Browser | New | 🔲 Not started | [→](opportunities/experience/05-session-browser.md) |
 | 3.P | **Polish:** ~~Status icon pairings~~ | HIG | ✅ Done | — |
@@ -103,7 +103,7 @@ macOS differentiation. These are the features that make people say "this could o
 | 5.3 | Rich Notifications | Improvement | 🔲 Not started | [→](opportunities/macos/07-notifications.md) |
 | 5.4 | Shortcuts & Automation | New | 🔲 Not started | [→](opportunities/macos/06-shortcuts-automation.md) |
 | 5.5 | Memory Management | Improvement | 🔲 Not started | [→](opportunities/architecture/05-memory-management.md) |
-| 5.6 | Scheduled Tasks & Templates | New | 🔨 In progress | [→](opportunities/context/02-task-templates-workflows.md) |
+| 5.6 | Scheduled Tasks & Templates | New | 🔨 In progress (data+UI done, execution blocked: tool permissions, no scheduler helper) | [→](opportunities/context/02-task-templates-workflows.md) |
 
 ---
 
