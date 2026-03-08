@@ -1,7 +1,7 @@
 # Scheduled Tasks, Templates & Workflows
 
 > **Category:** Context Control & Agent Intelligence
-> **Type:** 🆕 New Capability · **Priority:** 🔴 Critical
+> **Type:** New Capability · **Priority:** Critical
 > **Milestone:** M4
 
 ---
@@ -62,12 +62,12 @@ Every weekday at 8am
 | | Cowork | Atelier |
 |---|---|---|
 | **Scheduling** | `/schedule` text command | Native UI + Shortcuts.app triggers |
-| **Persistence** | Dies when app closes | `BGTaskScheduler` + Launch Agent survives sleep/quit/reboot |
+| **Persistence** | Dies when app closes | `launchd` Launch Agent — survives quit, sleep, reboot. Coalesces missed fires on wake. |
 | **Triggers** | Time-based only | Time, folder events, calendar, Focus modes, any Shortcuts trigger |
 | **Visibility** | Buried in chat history | Menu bar status, notification center, dedicated view |
 | **OS integration** | None | Shortcuts.app, Siri, Automator, AppleScript |
 
-The critical advantage: Atelier scheduled tasks survive the app closing. A `launchd` Launch Agent wakes the app to execute scheduled work, and `BGTaskScheduler` handles the OS coordination. Cowork's "app must stay open" limitation is the gap we fill.
+The critical advantage: Atelier scheduled tasks survive the app closing. A `launchd` Launch Agent wakes a lightweight helper binary to execute scheduled work — no need for the full app to be running. Cowork's "app must stay open" limitation is the gap we fill.
 
 ### Templates: save what worked
 
@@ -96,16 +96,16 @@ For non-developer users, the template format stays simple markdown with optional
 
 ### Headless execution for scheduled tasks
 
-When a scheduled task fires, Atelier doesn't need to spin up a full conversation UI. Claude Code's headless mode (`claude -p`) runs a prompt non-interactively with structured JSON output (`--output-format json`). A `launchd` agent that runs:
+When a scheduled task fires, Atelier doesn't need to spin up a full conversation UI. A bundled helper binary (`Contents/Helpers/atelier-scheduler`) reads the schedule store, determines which tasks are due, and runs each one via Claude Code's headless mode:
 
 ```bash
-claude -p --system-prompt-file .atelier/context.md \
-  "$(cat .atelier/templates/weekly-report.md)" \
+claude -p "{prompt}" \
+  --model {alias} \
   --output-format json \
   --max-turns 20
 ```
 
-...handles most scheduled tasks without waking the app. The app only needs to launch for tasks that require user interaction (approval gates, ask-user prompts). This simplifies the background execution architecture — `launchd` + `claude -p` handles the common case, `BGTaskScheduler` + full app handles the interactive case.
+The helper sets `WorkingDirectory` to the task's project path, so Claude operates in the right folder context. The full app only needs to launch for tasks that require user interaction (approval gates, ask-user prompts).
 
 ### Who uses scheduled tasks?
 
@@ -150,13 +150,17 @@ Users chain Atelier intents with any other Shortcuts action — Calendar, Mail, 
 
 ### Phase 2 — In-App Scheduling
 
-- Schedule UI accessible from the menu bar agent and project settings
-- Recurrence options: hourly, daily, weekly, monthly, custom cron expression
-- `BGTaskScheduler` for OS-managed scheduling
-- `launchd` Launch Agent for surviving app quit (wake the app to execute)
-- `NSProcessInfo.performActivity()` to prevent sleep during execution
+- **Model**: `ScheduledTask` struct — name, description, prompt, schedule (manual/hourly/daily/weekly/monthly/cron), optional model override, project path, pause state
+- **Persistence**: `ScheduleStore` (`@Observable`, `@MainActor`) persists to `~/Library/Application Support/Atelier/schedules.json`
+- **Execution**: Single `launchd` Launch Agent plist at `~/Library/LaunchAgents/com.atelier.scheduler.plist` with `AssociatedBundleIdentifiers` for clean Login Items display
+- **Helper binary**: `Contents/Helpers/atelier-scheduler` — reads `schedules.json`, matches due tasks to the current time, runs `claude -p` for each
+- **Agent command**: `claude -p "{prompt}" --model {alias} --output-format json --max-turns 20` with `WorkingDirectory` set to the task's project path
+- **Agent lifecycle**: Plist rebuilt and reloaded via `launchctl unload/load` on every task create/update/delete. If no active tasks remain, plist is deleted entirely
+- **Logs**: `StandardOutPath` / `StandardErrorPath` to `~/Library/Logs/Atelier/`
+- **Notifications**: App reads log files on launch for v1; helper binary posts via `UNUserNotificationCenter` in v2
+- **`NSProcessInfo.performActivity()`**: Used when running tasks in-process (manual "Run Now" button)
+- **Wake from sleep**: Not supported in v1. `IOPMSchedulePowerEvent(kIOPMAutoWake)` requires root — noted as v2 enhancement via `SMAppService` privileged helper
 - Schedule status visible in menu bar: next run time, last result
-- Notifications on completion via `UNUserNotificationCenter`
 
 ### Phase 3 — Shortcuts Integration
 
@@ -181,6 +185,34 @@ Users chain Atelier intents with any other Shortcuts action — Calendar, Mail, 
 - Configurable in the project context file
 - Integrates with the scheduling system (folder trigger + time window)
 
+## Technical Constraints
+
+### macOS scheduling options evaluated
+
+| Mechanism | Exact times? | Wakes from sleep? | App closed? | Used? |
+|---|---|---|---|---|
+| `launchd` Launch Agent | Yes (`StartCalendarInterval`) | No (catches up on wake) | Yes | **Yes** |
+| `SMAppService.agent(plistName:)` | Yes | No | Yes | No — plist in signed bundle, can't update dynamically |
+| `BGTaskScheduler` | N/A | N/A | N/A | No — not available on native macOS (Mac Catalyst only) |
+| `NSBackgroundActivityScheduler` | No (system decides) | No | No (app must run) | No |
+| `IOPMSchedulePowerEvent` | Yes | Yes | Yes | Future (requires root) |
+
+### Single-agent design
+
+One plist (`com.atelier.scheduler.plist`) with an `AssociatedBundleIdentifiers` key holds a `StartCalendarInterval` array — the union of all active task schedules. This means:
+
+- **One Login Items entry**: "Atelier" with app icon (not N raw plist names)
+- **Zero polling**: launchd's kernel timer fires at exact calendar times
+- **Dynamic updates**: plist rebuilt and reloaded on task CRUD only
+- **Clean removal**: if no tasks are active, plist is deleted entirely
+
+### launchd coalescing behavior
+
+From `launchd.plist(5)`:
+> "Unlike cron which skips job invocations when the computer is asleep, launchd will start the job the next time the computer wakes up. If multiple intervals transpire before the computer is woken, those events will be coalesced into one event upon wake from sleep."
+
+Since all tasks share one agent, a sleep-through-multiple-fires scenario fires the helper once on wake. The helper checks all tasks and runs whichever are due. No stampede, no duplicate runs.
+
 ## Dependencies
 
 - context/01-project-context-files.md (templates are context files)
@@ -194,7 +226,7 @@ Users chain Atelier intents with any other Shortcuts action — Calendar, Mail, 
 
 The pitch is simple: **Claude works while you sleep.**
 
-Scheduled tasks are the single most compelling reason to use a native app over Cowork. Cowork requires the app to stay open — close it and your schedule dies. Atelier uses `launchd` and `BGTaskScheduler` to survive anything. This is a native-only advantage that Electron fundamentally cannot match.
+Scheduled tasks are the single most compelling reason to use a native app over Cowork. Cowork requires the app to stay open — close it and your schedule dies. Atelier uses `launchd` Launch Agents to survive anything — app quit, sleep, reboot. When the Mac wakes up, launchd fires the helper, the helper runs whichever tasks are due, and you find finished output waiting. This is a native-only advantage that Electron fundamentally cannot match.
 
 Templates should feel like "Claude remembers how I like things done" — not like "I configured a workflow." The best template is one the user never explicitly created. Claude noticed a pattern, offered to save it, and asked if it should run automatically.
 
