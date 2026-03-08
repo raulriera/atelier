@@ -328,7 +328,7 @@ Smart loading reduces token waste; compaction snapshots preserve work state acro
 - Pruning: caps observations at 200 entries, evicts stale single-session entries not in the current distillation
 - Maximum 2 suggestions surfaced per startup, sorted by frequency
 - Mirrored logic in both `PatternTracker` (AtelierKit, for app-side dismissal) and `atelier-hooks.swift` (for hook-side recording/injection)
-- 23 tests covering normalization, parsing, recording, suggestions, dismissal, pruning, and persistence
+- 24 tests covering normalization, parsing, recording, suggestions, dismissal, pruning, and persistence
 
 ## Dependencies
 
