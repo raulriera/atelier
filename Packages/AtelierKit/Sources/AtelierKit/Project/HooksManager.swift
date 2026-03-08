@@ -115,7 +115,6 @@ public struct HooksManager: Sendable {
     // MARK: - Hook Definitions
 
     func buildAtelierHooks() -> [String: Any] {
-        let reinjectCommand = reinjectCommandString()
         let distillCommand = distillCommandString()
 
         var hooks: [String: Any] = [
@@ -124,7 +123,7 @@ public struct HooksManager: Sendable {
                     "matcher": "compact",
                     "hooks": [[
                         "type": "command",
-                        "command": reinjectCommand,
+                        "command": reinjectCommandString(trigger: "compact"),
                         "timeout": 5,
                         "statusMessage": "\(Self.statusMessagePrefix) Re-injecting project memory",
                     ] as [String: Any]],
@@ -133,7 +132,7 @@ public struct HooksManager: Sendable {
                     "matcher": "startup",
                     "hooks": [[
                         "type": "command",
-                        "command": reinjectCommand,
+                        "command": reinjectCommandString(trigger: "startup"),
                         "timeout": 5,
                         "statusMessage": "\(Self.statusMessagePrefix) Loading project memory",
                     ] as [String: Any]],
@@ -142,7 +141,7 @@ public struct HooksManager: Sendable {
                     "matcher": "resume",
                     "hooks": [[
                         "type": "command",
-                        "command": reinjectCommand,
+                        "command": reinjectCommandString(trigger: "resume"),
                         "timeout": 5,
                         "statusMessage": "\(Self.statusMessagePrefix) Loading project memory",
                     ] as [String: Any]],
@@ -188,7 +187,7 @@ public struct HooksManager: Sendable {
                     "hooks": [[
                         "type": "command",
                         "command": distillCommand!,
-                        "timeout": 30,
+                        "timeout": 300,
                         "async": true,
                         "statusMessage": "\(Self.statusMessagePrefix) Distilling learnings",
                     ] as [String: Any]],
@@ -201,7 +200,7 @@ public struct HooksManager: Sendable {
                     "hooks": [[
                         "type": "command",
                         "command": distillCommand!,
-                        "timeout": 30,
+                        "timeout": 300,
                         "statusMessage": "\(Self.statusMessagePrefix) Saving learnings before compaction",
                     ] as [String: Any]],
                 ] as [String: Any],
@@ -213,11 +212,15 @@ public struct HooksManager: Sendable {
 
     /// Builds the reinject command string.
     ///
+    /// - Parameter trigger: The SessionStart matcher (`compact`, `startup`, or `resume`).
+    ///   Passed as a CLI argument so the helper can include compaction snapshots
+    ///   only when resuming after compaction.
+    ///
     /// Prefers the bundled helper binary; falls back to inline shell that reads
     /// all `.md` files from the memory directory.
-    func reinjectCommandString() -> String {
+    func reinjectCommandString(trigger: String = "startup") -> String {
         if let helper = helperPath {
-            return "'\(helper)' reinject"
+            return "'\(helper)' reinject \(trigger)"
         }
 
         let dir = memoryDirPath

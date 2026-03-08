@@ -241,9 +241,9 @@ The CLI doesn't need to know about living context. It just receives a system pro
 
 ## Implementation
 
-### Phase 1 — Hook-Based Distillation 🔨
+### Phase 1 — Hook-Based Distillation ✅
 
-Distillation migrated from app-side code to CLI hooks via `atelier-hooks` helper binary. Hooks are registered and the binary is compiled, but **distillation is not functioning in production** due to bugs in the helper binary.
+Distillation migrated from app-side code to CLI hooks via `atelier-hooks` helper binary.
 
 **What's built:**
 - `HooksManager` — registers hooks in `.claude/settings.local.json`, coexists with user hooks
@@ -253,31 +253,26 @@ Distillation migrated from app-side code to CLI hooks via `atelier-hooks` helper
 - `ContextFileLoader` — discovers memory files at project root, injects with `<project-memory>` wrapper
 
 **Hooks registered:**
-- `Stop` (async) — distills learnings after each response
-- `PreCompact[auto]` (sync) — saves learnings before context compresses
+- `Stop` (async, 300s timeout) — distills learnings after each response
+- `PreCompact[auto]` (sync, 300s timeout) — saves learnings before context compresses
 - `SessionStart[compact/startup/resume]` — re-injects learnings into fresh context
 
 **What was removed:**
 - `ConversationSummarizer` — replaced by transcript-based summarization in helper binary
 - `triggerDistillation()` in `ConversationWindow` — replaced by `Stop` hook
 
-**Known bugs (blocking distillation):**
+**Bugs fixed:**
 
-1. **CLI path not found** (`atelier-hooks.swift:215`): `findCLI()` is missing `~/.local/bin/claude` from its candidate list — the primary install location for the Claude CLI. `CLIDiscovery.findCLI()` in AtelierKit checks this path first, but the helper binary's copy doesn't. Every `distill` call exits with "Claude CLI not found". This is the root cause of memory never updating.
+1. ~~**CLI path not found**~~ — `findCLI()` now mirrors `CLIDiscovery.findCLI()`: same candidate list (`~/.local/bin/claude` first), `getpwuid` for home resolution, `which` fallback
+2. ~~**HOME resolution inconsistency**~~ — uses `getpwuid(getuid())` instead of `$HOME`
+3. ~~**Missing process working directory**~~ — `distill()` now sets `currentDirectoryURL` from hook input `cwd`
+4. ~~**Silent process failures**~~ — checks `terminationStatus`, logs stderr on non-zero exit
+5. ~~**Tight timeout**~~ — increased from 30s to 300s (5 minutes) for both Stop and PreCompact hooks
+6. Added nesting protection (unset `CLAUDECODE`/`CLAUDE_CODE_ENTRYPOINT`) and `--no-session-persistence`
 
-2. **HOME resolution inconsistency** (`atelier-hooks.swift:216`): Uses `ProcessInfo.processInfo.environment["HOME"]` instead of `getpwuid(getuid())`. In sandboxed or nested process contexts, `$HOME` may not resolve correctly. `CLIDiscovery` uses `getpwuid` — the helper should match.
+### Phase 2 — Multi-File Memory ✅
 
-3. **Missing process working directory** (`atelier-hooks.swift:229`): The `Process` spawned by `distill()` doesn't set `currentDirectoryURL`, unlike `ProcessCLIRunner` in AtelierKit. May break relative path resolution in the CLI.
-
-4. **Silent process failures** (`atelier-hooks.swift:244-251`): No check of `process.terminationStatus` after `waitUntilExit()`. If `claude -p` exits non-zero (auth failure, model unavailable, timeout), the empty stdout is treated as "no learnings" and distillation silently succeeds with no output.
-
-5. **Tight timeout** (`HooksManager.swift:191`): The `Stop` hook has `"timeout": 30` with `"async": true`. The distill command must parse stdin, find the CLI binary, spawn `claude -p --model haiku`, wait for API response, parse output, and write files — all within 30 seconds. On slow networks this may be exceeded, causing silent failure.
-
-**Fix approach:** Align `findCLI()` in `atelier-hooks.swift` with `CLIDiscovery.findCLI()` — same candidate list, same `getpwuid` resolution, same `which` fallback. Add process exit status checking and stderr logging. Consider increasing the distill timeout to 60 seconds.
-
-### Phase 2 — Multi-File Memory 🔨
-
-Memory split from a single `learnings.md` into separate category files that grow independently. Architecture is correct but **no category files have been written** because Phase 1 distillation is broken.
+Memory split from a single `learnings.md` into separate category files that grow independently. Phase 1 distillation bugs are fixed — category files should now be written correctly.
 
 **What's built:**
 - `MemoryStore` rewritten with `read(category:)`, `write(category:)`, `readAll()`, `listFiles()`
@@ -295,15 +290,24 @@ Memory split from a single `learnings.md` into separate category files that grow
 
 **No known bugs** — once Phase 1 distillation is fixed, category files will be written correctly.
 
-### Gap — Infinite Session via Compaction Index
+### Phase 3 — Smart Loading & Compaction Index ✅
 
-Each compaction writes a summary file to `.atelier/memory/compacts/`. These files form a living index of every compaction in the project — not just learnings, but what was being worked on and the state of things at that moment. The `SessionStart[compact]` hook re-injects the relevant summaries so the session continues seamlessly. The user never has to start over; one session lasts forever.
+Smart loading reduces token waste; compaction snapshots preserve work state across compactions.
 
-### Phase 3 — Smart Loading
+**Smart loading:**
+- `preferences.md` and `corrections.md` always injected in full (high-value, small)
+- All other memory files appear as one-line manifest entries with preview — Claude reads on demand
+- Per-file line budgets in distillation prompt enforce condensation (Preferences: 25, Corrections: 15, Decisions: 30, Patterns: 25)
+- Hard cap at injection time (40 lines) as defense-in-depth — truncates with "read full file" note
+- `PostToolUse[Write|Edit]` hook tracks file changes → updates `.atelier/structure.json` automatically
 
-- Add file size monitoring — split a file when it exceeds ~100 lines
-- **Switch from injection to manifest-based discovery** — always load `context.md` + `preferences.md`, everything else via one-line manifest read on demand (see "Smart loading" section)
-- `PostToolUse[Write|Edit]` hook tracks file changes → updates project structure map automatically
+**Compaction index (infinite session):**
+- `PreCompact` saves the transcript summary to `.atelier/memory/compacts/{timestamp}.md` — zero extra LLM calls, reuses the summary already built for distillation
+- `SessionStart[compact]` re-injects the latest snapshot in a `<session-state>` block at the end of the prompt (recency-favored attention position)
+- `SessionStart[startup|resume]` does NOT inject snapshots — fresh sessions don't need stale work state
+- `HooksManager` passes trigger type (`compact`, `startup`, `resume`) as CLI argument to `reinject`
+- Snapshot rotation: keeps only the 5 most recent snapshots, prunes older ones automatically
+- The user never loses their thread of work — compaction becomes invisible
 
 ### Phase 4 — Project Fingerprinting
 

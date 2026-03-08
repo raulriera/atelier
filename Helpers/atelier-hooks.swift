@@ -180,8 +180,20 @@ func buildDistillationPrompt(summary: String, existingLearnings: String?) -> Str
     - Keep entries concise — one line per learning
     - No session-specific details (no timestamps, no tool names, no "currently working on")
     - If existing learnings are provided, merge: update if changed, add if new, keep if still valid, remove if contradicted
-    - Keep total output under 200 lines
     - If there is nothing meaningful to extract, output exactly: NO_LEARNINGS
+
+    Per-file line budgets (bullet entries, NOT counting the heading):
+    - ## Preferences: max 25 entries
+    - ## Corrections: max 15 entries
+    - ## Decisions: max 30 entries
+    - ## Patterns: max 25 entries
+
+    When a section approaches its budget, you MUST condense:
+    - Merge related entries into one ("prefers dark mode" + "use dark theme" → single entry)
+    - Subsume older entries into broader ones ("use DD/MM/YYYY" + "use metric units" → "Use DD/MM/YYYY dates and metric units")
+    - For decisions, keep the conclusion, drop the detailed rationale for old entries
+    - Drop entries that are subsumed by newer, more specific ones
+    - Prefer fewer, richer entries over many granular ones
 
     Begin output:
     """
@@ -211,30 +223,70 @@ func validateLearnings(_ content: String) -> String? {
     return trimmed
 }
 
+/// The real user home directory, bypassing sandbox container redirection.
+/// Mirrors `CLIDiscovery.realHomeDirectory` in AtelierKit.
+func realHomeDirectory() -> String {
+    if let pw = getpwuid(getuid()) {
+        return String(cString: pw.pointee.pw_dir)
+    }
+    return NSHomeDirectory()
+}
+
 /// Finds the claude CLI binary.
+/// Mirrors `CLIDiscovery.findCLI()` in AtelierKit — same candidates, same order.
 func findCLI() -> String? {
-    let home = ProcessInfo.processInfo.environment["HOME"] ?? NSHomeDirectory()
+    let home = realHomeDirectory()
     let candidates = [
+        "\(home)/.local/bin/claude",
         "\(home)/.claude/bin/claude",
-        "/usr/local/bin/claude",
         "/opt/homebrew/bin/claude",
+        "/usr/local/bin/claude",
     ]
-    return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
+
+    if let found = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) {
+        return found
+    }
+
+    // Fall back to PATH lookup
+    let whichProcess = Process()
+    whichProcess.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+    whichProcess.arguments = ["claude"]
+    let pipe = Pipe()
+    whichProcess.standardOutput = pipe
+    whichProcess.standardError = FileHandle.nullDevice
+    try? whichProcess.run()
+    whichProcess.waitUntilExit()
+    let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
+        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+    if !output.isEmpty, FileManager.default.isExecutableFile(atPath: output) {
+        return output
+    }
+
+    return nil
 }
 
 /// Calls Haiku to distill learnings from a conversation summary.
-func distill(summary: String, existingLearnings: String?, cliPath: String) -> String? {
+func distill(summary: String, existingLearnings: String?, cliPath: String, cwd: String) -> String? {
     let prompt = buildDistillationPrompt(summary: summary, existingLearnings: existingLearnings)
 
     let process = Process()
     process.executableURL = URL(fileURLWithPath: cliPath)
+    process.currentDirectoryURL = URL(fileURLWithPath: cwd)
     process.arguments = [
         "-p",
         "--output-format", "text",
         "--model", "haiku",
         "--max-turns", "1",
+        "--no-session-persistence",
         "--", prompt,
     ]
+
+    // Nesting protection: prevent recursive Claude invocations
+    var env = ProcessInfo.processInfo.environment
+    env.removeValue(forKey: "CLAUDECODE")
+    env.removeValue(forKey: "CLAUDE_CODE_ENTRYPOINT")
+    process.environment = env
 
     let stdout = Pipe()
     let stderr = Pipe()
@@ -244,11 +296,21 @@ func distill(summary: String, existingLearnings: String?, cliPath: String) -> St
     do {
         try process.run()
     } catch {
+        FileHandle.standardError.write(Data("Failed to launch claude: \(error)\n".utf8))
         return nil
     }
 
+    // Read stdout before waitUntilExit to avoid pipe deadlock
     let data = stdout.fileHandleForReading.readDataToEndOfFile()
+    // Drain stderr concurrently to prevent pipe buffer deadlock
+    let stderrData = stderr.fileHandleForReading.readDataToEndOfFile()
     process.waitUntilExit()
+
+    guard process.terminationStatus == 0 else {
+        let errMsg = String(data: stderrData, encoding: .utf8) ?? ""
+        FileHandle.standardError.write(Data("claude exited with status \(process.terminationStatus): \(errMsg)\n".utf8))
+        return nil
+    }
 
     let raw = String(data: data, encoding: .utf8)?
         .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -327,6 +389,62 @@ func readAllMemoryFiles(memoryDir: String) -> String? {
     return parts.joined(separator: "\n\n")
 }
 
+/// Maximum number of compaction snapshots to keep. Older ones are pruned.
+let maxCompactionSnapshots = 5
+
+/// Saves the conversation summary as a compaction snapshot.
+///
+/// These snapshots capture *what was being worked on* (not learnings) so that
+/// after compaction, `SessionStart[compact]` can re-inject the work state and
+/// Claude picks up exactly where it left off.
+func saveCompactionSnapshot(summary: String, compactsDir: String) {
+    try? FileManager.default.createDirectory(
+        atPath: compactsDir,
+        withIntermediateDirectories: true
+    )
+
+    // Write the current snapshot
+    let timestamp = ISO8601DateFormatter().string(from: Date())
+        .replacingOccurrences(of: ":", with: "-") // filesystem-safe
+    let filename = "\(timestamp).md"
+    let filePath = "\(compactsDir)/\(filename)"
+
+    do {
+        try summary.write(toFile: filePath, atomically: true, encoding: .utf8)
+    } catch {
+        FileHandle.standardError.write(Data("Failed to write compaction snapshot: \(error)\n".utf8))
+        return
+    }
+
+    // Prune old snapshots — keep only the most recent N
+    pruneCompactionSnapshots(in: compactsDir)
+}
+
+/// Removes old compaction snapshots, keeping only the most recent `maxCompactionSnapshots`.
+func pruneCompactionSnapshots(in directory: String) {
+    guard let files = try? FileManager.default.contentsOfDirectory(atPath: directory) else { return }
+    let sorted = files.filter { $0.hasSuffix(".md") }.sorted()
+    guard sorted.count > maxCompactionSnapshots else { return }
+
+    let toRemove = sorted.prefix(sorted.count - maxCompactionSnapshots)
+    for file in toRemove {
+        try? FileManager.default.removeItem(atPath: "\(directory)/\(file)")
+    }
+}
+
+/// Reads the most recent compaction snapshot, or nil if none exists.
+func readLatestCompactionSnapshot(in directory: String) -> String? {
+    guard let files = try? FileManager.default.contentsOfDirectory(atPath: directory) else { return nil }
+    let sorted = files.filter { $0.hasSuffix(".md") }.sorted()
+    guard let latest = sorted.last else { return nil }
+
+    let path = "\(directory)/\(latest)"
+    guard let content = try? String(contentsOfFile: path, encoding: .utf8),
+          !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    else { return nil }
+    return content
+}
+
 func handleDistill(input: HookInput) {
     guard let transcriptPath = input.transcriptPath else {
         FileHandle.standardError.write(Data("No transcript_path in hook input\n".utf8))
@@ -357,8 +475,16 @@ func handleDistill(input: HookInput) {
         exit(0)
     }
 
-    // Distill
-    guard let result = distill(summary: summary, existingLearnings: existing, cliPath: cliPath) else {
+    // Save compaction snapshot — captures what was being worked on
+    // so SessionStart[compact] can re-inject the work state.
+    // This is a cheap file write, no LLM call.
+    saveCompactionSnapshot(
+        summary: summary,
+        compactsDir: "\(memoryDir)/compacts"
+    )
+
+    // Distill learnings via Haiku
+    guard let result = distill(summary: summary, existingLearnings: existing, cliPath: cliPath, cwd: cwd) else {
         exit(0)
     }
 
@@ -429,26 +555,85 @@ func handleTrackFile(input: HookInput) {
     }
 }
 
-func handleReinject(input: HookInput) {
+/// Memory files that are always injected in full (high-value, small).
+/// Mirrors `ContextFileLoader.alwaysInjectFilenames` in AtelierKit.
+let alwaysInjectFilenames: Set<String> = ["preferences.md", "corrections.md"]
+
+/// Hard cap for always-inject files (defense-in-depth).
+/// Mirrors `ContextFileLoader.maxAlwaysInjectLines`.
+let maxAlwaysInjectLines = 40
+
+/// Truncates content if it exceeds the line budget.
+func capContent(_ content: String, filename: String) -> String {
+    let lines = content.components(separatedBy: .newlines)
+    guard lines.count > maxAlwaysInjectLines else { return content }
+    let kept = lines.prefix(maxAlwaysInjectLines).joined(separator: "\n")
+    return kept + "\n(...truncated — read .atelier/memory/\(filename) for full content)"
+}
+
+/// Hard cap for the compaction snapshot injected into the context.
+/// Recent conversation excerpt doesn't need to be huge — just enough
+/// for Claude to pick up the thread of work.
+let maxSnapshotLines = 80
+
+func handleReinject(input: HookInput, trigger: String) {
     guard let cwd = input.cwd else { exit(0) }
 
     let memoryDir = "\(cwd)/.atelier/memory"
-    let combined = readAllMemoryFiles(memoryDir: memoryDir)
+    let manager = FileManager.default
+
+    // Read memory files, split into always-inject vs manifest
+    var alwaysInjectContents: [String] = []
+    var manifestEntries: [String] = []
+
+    if let files = try? manager.contentsOfDirectory(atPath: memoryDir) {
+        for file in files.sorted() where file.hasSuffix(".md") {
+            let path = "\(memoryDir)/\(file)"
+            guard let content = try? String(contentsOfFile: path, encoding: .utf8),
+                  !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else { continue }
+
+            if alwaysInjectFilenames.contains(file) {
+                alwaysInjectContents.append(capContent(content, filename: file))
+            } else {
+                let preview = content.components(separatedBy: .newlines)
+                    .first { !$0.trimmingCharacters(in: .whitespaces).isEmpty } ?? file
+                manifestEntries.append("- \(file): \(preview)")
+            }
+        }
+    }
 
     // Read structure map
     let mapPath = "\(cwd)/.atelier/structure.json"
     let structureMap = readStructureMap(at: mapPath)
 
-    // Need at least one of memory or structure to output anything
-    guard combined != nil || !structureMap.isEmpty else { exit(0) }
+    // Read compaction snapshot — only after compaction, not on fresh startup/resume
+    let compactionSnapshot: String? = if trigger == "compact" {
+        readLatestCompactionSnapshot(in: "\(memoryDir)/compacts")
+    } else {
+        nil
+    }
+
+    // Need at least one source to output anything
+    guard !alwaysInjectContents.isEmpty || !manifestEntries.isEmpty
+            || !structureMap.isEmpty || compactionSnapshot != nil
+    else { exit(0) }
 
     print("<project-memory>")
     print("The following learnings are automatically managed by Atelier.")
     print("Do NOT read, edit, or write these files with tools.")
 
-    if let combined {
+    for content in alwaysInjectContents {
         print("")
-        print(combined)
+        print(content)
+    }
+
+    if !manifestEntries.isEmpty {
+        print("")
+        print("Additional memory files available (read with the Read tool when relevant):")
+        for entry in manifestEntries {
+            print(entry)
+        }
     }
 
     if !structureMap.isEmpty {
@@ -461,6 +646,25 @@ func handleReinject(input: HookInput) {
     }
 
     print("</project-memory>")
+
+    // Compaction snapshot goes AFTER project-memory, at the end of the prompt,
+    // in the recency-favored attention position. This is the most important
+    // context for continuing the session — what was being worked on right now.
+    if let snapshot = compactionSnapshot {
+        let lines = snapshot.components(separatedBy: .newlines)
+        let capped = lines.count > maxSnapshotLines
+            ? lines.prefix(maxSnapshotLines).joined(separator: "\n")
+            : snapshot
+
+        print("")
+        print("<session-state>")
+        print("The context window was just compacted. Below is the recent conversation")
+        print("before compaction. Continue the session seamlessly — pick up exactly where")
+        print("you left off without asking the user to repeat themselves.")
+        print("")
+        print(capped)
+        print("</session-state>")
+    }
 }
 
 // MARK: - Path Guard
@@ -569,7 +773,7 @@ func handlePathGuard(input: HookInput) {
 
 let args = CommandLine.arguments
 guard args.count >= 2 else {
-    FileHandle.standardError.write(Data("Usage: atelier-hooks <distill|reinject|track-file|path-guard>\n".utf8))
+    FileHandle.standardError.write(Data("Usage: atelier-hooks <distill|reinject [compact|startup|resume]|track-file|path-guard>\n".utf8))
     exit(1)
 }
 
@@ -583,7 +787,8 @@ switch args[1] {
 case "distill":
     handleDistill(input: input)
 case "reinject":
-    handleReinject(input: input)
+    let trigger = args.count >= 3 ? args[2] : "startup"
+    handleReinject(input: input, trigger: trigger)
 case "track-file":
     handleTrackFile(input: input)
 case "path-guard":

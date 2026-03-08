@@ -1,6 +1,8 @@
 # Atelier — Opportunity Index
 
 > A native macOS application replacing Claude Cowork's Electron shell. A single adaptive conversation in a window — no modes, no tabs, no sidebars. Speed and simplicity are the moats.
+>
+> **Competitive reality:** Cowork already has scheduled tasks with full MCP access, cloud connectors (Calendar, Gmail, Drive, DocuSign), and a plugin marketplace. Atelier competes on native speed, resource efficiency, macOS integration (Services, Shortcuts, Spotlight, widgets, Focus filters), and background execution via launchd. If it's not faster or more native, it has no reason to exist.
 
 ---
 
@@ -8,7 +10,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **Total opportunities** | 45 |
+| **Total opportunities** | 42 |
 | **Categories** | 6 (Architecture, Security, Experience, Context, Hub, macOS) |
 | **Milestones** | 6 (M0–M5) |
 
@@ -21,7 +23,7 @@ Build order. Each milestone produces something usable and testable. Earlier mile
 | Milestone | Theme | Delivers |
 |-----------|-------|----------|
 | **M0** | Conversation | Native window, API connection, basic conversation working |
-| **M1** | Safe foundation | Sandboxed execution, file sharing, network isolation, permissions, credentials |
+| **M1** | Safe foundation | CLI filesystem boundary, file permissions, hooks, path guard |
 | **M2** | The product | Project model, context files, session persistence, conversational flow |
 | **M3** | Intelligence | Embedded Code terminal, approval flow, token visibility, capabilities, prompt injection defense |
 | **M4** | Native power | System services, menu bar, notifications, Shortcuts, **scheduled tasks & templates** |
@@ -44,17 +46,14 @@ Ship the core experience first: open the app, talk to Claude, get a response. Co
 
 ## M1 — Safe Foundation
 
-Stand up the sandbox and lock it down. Get the container running, file sharing working, and security hardened — so M2 can open real projects safely.
+Lock down tool access so projects can be opened safely. File tools scoped to project directory, sensitive paths denied, hooks for runtime enforcement.
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 2.1 | Sandboxed Execution | Improvement | 🔨 In progress (XPC ✅, Containerization not started) | [→](opportunities/architecture/02-sandboxed-execution.md) |
-| 2.2 | File Sharing (Host ↔ VM) | Improvement | 🔨 In progress (bookmarks ✅, VirtioFS mounts blocked on 2.1) | [→](opportunities/architecture/03-file-sharing.md) |
-| 2.3 | Network Isolation | Improvement | 🔨 In progress (policy engine ✅, enforcement blocked on 2.1) | [→](opportunities/security/01-network-isolation.md) |
 | 2.4 | File Access Permissions | Improvement | ✅ Done | [→](opportunities/security/02-file-access-permissions.md) |
-| 2.5 | File Deletion Safety | New | ✅ Done (optional enhancements deferred) | [→](opportunities/security/06-file-deletion-safety.md) |
-| 2.6 | Credential Storage | Improvement | ✅ Done (Secure Enclave/biometric deferred) | [→](opportunities/security/04-credential-storage.md) |
-| 2.7 | CLI Filesystem Boundary | New | ✅ Done (Phase 1–2) | [→](opportunities/security/07-cli-filesystem-boundary.md) |
+| 2.5 | File Deletion Safety | New | ✅ Done | [→](opportunities/security/06-file-deletion-safety.md) |
+| 2.6 | Credential Storage | Improvement | ✅ Done | [→](opportunities/security/04-credential-storage.md) |
+| 2.7 | CLI Filesystem Boundary | New | ✅ Done | [→](opportunities/security/07-cli-filesystem-boundary.md) |
 
 ---
 
@@ -68,7 +67,7 @@ With a working conversation (M0) and a safe sandbox (M1), this is where Atelier 
 | 3.2 | Project Context Files | New | ✅ Done | [→](opportunities/context/01-project-context-files.md) |
 | 3.3 | Session Persistence | New | ✅ Done | [→](opportunities/architecture/04-session-persistence.md) |
 | 3.4 | Conversational Flow | New | ✅ Done | [→](opportunities/experience/03-conversational-flow.md) |
-| 3.5 | Living Context | New | 🔨 In progress (Phase 1–2 blocked by bugs) | [→](opportunities/context/05-living-context.md) |
+| 3.5 | Living Context | New | 🔨 In progress (Phase 1–3 ✅, Phase 4–6 not started) | [→](opportunities/context/05-living-context.md) |
 | 3.6 | Hooks Infrastructure | New | 🔨 In progress (Phase 1–3 ✅) | [→](opportunities/architecture/09-hooks-infrastructure.md) |
 | 3.7 | Session Browser | New | 🔲 Not started | [→](opportunities/experience/05-session-browser.md) |
 | 3.P | **Polish:** ~~Status icon pairings~~ | HIG | ✅ Done | — |
@@ -146,13 +145,11 @@ Opportunities tracked in the repo but not yet assigned to a numbered milestone.
 For browsing by domain rather than build order.
 
 ### Architecture (`opportunities/architecture/`)
-The foundation — native app shell, VM execution, file sharing, sessions, memory.
+The foundation — native app shell, sessions, memory.
 
 | File | Milestone |
 |------|-----------|
 | [01-application-shell.md](opportunities/architecture/01-application-shell.md) | M0 |
-| [02-sandboxed-execution.md](opportunities/architecture/02-sandboxed-execution.md) | M1 |
-| [03-file-sharing.md](opportunities/architecture/03-file-sharing.md) | M1 |
 | [04-session-persistence.md](opportunities/architecture/04-session-persistence.md) | M2 |
 | [05-memory-management.md](opportunities/architecture/05-memory-management.md) | M4 |
 | [06-conversation-model.md](opportunities/architecture/06-conversation-model.md) | M0 |
@@ -163,11 +160,10 @@ The foundation — native app shell, VM execution, file sharing, sessions, memor
 | [11-session-continuity.md](opportunities/architecture/11-session-continuity.md) | M2 |
 
 ### Security (`opportunities/security/`)
-Network isolation, file permissions, prompt injection, credentials, audit, deletion safety.
+File permissions, prompt injection, credentials, audit, deletion safety.
 
 | File | Milestone |
 |------|-----------|
-| [01-network-isolation.md](opportunities/security/01-network-isolation.md) | M1 |
 | [02-file-access-permissions.md](opportunities/security/02-file-access-permissions.md) | M1 |
 | [03-prompt-injection-defense.md](opportunities/security/03-prompt-injection-defense.md) | M3 |
 | [04-credential-storage.md](opportunities/security/04-credential-storage.md) | M1 |
@@ -240,8 +236,6 @@ atelier/
 └── opportunities/
     ├── architecture/
     │   ├── 01-application-shell.md
-    │   ├── 02-sandboxed-execution.md
-    │   ├── 03-file-sharing.md
     │   ├── 04-session-persistence.md
     │   ├── 05-memory-management.md
     │   ├── 06-conversation-model.md
@@ -250,7 +244,6 @@ atelier/
     │   ├── 09-hooks-infrastructure.md
     │   └── 10-multi-window-isolation.md
     ├── security/
-    │   ├── 01-network-isolation.md
     │   ├── 02-file-access-permissions.md
     │   ├── 03-prompt-injection-defense.md
     │   ├── 04-credential-storage.md

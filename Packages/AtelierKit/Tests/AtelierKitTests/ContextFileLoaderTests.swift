@@ -228,7 +228,7 @@ struct ContextFileLoaderTests {
         #expect(localResults[0].filename == "learnings.md")
     }
 
-    @Test func memoryFilesIncludedInInjection() throws {
+    @Test func alwaysInjectMemoryFilesIncludedInFull() throws {
         let dir = try makeTempDir()
         defer { cleanup(dir) }
 
@@ -237,16 +237,134 @@ struct ContextFileLoaderTests {
             .appendingPathComponent("memory")
         try manager.createDirectory(at: memoryDir, withIntermediateDirectories: true)
         try "## Preferences\n- Use bullet lists".write(
-            to: memoryDir.appendingPathComponent("learnings.md"),
+            to: memoryDir.appendingPathComponent("preferences.md"),
             atomically: true, encoding: .utf8
         )
 
         let files = ContextFileLoader.discover(from: dir)
         let localFiles = files.filter { $0.url.path.hasPrefix(dir.path) }
         let content = try #require(ContextFileLoader.contentForInjection(from: localFiles))
-        #expect(content.contains("Use bullet lists"))
+        #expect(content.contains("## Preferences"))
+        #expect(content.contains("- Use bullet lists"))
         #expect(content.contains("<project-memory>"))
         #expect(content.contains("Do NOT read, edit, or write"))
+    }
+
+    @Test func onDemandMemoryFilesAppearAsManifestEntries() throws {
+        let dir = try makeTempDir()
+        defer { cleanup(dir) }
+
+        let memoryDir = dir
+            .appendingPathComponent(".atelier")
+            .appendingPathComponent("memory")
+        try manager.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+        try "## Key Decisions\n- Chose Stripe over Square".write(
+            to: memoryDir.appendingPathComponent("decisions.md"),
+            atomically: true, encoding: .utf8
+        )
+
+        let files = ContextFileLoader.discover(from: dir)
+        let localFiles = files.filter { $0.url.path.hasPrefix(dir.path) }
+        let content = try #require(ContextFileLoader.contentForInjection(from: localFiles))
+        // On-demand files should NOT have full content injected
+        #expect(!content.contains("- Chose Stripe over Square"))
+        // Should appear as a manifest entry with first-line preview
+        #expect(content.contains("- decisions.md: ## Key Decisions"))
+        #expect(content.contains("Additional memory files available"))
+        #expect(content.contains("<project-memory>"))
+    }
+
+    @Test func smartLoadingSplitsAlwaysInjectAndManifest() throws {
+        let dir = try makeTempDir()
+        defer { cleanup(dir) }
+
+        let memoryDir = dir
+            .appendingPathComponent(".atelier")
+            .appendingPathComponent("memory")
+        try manager.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+
+        // Always-inject file
+        try "## Preferences\n- Dark mode".write(
+            to: memoryDir.appendingPathComponent("preferences.md"),
+            atomically: true, encoding: .utf8
+        )
+        // Always-inject file
+        try "## Corrections\n- Say 'use' not 'leverage'".write(
+            to: memoryDir.appendingPathComponent("corrections.md"),
+            atomically: true, encoding: .utf8
+        )
+        // On-demand file
+        try "## Patterns\n- Files by client name".write(
+            to: memoryDir.appendingPathComponent("patterns.md"),
+            atomically: true, encoding: .utf8
+        )
+
+        let files = ContextFileLoader.discover(from: dir)
+        let localFiles = files.filter { $0.url.path.hasPrefix(dir.path) }
+        let content = try #require(ContextFileLoader.contentForInjection(from: localFiles))
+
+        // Always-inject files have full content
+        #expect(content.contains("- Dark mode"))
+        #expect(content.contains("- Say 'use' not 'leverage'"))
+
+        // On-demand file appears as manifest only
+        #expect(!content.contains("- Files by client name"))
+        #expect(content.contains("- patterns.md: ## Patterns"))
+    }
+
+    @Test func oversizedAlwaysInjectFileIsTruncated() throws {
+        let dir = try makeTempDir()
+        defer { cleanup(dir) }
+
+        let memoryDir = dir
+            .appendingPathComponent(".atelier")
+            .appendingPathComponent("memory")
+        try manager.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+
+        // Create a preferences.md that exceeds the hard cap
+        let lines = ["## Preferences"] + (1...60).map { "- Preference entry \($0)" }
+        let oversized = lines.joined(separator: "\n")
+        try oversized.write(
+            to: memoryDir.appendingPathComponent("preferences.md"),
+            atomically: true, encoding: .utf8
+        )
+
+        let files = ContextFileLoader.discover(from: dir)
+        let localFiles = files.filter { $0.url.path.hasPrefix(dir.path) }
+        let content = try #require(ContextFileLoader.contentForInjection(from: localFiles))
+
+        // Should contain the truncation notice
+        #expect(content.contains("...truncated"))
+        #expect(content.contains("preferences.md"))
+        // Should contain early entries but not late ones
+        #expect(content.contains("Preference entry 1"))
+        #expect(!content.contains("Preference entry 60"))
+    }
+
+    @Test func smallAlwaysInjectFileIsNotTruncated() throws {
+        let dir = try makeTempDir()
+        defer { cleanup(dir) }
+
+        let memoryDir = dir
+            .appendingPathComponent(".atelier")
+            .appendingPathComponent("memory")
+        try manager.createDirectory(at: memoryDir, withIntermediateDirectories: true)
+
+        let lines = ["## Corrections"] + (1...10).map { "- Fix \($0)" }
+        let small = lines.joined(separator: "\n")
+        try small.write(
+            to: memoryDir.appendingPathComponent("corrections.md"),
+            atomically: true, encoding: .utf8
+        )
+
+        let files = ContextFileLoader.discover(from: dir)
+        let localFiles = files.filter { $0.url.path.hasPrefix(dir.path) }
+        let content = try #require(ContextFileLoader.contentForInjection(from: localFiles))
+
+        // Should NOT be truncated
+        #expect(!content.contains("...truncated"))
+        #expect(content.contains("Fix 1"))
+        #expect(content.contains("Fix 10"))
     }
 
     @Test func contentForInjectionReturnsNilForEmptyContent() throws {

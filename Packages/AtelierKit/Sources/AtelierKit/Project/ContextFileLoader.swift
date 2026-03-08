@@ -87,38 +87,98 @@ public enum ContextFileLoader {
             }
     }
 
-    /// Reads all injectable files and concatenates their content.
+    /// Memory files that are always injected in full (high-value, small).
+    /// Everything else is listed as a manifest entry for on-demand reading.
+    private static let alwaysInjectFilenames: Set<String> = [
+        "preferences.md",
+        "corrections.md",
+    ]
+
+    /// Hard cap for always-inject files. If distillation fails to keep a file
+    /// compact, we truncate at injection time rather than blowing the context window.
+    /// 40 lines accommodates a heading + 30 bullet entries with some slack.
+    static let maxAlwaysInjectLines = 40
+
+    /// Reads injectable files and concatenates their content.
     ///
     /// Returns `nil` when there are no injectable files or all are empty,
     /// so callers can skip the `--append-system-prompt` flag entirely.
     ///
-    /// Memory files are wrapped with an instruction telling the agent
-    /// they are auto-managed and should not be edited directly.
+    /// Memory files use smart loading: `preferences.md` and `corrections.md`
+    /// are always injected in full. Other memory files appear as a manifest
+    /// so Claude can read them on demand when a topic comes up.
+    ///
+    /// Defense-in-depth: if an always-inject file exceeds `maxAlwaysInjectLines`,
+    /// only the first portion is injected with a note to read the full file on demand.
     public static func contentForInjection(from files: [ContextFile]) -> String? {
-        let parts = files
-            .filter { $0.source == .injected || $0.source == .memory }
-            .compactMap { file -> String? in
+        var parts: [String] = []
+        var alwaysInjectContents: [String] = []
+        var manifestEntries: [String] = []
+
+        for file in files {
+            switch file.source {
+            case .nativeCLI:
+                continue
+
+            case .injected:
                 guard let content = try? String(contentsOf: file.url, encoding: .utf8),
                       !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                else { return nil }
+                else { continue }
+                parts.append(content)
 
-                if file.source == .memory {
-                    return """
-                    <project-memory>
-                    The following learnings are automatically managed by the app. \
-                    Do NOT read, edit, or write these files with tools. \
-                    They update automatically after each conversation.
+            case .memory:
+                guard let content = try? String(contentsOf: file.url, encoding: .utf8),
+                      !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                else { continue }
 
-                    \(content)
-                    </project-memory>
-                    """
+                if alwaysInjectFilenames.contains(file.filename) {
+                    alwaysInjectContents.append(
+                        capContent(content, filename: file.filename)
+                    )
+                } else {
+                    let preview = content.components(separatedBy: .newlines)
+                        .first { !$0.trimmingCharacters(in: .whitespaces).isEmpty } ?? file.filename
+                    manifestEntries.append("- \(file.filename): \(preview)")
                 }
-
-                return content
             }
+        }
+
+        // Build the project-memory block
+        if !alwaysInjectContents.isEmpty || !manifestEntries.isEmpty {
+            var memoryBlock = """
+            <project-memory>
+            The following learnings are automatically managed by the app. \
+            Do NOT read, edit, or write these files with tools. \
+            They update automatically after each conversation.
+            """
+
+            for content in alwaysInjectContents {
+                memoryBlock += "\n\n\(content)"
+            }
+
+            if !manifestEntries.isEmpty {
+                memoryBlock += "\n\n"
+                memoryBlock += "Additional memory files available (read with the Read tool when relevant):\n"
+                memoryBlock += manifestEntries.joined(separator: "\n")
+            }
+
+            memoryBlock += "\n</project-memory>"
+            parts.append(memoryBlock)
+        }
 
         guard !parts.isEmpty else { return nil }
         return parts.joined(separator: "\n\n---\n\n")
+    }
+
+    /// Truncates content to `maxAlwaysInjectLines` if it exceeds the budget.
+    ///
+    /// When truncated, appends a note telling Claude the file was capped and
+    /// the full version is available via the Read tool.
+    private static func capContent(_ content: String, filename: String) -> String {
+        let lines = content.components(separatedBy: .newlines)
+        guard lines.count > maxAlwaysInjectLines else { return content }
+        let kept = lines.prefix(maxAlwaysInjectLines).joined(separator: "\n")
+        return kept + "\n(...truncated — read .atelier/memory/\(filename) for full content)"
     }
 
     private static var homeDirectory: String {

@@ -87,6 +87,28 @@ struct DistillationEngineTests {
         #expect(prompt.contains("NO_LEARNINGS"))
     }
 
+    @Test func promptIncludesPerFileBudgets() async {
+        let engine = makeEngine()
+        let prompt = await engine.buildDistillationPrompt(
+            conversationSummary: "User: Hello",
+            existingLearnings: nil
+        )
+        #expect(prompt.contains("## Preferences: max 25"))
+        #expect(prompt.contains("## Corrections: max 15"))
+        #expect(prompt.contains("## Decisions: max 30"))
+        #expect(prompt.contains("## Patterns: max 25"))
+    }
+
+    @Test func promptIncludesCondensationStrategy() async {
+        let engine = makeEngine()
+        let prompt = await engine.buildDistillationPrompt(
+            conversationSummary: "User: Hello",
+            existingLearnings: nil
+        )
+        #expect(prompt.contains("condense"))
+        #expect(prompt.contains("Merge related entries"))
+    }
+
     @Test func promptInstructsMerging() async {
         let engine = makeEngine()
         let prompt = await engine.buildDistillationPrompt(

@@ -122,8 +122,20 @@ public actor DistillationEngine {
         - Keep entries concise — one line per learning
         - No session-specific details (no timestamps, no tool names, no "currently working on")
         - If existing learnings are provided, merge: update if changed, add if new, keep if still valid, remove if contradicted
-        - Keep total output under 200 lines
         - If there is nothing meaningful to extract, output exactly: NO_LEARNINGS
+
+        Per-file line budgets (bullet entries, NOT counting the heading):
+        - ## Preferences: max 25 entries
+        - ## Corrections: max 15 entries
+        - ## Decisions: max 30 entries
+        - ## Patterns: max 25 entries
+
+        When a section approaches its budget, you MUST condense:
+        - Merge related entries into one ("prefers dark mode" + "use dark theme" → single entry)
+        - Subsume older entries into broader ones ("use DD/MM/YYYY" + "use metric units" → "Use DD/MM/YYYY dates and metric units")
+        - For decisions, keep the conclusion, drop the detailed rationale for old entries
+        - Drop entries that are subsumed by newer, more specific ones
+        - Prefer fewer, richer entries over many granular ones
 
         Begin output:
         """
