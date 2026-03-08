@@ -32,13 +32,6 @@ struct AtelierApp: App {
     @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some Scene {
-        #if DEBUG
-        MenuBarExtra("Context Health", systemImage: "brain") {
-            ContextHealthView(projectStore: projectStore)
-        }
-        .menuBarExtraStyle(.window)
-        #endif
-
         WindowGroup(for: UUID.self) { $projectID in
             ProjectWindow(
                 projectID: projectID,

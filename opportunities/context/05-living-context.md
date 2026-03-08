@@ -309,39 +309,29 @@ Smart loading reduces token waste; compaction snapshots preserve work state acro
 - Snapshot rotation: keeps only the 5 most recent snapshots, prunes older ones automatically
 - The user never loses their thread of work — compaction becomes invisible
 
-### Phase 4 — Project Fingerprinting (deferred)
-
-Not critical for the core loop. Can be added later as a first-session enhancement.
+### Phase 4 — Project Fingerprinting
 
 - On first session, scan project directory structure
 - Identify primary domain(s) based on file types, names, and directory patterns
 - Generate initial `context.md` with inferred project identity
 - Present to user for confirmation: "I think this is a [type] project. Does this look right?"
+- `SessionStart[startup]` hook on first session triggers fingerprinting
 
-### Phase 5 — Proactive Suggestions (deferred)
-
-Requires multiple real-world sessions to validate patterns. Revisit after the core loop has been used in production for several weeks.
+### Phase 5 — Proactive Suggestions
 
 - Track patterns across sessions (corrections, repeated instructions, style preferences)
 - After confidence threshold is met (3+ consistent signals), offer to save
 - UI for viewing and managing suggestions (dismiss, accept, modify)
 - Respect dismissals permanently — never re-suggest the same thing
+- `PostToolUseFailure` hook records failed approaches automatically
 
-### Phase 6 — Context Health ✅
+### Phase 6 — Context Health
 
-Debug-only menu bar panel for monitoring context health during development.
-
-**What's built:**
-- `ContextHealth` model — scans project root, discovers all context files, classifies by source (always-inject, manifest, injected, native CLI, structure map, compaction snapshot), estimates token cost (~4 chars/token)
-- `ContextHealthView` — SwiftUI debug panel showing summary stats, per-file sizes/lines/tokens, budget indicators (green/orange/red), compaction snapshot list, and full injection preview
-- `MenuBarExtra` in `AtelierApp` — brain icon in menu bar, `#if DEBUG` gated, `.window` style popover
-- Project picker — dropdown of all projects with root URLs, auto-selects most recently opened
-- Budget indicators — color-coded dots showing how close each file is to its distillation budget (Preferences: 25, Corrections: 15, Decisions: 30, Patterns: 25)
-
-**What's deferred:**
-- Staleness detection (needs session-count tracking per entry)
-- Conflict detection (needs semantic comparison between entries)
-- `InstructionsLoaded` hook (nice-to-have for verifying memory loads)
+- Dashboard showing active context files and their token cost
+- Staleness detection — flag entries that haven't been relevant in N sessions
+- Conflict detection — flag contradictions between context files
+- Token budget visualization — "Your context uses X of Y available tokens"
+- `InstructionsLoaded` hook verifies memory files are being read and tracks load order
 
 ## Dependencies
 
