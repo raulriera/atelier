@@ -25,6 +25,7 @@ struct AutomationFormView: View {
     @State private var weekday = 1
     @State private var monthDay = 1
     @State private var selectedModel: String?
+    @State private var selectedColor: TaskColor = .blue
 
     init(scheduleStore: ScheduleStore, projectPath: String, existingTask: ScheduledTask? = nil) {
         self.scheduleStore = scheduleStore
@@ -37,6 +38,10 @@ struct AutomationFormView: View {
             _prompt = State(initialValue: task.prompt)
             _selectedModel = State(initialValue: task.model)
 
+            if let preset = TaskColor(rawValue: task.colorName) {
+                _selectedColor = State(initialValue: preset)
+            }
+
             switch task.schedule {
             case .manual:
                 _scheduleType = State(initialValue: .manual)
@@ -44,6 +49,14 @@ struct AutomationFormView: View {
                 _scheduleType = State(initialValue: .hourly)
             case .daily(let h, let m):
                 _scheduleType = State(initialValue: .daily)
+                _hour = State(initialValue: h)
+                _minute = State(initialValue: m)
+            case .weekdays(let h, let m):
+                _scheduleType = State(initialValue: .weekdays)
+                _hour = State(initialValue: h)
+                _minute = State(initialValue: m)
+            case .weekends(let h, let m):
+                _scheduleType = State(initialValue: .weekends)
                 _hour = State(initialValue: h)
                 _minute = State(initialValue: m)
             case .weekly(let w, let h, let m):
@@ -68,73 +81,94 @@ struct AutomationFormView: View {
     }
 
     var body: some View {
-        Form {
-            Section("Task") {
-                TextField("Name", text: $name, prompt: Text("Morning briefing"))
-                TextField("Description", text: $description, prompt: Text("Optional"))
-            }
-
-            Section("Prompt") {
-                TextEditor(text: $prompt)
-                    .font(.body)
-                    .frame(minHeight: 80)
-            }
-
-            Section("Schedule") {
-                Picker("Frequency", selection: $scheduleType) {
-                    ForEach(ScheduleType.allCases) { type in
-                        Text(type.label).tag(type)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Form {
+                    Section("Task") {
+                        TextField("Name", text: $name, prompt: Text("Morning briefing"))
+                        TextField("Description", text: $description, prompt: Text("Optional"))
                     }
                 }
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+                .fixedSize(horizontal: false, vertical: true)
 
-                if scheduleType.showsTime {
-                    HStack {
-                        Picker("Hour", selection: $hour) {
-                            ForEach(0..<24, id: \.self) { h in
-                                Text(String(format: "%d %@", h % 12 == 0 ? 12 : h % 12, h >= 12 ? "PM" : "AM"))
-                                    .tag(h)
+                // Prompt lives outside the Form so it has no section container
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text("Prompt")
+                        .font(.system(.subheadline))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    PromptField(text: $prompt)
+                }
+                .padding(.horizontal, 20) // Matches .formStyle(.grouped) section inset
+                .padding(.vertical, Spacing.xs)
+
+                Form {
+                    Section("Schedule") {
+                        Picker("Frequency", selection: $scheduleType) {
+                            ForEach(ScheduleType.allCases) { type in
+                                Text(type.label).tag(type)
                             }
                         }
 
-                        Picker("Minute", selection: $minute) {
-                            ForEach([0, 15, 30, 45], id: \.self) { m in
-                                Text(String(format: ":%02d", m)).tag(m)
+                        if scheduleType.showsTime {
+                            HStack {
+                                Picker("Hour", selection: $hour) {
+                                    ForEach(0..<24, id: \.self) { h in
+                                        Text(String(format: "%d %@", h % 12 == 0 ? 12 : h % 12, h >= 12 ? "PM" : "AM"))
+                                            .tag(h)
+                                    }
+                                }
+
+                                Picker("Minute", selection: $minute) {
+                                    ForEach([0, 15, 30, 45], id: \.self) { m in
+                                        Text(String(format: ":%02d", m)).tag(m)
+                                    }
+                                }
+                            }
+                        }
+
+                        if scheduleType == .weekly {
+                            Picker("Day", selection: $weekday) {
+                                Text("Sunday").tag(0)
+                                Text("Monday").tag(1)
+                                Text("Tuesday").tag(2)
+                                Text("Wednesday").tag(3)
+                                Text("Thursday").tag(4)
+                                Text("Friday").tag(5)
+                                Text("Saturday").tag(6)
+                            }
+                        }
+
+                        if scheduleType == .monthly {
+                            Picker("Day of month", selection: $monthDay) {
+                                ForEach(1...28, id: \.self) { d in
+                                    Text("\(d)").tag(d)
+                                }
                             }
                         }
                     }
-                }
 
-                if scheduleType == .weekly {
-                    Picker("Day", selection: $weekday) {
-                        Text("Sunday").tag(0)
-                        Text("Monday").tag(1)
-                        Text("Tuesday").tag(2)
-                        Text("Wednesday").tag(3)
-                        Text("Thursday").tag(4)
-                        Text("Friday").tag(5)
-                        Text("Saturday").tag(6)
-                    }
-                }
-
-                if scheduleType == .monthly {
-                    Picker("Day of month", selection: $monthDay) {
-                        ForEach(1...28, id: \.self) { d in
-                            Text("\(d)").tag(d)
+                    Section("Model") {
+                        Picker("Model", selection: $selectedModel) {
+                            Text("Default").tag(nil as String?)
+                            ForEach(ModelConfiguration.allModels) { model in
+                                Text(model.displayName).tag(model.cliAlias as String?)
+                            }
                         }
                     }
-                }
-            }
 
-            Section("Model") {
-                Picker("Model", selection: $selectedModel) {
-                    Text("Default").tag(nil as String?)
-                    ForEach(ModelConfiguration.allModels) { model in
-                        Text(model.displayName).tag(model.cliAlias as String?)
+                    Section("Color") {
+                        colorPicker
                     }
                 }
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .formStyle(.grouped)
         .frame(minWidth: 360, idealWidth: 420, minHeight: 400, idealHeight: 500)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -150,8 +184,37 @@ struct AutomationFormView: View {
         }
     }
 
+    // MARK: - Color Picker
+
+    private var colorPicker: some View {
+        HStack(spacing: Spacing.xs) {
+            ForEach(TaskColor.allCases) { color in
+                Button {
+                    selectedColor = color
+                } label: {
+                    Circle()
+                        .fill(color.swiftUIColor.gradient)
+                        .frame(width: 24, height: 24)
+                        .overlay {
+                            if selectedColor == color {
+                                Image(systemName: "checkmark")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(color.rawValue.capitalized)
+                .accessibilityAddTraits(selectedColor == color ? .isSelected : [])
+            }
+        }
+    }
+
+    // MARK: - Save
+
     private func save() {
         let schedule = buildSchedule()
+        let colorValue = selectedColor.rawValue
 
         if var task = existingTask {
             task.name = name.trimmingCharacters(in: .whitespaces)
@@ -159,6 +222,7 @@ struct AutomationFormView: View {
             task.prompt = prompt.trimmingCharacters(in: .whitespaces)
             task.schedule = schedule
             task.model = selectedModel
+            task.colorName = colorValue
             scheduleStore.update(task)
         } else {
             let task = ScheduledTask(
@@ -167,7 +231,8 @@ struct AutomationFormView: View {
                 prompt: prompt.trimmingCharacters(in: .whitespaces),
                 schedule: schedule,
                 model: selectedModel,
-                projectPath: projectPath
+                projectPath: projectPath,
+                colorName: colorValue
             )
             scheduleStore.add(task)
         }
@@ -178,6 +243,8 @@ struct AutomationFormView: View {
         case .manual: .manual
         case .hourly: .hourly
         case .daily: .daily(hour: hour, minute: minute)
+        case .weekdays: .weekdays(hour: hour, minute: minute)
+        case .weekends: .weekends(hour: hour, minute: minute)
         case .weekly: .weekly(weekday: weekday, hour: hour, minute: minute)
         case .monthly: .monthly(day: monthDay, hour: hour, minute: minute)
         }
@@ -188,7 +255,7 @@ struct AutomationFormView: View {
 
 /// Simplified schedule picker cases for the form UI.
 private enum ScheduleType: String, CaseIterable, Identifiable {
-    case manual, hourly, daily, weekly, monthly
+    case manual, hourly, daily, weekdays, weekends, weekly, monthly
 
     var id: String { rawValue }
 
@@ -197,6 +264,8 @@ private enum ScheduleType: String, CaseIterable, Identifiable {
         case .manual: "Manual"
         case .hourly: "Every hour"
         case .daily: "Daily"
+        case .weekdays: "Weekdays"
+        case .weekends: "Weekends"
         case .weekly: "Weekly"
         case .monthly: "Monthly"
         }
@@ -205,8 +274,35 @@ private enum ScheduleType: String, CaseIterable, Identifiable {
     var showsTime: Bool {
         switch self {
         case .manual, .hourly: false
-        case .daily, .weekly, .monthly: true
+        case .daily, .weekdays, .weekends, .weekly, .monthly: true
         }
+    }
+}
+
+// MARK: - Prompt Field
+
+/// Text editor with the shared glowing field treatment, no submit button.
+private struct PromptField: View {
+    @Binding var text: String
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $text)
+                .focused($isFocused)
+                .font(.conversationBody)
+                .foregroundStyle(.contentPrimary)
+                .textEditorStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .contentMargins(.all, 0, for: .scrollContent)
+                .scrollIndicators(.hidden)
+                .frame(minHeight: 80, maxHeight: 200)
+                .fixedSize(horizontal: false, vertical: true)
+                .offset(y: -2)
+        }
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .glowingFieldContainer(isFocused: isFocused)
     }
 }
 

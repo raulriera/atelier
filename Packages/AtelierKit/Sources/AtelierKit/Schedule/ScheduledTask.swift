@@ -25,6 +25,8 @@ public struct ScheduledTask: Sendable, Codable, Identifiable {
     public var lastRunDate: Date?
     /// Whether the last run succeeded, if ever run.
     public var lastRunSucceeded: Bool?
+    /// Card color name from ``TaskColor``.
+    public var colorName: String
     /// When the task was created.
     public var createdAt: Date
 
@@ -50,6 +52,7 @@ public struct ScheduledTask: Sendable, Codable, Identifiable {
         isPaused: Bool = false,
         lastRunDate: Date? = nil,
         lastRunSucceeded: Bool? = nil,
+        colorName: String = TaskColor.defaultName,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -62,6 +65,7 @@ public struct ScheduledTask: Sendable, Codable, Identifiable {
         self.isPaused = isPaused
         self.lastRunDate = lastRunDate
         self.lastRunSucceeded = lastRunSucceeded
+        self.colorName = colorName
         self.createdAt = createdAt
     }
 }

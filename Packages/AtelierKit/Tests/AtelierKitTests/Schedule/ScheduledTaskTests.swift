@@ -35,6 +35,16 @@ struct ScheduledTaskTests {
         #expect(schedule.displayName == "Daily at 12:00 AM")
     }
 
+    @Test func weekdaysDisplayName() {
+        let schedule = TaskSchedule.weekdays(hour: 9, minute: 0)
+        #expect(schedule.displayName == "Weekdays at 9:00 AM")
+    }
+
+    @Test func weekendsDisplayName() {
+        let schedule = TaskSchedule.weekends(hour: 10, minute: 30)
+        #expect(schedule.displayName == "Weekends at 10:30 AM")
+    }
+
     @Test func weeklyDisplayName() {
         let schedule = TaskSchedule.weekly(weekday: 1, hour: 15, minute: 0)
         #expect(schedule.displayName == "Monday at 3:00 PM")
@@ -55,48 +65,62 @@ struct ScheduledTaskTests {
         #expect(schedule.displayName == "Custom schedule")
     }
 
-    // MARK: - TaskSchedule.calendarIntervalDictionary
+    // MARK: - TaskSchedule.calendarIntervals
 
-    @Test func manualCalendarIntervalIsNil() {
-        #expect(TaskSchedule.manual.calendarIntervalDictionary == nil)
+    @Test func manualCalendarIntervalsIsNil() {
+        #expect(TaskSchedule.manual.calendarIntervals == nil)
     }
 
-    @Test func hourlyCalendarInterval() {
-        let dict = TaskSchedule.hourly.calendarIntervalDictionary
-        #expect(dict == ["Minute": 0])
+    @Test func hourlyCalendarIntervals() {
+        let intervals = TaskSchedule.hourly.calendarIntervals
+        #expect(intervals == [["Minute": 0]])
     }
 
-    @Test func dailyCalendarInterval() {
-        let dict = TaskSchedule.daily(hour: 8, minute: 0).calendarIntervalDictionary
-        #expect(dict == ["Hour": 8, "Minute": 0])
+    @Test func dailyCalendarIntervals() {
+        let intervals = TaskSchedule.daily(hour: 8, minute: 0).calendarIntervals
+        #expect(intervals == [["Hour": 8, "Minute": 0]])
     }
 
-    @Test func weeklyCalendarInterval() {
-        let dict = TaskSchedule.weekly(weekday: 1, hour: 15, minute: 0).calendarIntervalDictionary
-        #expect(dict == ["Weekday": 1, "Hour": 15, "Minute": 0])
+    @Test func weekdaysCalendarIntervals() {
+        let intervals = TaskSchedule.weekdays(hour: 9, minute: 0).calendarIntervals
+        #expect(intervals?.count == 5)
+        #expect(intervals?[0] == ["Weekday": 1, "Hour": 9, "Minute": 0])
+        #expect(intervals?[4] == ["Weekday": 5, "Hour": 9, "Minute": 0])
     }
 
-    @Test func monthlyCalendarInterval() {
-        let dict = TaskSchedule.monthly(day: 15, hour: 9, minute: 30).calendarIntervalDictionary
-        #expect(dict == ["Day": 15, "Hour": 9, "Minute": 30])
+    @Test func weekendsCalendarIntervals() {
+        let intervals = TaskSchedule.weekends(hour: 10, minute: 30).calendarIntervals
+        #expect(intervals?.count == 2)
+        #expect(intervals?[0] == ["Weekday": 0, "Hour": 10, "Minute": 30])
+        #expect(intervals?[1] == ["Weekday": 6, "Hour": 10, "Minute": 30])
     }
 
-    @Test func cronCalendarIntervalWithAllFields() {
-        let dict = TaskSchedule.cron(minute: 30, hour: 14, day: 1, month: 6, weekday: 3)
-            .calendarIntervalDictionary
-        #expect(dict == ["Minute": 30, "Hour": 14, "Day": 1, "Month": 6, "Weekday": 3])
+    @Test func weeklyCalendarIntervals() {
+        let intervals = TaskSchedule.weekly(weekday: 1, hour: 15, minute: 0).calendarIntervals
+        #expect(intervals == [["Weekday": 1, "Hour": 15, "Minute": 0]])
     }
 
-    @Test func cronCalendarIntervalWithPartialFields() {
-        let dict = TaskSchedule.cron(minute: 0, hour: nil, day: nil, month: nil, weekday: nil)
-            .calendarIntervalDictionary
-        #expect(dict == ["Minute": 0])
+    @Test func monthlyCalendarIntervals() {
+        let intervals = TaskSchedule.monthly(day: 15, hour: 9, minute: 30).calendarIntervals
+        #expect(intervals == [["Day": 15, "Hour": 9, "Minute": 30]])
     }
 
-    @Test func cronCalendarIntervalAllNilReturnsNil() {
-        let dict = TaskSchedule.cron(minute: nil, hour: nil, day: nil, month: nil, weekday: nil)
-            .calendarIntervalDictionary
-        #expect(dict == nil)
+    @Test func cronCalendarIntervalsWithAllFields() {
+        let intervals = TaskSchedule.cron(minute: 30, hour: 14, day: 1, month: 6, weekday: 3)
+            .calendarIntervals
+        #expect(intervals == [["Minute": 30, "Hour": 14, "Day": 1, "Month": 6, "Weekday": 3]])
+    }
+
+    @Test func cronCalendarIntervalsWithPartialFields() {
+        let intervals = TaskSchedule.cron(minute: 0, hour: nil, day: nil, month: nil, weekday: nil)
+            .calendarIntervals
+        #expect(intervals == [["Minute": 0]])
+    }
+
+    @Test func cronCalendarIntervalsAllNilReturnsNil() {
+        let intervals = TaskSchedule.cron(minute: nil, hour: nil, day: nil, month: nil, weekday: nil)
+            .calendarIntervals
+        #expect(intervals == nil)
     }
 
     // MARK: - logURL

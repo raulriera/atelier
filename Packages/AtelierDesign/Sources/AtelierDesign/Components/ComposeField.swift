@@ -20,7 +20,6 @@ public struct ComposeField: View {
     let onStop: (() -> Void)?
 
     @FocusState private var isFocused: Bool
-    @Environment(\.controlActiveState) private var controlActiveState
     @State private var fieldHeight: CGFloat = 48
 
     public init(
@@ -54,12 +53,6 @@ public struct ComposeField: View {
     /// Concentric inner radius: outer radius minus the smallest padding.
     private var innerCornerRadius: CGFloat {
         max(cornerRadius - Spacing.xs, 0)
-    }
-
-    /// Show the rainbow glow only when the field is focused AND the window is key.
-    /// Background windows keep their focus state but skip the gradient rendering.
-    private var showsGlow: Bool {
-        isFocused && controlActiveState == .key
     }
 
     public var body: some View {
@@ -117,32 +110,7 @@ public struct ComposeField: View {
         .clipShape(.rect(cornerRadius: innerCornerRadius, style: .continuous))
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.xs)
-        // Glass background
-        .background(
-            .ultraThinMaterial,
-            in: .rect(cornerRadius: cornerRadius, style: .continuous)
-        )
-        // Static rainbow border
-        .overlay {
-            if showsGlow {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(AIGlow.angular, lineWidth: 1.5)
-                    .opacity(0.6)
-                    .transition(.opacity)
-            }
-        }
-        // Static outer glow
-        .background {
-            if showsGlow {
-                RoundedRectangle(cornerRadius: cornerRadius + 4, style: .continuous)
-                    .fill(AIGlow.angular)
-                    .blur(radius: 12)
-                    .opacity(0.2)
-                    .padding(-4)
-                    .transition(.opacity)
-            }
-        }
-        .animation(Motion.morph, value: showsGlow)
+        .glowingFieldContainer(isFocused: isFocused, cornerRadius: cornerRadius)
         .animation(Motion.morph, value: cornerRadius)
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height in
             fieldHeight = height

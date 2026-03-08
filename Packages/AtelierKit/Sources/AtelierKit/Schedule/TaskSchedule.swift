@@ -11,6 +11,10 @@ public enum TaskSchedule: Sendable, Codable, Hashable {
     case hourly
     /// Fires once per day at the given hour and minute.
     case daily(hour: Int, minute: Int)
+    /// Fires Monday through Friday at the given time.
+    case weekdays(hour: Int, minute: Int)
+    /// Fires Saturday and Sunday at the given time.
+    case weekends(hour: Int, minute: Int)
     /// Fires once per week on the given weekday (0 = Sunday) at the given time.
     case weekly(weekday: Int, hour: Int, minute: Int)
     /// Fires once per month on the given day at the given time.
@@ -29,6 +33,10 @@ public enum TaskSchedule: Sendable, Codable, Hashable {
             "Every hour"
         case .daily(let hour, let minute):
             "Daily at \(Self.formatTime(hour: hour, minute: minute))"
+        case .weekdays(let hour, let minute):
+            "Weekdays at \(Self.formatTime(hour: hour, minute: minute))"
+        case .weekends(let hour, let minute):
+            "Weekends at \(Self.formatTime(hour: hour, minute: minute))"
         case .weekly(let weekday, let hour, let minute):
             "\(Self.weekdayName(weekday)) at \(Self.formatTime(hour: hour, minute: minute))"
         case .monthly(let day, let hour, let minute):
@@ -38,23 +46,32 @@ public enum TaskSchedule: Sendable, Codable, Hashable {
         }
     }
 
-    /// Converts the schedule to a launchd `StartCalendarInterval` dictionary.
+    /// Converts the schedule to launchd `StartCalendarInterval` dictionaries.
     ///
     /// Returns `nil` for `.manual` since it never auto-fires.
-    public var calendarIntervalDictionary: [String: Int]? {
+    /// Weekdays and weekends expand into multiple intervals (one per day).
+    public var calendarIntervals: [[String: Int]]? {
         switch self {
         case .manual:
             nil
         case .hourly:
-            ["Minute": 0]
+            [["Minute": 0]]
         case .daily(let hour, let minute):
-            ["Hour": hour, "Minute": minute]
+            [["Hour": hour, "Minute": minute]]
+        case .weekdays(let hour, let minute):
+            (1...5).map { ["Weekday": $0, "Hour": hour, "Minute": minute] }
+        case .weekends(let hour, let minute):
+            [0, 6].map { ["Weekday": $0, "Hour": hour, "Minute": minute] }
         case .weekly(let weekday, let hour, let minute):
-            ["Weekday": weekday, "Hour": hour, "Minute": minute]
+            [["Weekday": weekday, "Hour": hour, "Minute": minute]]
         case .monthly(let day, let hour, let minute):
-            ["Day": day, "Hour": hour, "Minute": minute]
+            [["Day": day, "Hour": hour, "Minute": minute]]
         case .cron(let minute, let hour, let day, let month, let weekday):
-            Self.buildCronDictionary(minute: minute, hour: hour, day: day, month: month, weekday: weekday)
+            if let dict = Self.buildCronDictionary(minute: minute, hour: hour, day: day, month: month, weekday: weekday) {
+                [dict]
+            } else {
+                nil
+            }
         }
     }
 

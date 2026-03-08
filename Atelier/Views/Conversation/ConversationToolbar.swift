@@ -12,8 +12,12 @@ struct ConversationToolbar: ToolbarContent {
             HStack(spacing: 0) {
                 ForEach(InspectorTab.allCases) { tab in
                     Button {
-                        inspectorTab = tab
-                        showInspector = true
+                        if inspectorTab == tab && showInspector {
+                            showInspector = false
+                        } else {
+                            inspectorTab = tab
+                            showInspector = true
+                        }
                     } label: {
                         Image(systemName: tab.systemImage)
                             .frame(width: 28, height: 28)
