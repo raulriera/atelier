@@ -1,15 +1,19 @@
 import Foundation
 
 /// Abstraction over spawning a CLI process, enabling test injection.
-protocol CLIRunner: Sendable {
+public protocol CLIRunner: Sendable {
     func run(arguments: [String], workingDirectory: URL) async throws -> String
 }
 
 /// Runs a real `Process` — the production implementation.
-struct ProcessCLIRunner: CLIRunner {
-    let executablePath: String
+public struct ProcessCLIRunner: CLIRunner {
+    public let executablePath: String
 
-    func run(arguments: [String], workingDirectory: URL) async throws -> String {
+    public init(executablePath: String) {
+        self.executablePath = executablePath
+    }
+
+    public func run(arguments: [String], workingDirectory: URL) async throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
         process.arguments = arguments

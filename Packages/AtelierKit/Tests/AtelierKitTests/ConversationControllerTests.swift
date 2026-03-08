@@ -64,7 +64,8 @@ private final class SpyEngine: ConversationEngine, @unchecked Sendable {
 @MainActor
 private func makeController(
     engine: any ConversationEngine = MockEngine(events: []),
-    persistence: SessionPersistence? = nil
+    persistence: SessionPersistence? = nil,
+    workingDirectory: URL? = nil
 ) async -> ConversationController {
     let store = CapabilityStore()
     let p = persistence ?? InMemorySessionPersistence()
@@ -72,7 +73,7 @@ private func makeController(
         engine: engine,
         capabilityStore: store,
         sessionPersistence: p,
-        workingDirectory: nil
+        workingDirectory: workingDirectory
     )
 }
 
@@ -325,6 +326,88 @@ struct ConversationControllerTests {
 
             let sentModel = try #require(spy.sentModels.first)
             #expect(sentModel.modelId == ModelConfiguration.opus.modelId)
+        }
+    }
+
+    @Suite("Project fingerprinting")
+    struct Fingerprinting {
+
+        private func makeTempProject(withContextFile: Bool = false) throws -> URL {
+            let dir = FileManager.default.temporaryDirectory
+                .appendingPathComponent("CCTests-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+            // Add some files so the fingerprint has content
+            try "revenue".write(to: dir.appendingPathComponent("data.csv"), atomically: true, encoding: .utf8)
+            try "notes".write(to: dir.appendingPathComponent("notes.txt"), atomically: true, encoding: .utf8)
+
+            if withContextFile {
+                let atelierDir = dir.appendingPathComponent(".atelier", isDirectory: true)
+                try FileManager.default.createDirectory(at: atelierDir, withIntermediateDirectories: true)
+                try "Custom context".write(
+                    to: atelierDir.appendingPathComponent("context.md"),
+                    atomically: true,
+                    encoding: .utf8
+                )
+            }
+
+            return dir
+        }
+
+        private func cleanup(_ url: URL) {
+            try? FileManager.default.removeItem(at: url)
+        }
+
+        @Test("checkAvailability triggers background fingerprinting when no context.md exists", .timeLimit(.minutes(1)))
+        @MainActor func triggersFingerprinting() async throws {
+            let dir = try makeTempProject()
+            defer { cleanup(dir) }
+
+            let controller = await makeController(workingDirectory: dir)
+            controller.checkAvailability()
+
+            // Wait for the background task to complete
+            try await Task.sleep(for: .milliseconds(200))
+
+            let contextPath = dir
+                .appendingPathComponent(".atelier", isDirectory: true)
+                .appendingPathComponent("context.md")
+            #expect(FileManager.default.fileExists(atPath: contextPath.path))
+
+            let content = try String(contentsOf: contextPath, encoding: .utf8)
+            #expect(content.contains("# Project Context"))
+        }
+
+        @Test("checkAvailability does not overwrite existing context.md", .timeLimit(.minutes(1)))
+        @MainActor func doesNotOverwriteExisting() async throws {
+            let dir = try makeTempProject(withContextFile: true)
+            defer { cleanup(dir) }
+
+            let controller = await makeController(workingDirectory: dir)
+            controller.checkAvailability()
+
+            try await Task.sleep(for: .milliseconds(200))
+
+            let contextPath = dir
+                .appendingPathComponent(".atelier", isDirectory: true)
+                .appendingPathComponent("context.md")
+            let content = try String(contentsOf: contextPath, encoding: .utf8)
+            #expect(content == "Custom context")
+        }
+
+        @Test("checkAvailability returns immediately without blocking")
+        @MainActor func nonBlocking() async throws {
+            let dir = try makeTempProject()
+            defer { cleanup(dir) }
+
+            let controller = await makeController(workingDirectory: dir)
+
+            // checkAvailability is synchronous — it must return immediately
+            // even when fingerprinting is needed
+            controller.checkAvailability()
+
+            // If we get here, it didn't block
+            #expect(!controller.session.isStreaming)
         }
     }
 

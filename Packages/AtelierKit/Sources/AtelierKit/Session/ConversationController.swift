@@ -33,6 +33,7 @@ public final class ConversationController {
 
     private var streamingTask: Task<Void, Never>?
     private var saveTask: Task<Void, Never>?
+    private var fingerprintTask: Task<Void, Never>?
     private var approvalServer: ApprovalServer?
     private var approvalObserverTask: Task<Void, Never>?
     private var askUserObserverTask: Task<Void, Never>?
@@ -114,6 +115,17 @@ public final class ConversationController {
         if let cwd = workingDirectory {
             activeContextFiles = ContextFileLoader.discover(from: cwd)
             try? HooksManager(projectRoot: cwd).install()
+
+            // Generate a context file in the background if one doesn't exist yet.
+            // generateIfMissing is a no-op when the file already exists.
+            // Uses Haiku for a natural-language summary when the CLI is available.
+            let root = cwd
+            let runner: CLIRunner? = CLIDiscovery.isAvailable
+                ? ProcessCLIRunner(executablePath: CLIDiscovery.findCLI())
+                : nil
+            fingerprintTask = Task.detached(priority: .utility) {
+                await ProjectFingerprinter.generateIfMissing(at: root, runner: runner)
+            }
         }
     }
 
@@ -125,6 +137,8 @@ public final class ConversationController {
             streamingTask = nil
             session.completeAssistantMessage(usage: TokenUsage())
         }
+        fingerprintTask?.cancel()
+        fingerprintTask = nil
         saveTask?.cancel()
         saveTask = nil
         if let captured = session.snapshot(wasInterrupted: wasStreaming) {
