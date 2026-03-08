@@ -49,6 +49,7 @@ struct AtelierApp: App {
             height: Layout.defaultWindowHeight
         )
         .windowResizability(.contentSize)
+        .windowTabBehavior(.disabled)
         .commands {
             CommandGroup(after: .toolbar) {
                 Button {
