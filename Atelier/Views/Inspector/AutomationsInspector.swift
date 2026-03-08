@@ -126,6 +126,7 @@ private struct AutomationCard: View {
     let onDelete: () -> Void
 
     @State private var showingDeleteConfirmation = false
+    @State private var optionKeyHeld = false
 
     /// Resolves the stored color name to a SwiftUI color.
     private var cardColor: Color {
@@ -187,6 +188,10 @@ private struct AutomationCard: View {
             .opacity(task.isPaused ? 0.6 : 1)
         }
         .buttonStyle(.plain)
+        .onAppear { optionKeyHeld = NSEvent.modifierFlags.contains(.option) }
+        .onModifierKeysChanged { _, new in
+            optionKeyHeld = new.contains(.option)
+        }
         .confirmationDialog("Delete \"\(task.name)\"?", isPresented: $showingDeleteConfirmation) {
             Button("Delete", role: .destructive, action: onDelete)
         } message: {
@@ -198,6 +203,14 @@ private struct AutomationCard: View {
         Menu {
             Button(task.isPaused ? "Resume" : "Pause", action: onTogglePause)
             Button("Run Now", action: onRunNow)
+
+            if optionKeyHeld {
+                Divider()
+                Button("Show Logs") {
+                    NSWorkspace.shared.open(task.logURL)
+                }
+            }
+
             Divider()
             Button("Delete", role: .destructive) { showingDeleteConfirmation = true }
         } label: {

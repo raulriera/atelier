@@ -23,7 +23,7 @@ struct WelcomeView: View {
                     .font(.title2)
                     .foregroundStyle(.contentPrimary)
 
-                Text("Welcome to Atelier")
+                Text("Let's work on something great!")
                     .font(.sectionTitle)
                     .foregroundStyle(.contentPrimary)
             }

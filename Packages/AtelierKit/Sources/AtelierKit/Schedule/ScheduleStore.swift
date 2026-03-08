@@ -174,14 +174,15 @@ public final class ScheduleStore {
                     arguments += ["--model", model]
                 }
 
-                // Pre-approve file tools scoped to the project directory.
-                // Bash is intentionally excluded — it can't be scoped to a path
-                // and would allow arbitrary system access. Containers (M1) will
-                // solve this by running tasks in an isolated VM where Bash is safe.
+                // Pre-approve file tools scoped to the project directory
+                // and Bash (unscoped — CLI doesn't support path-scoping Bash).
+                // TODO: Once Containerization (M1) lands, Bash runs inside an
+                // isolated VM with only the project folder mounted, making this safe.
                 let projectRoot = URL(fileURLWithPath: task.projectPath).standardizedFileURL.path
                 for tool in ["Read", "Glob", "Grep", "Write", "Edit"] {
                     arguments += ["--allowedTools", "\(tool)(\(projectRoot)/*)"]
                 }
+                arguments += ["--allowedTools", "Bash"]
                 arguments += CLIEngine.sensitivePathDenyRules()
 
                 process.arguments = arguments
