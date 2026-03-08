@@ -5,7 +5,7 @@ import AtelierKit
 struct ConversationWindow: View {
     @State private var controller: ConversationController
     @State private var draft = ""
-    @State private var showInspector = true
+    @State private var showInspector = false
     @State private var inspectorTab: InspectorTab = .capabilities
     @State private var showComposeField = false
 
