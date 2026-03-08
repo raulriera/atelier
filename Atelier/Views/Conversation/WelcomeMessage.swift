@@ -31,7 +31,7 @@ struct WelcomeView: View {
             // Suggestion grid — non-lazy to avoid the reversed scroll view
             // dropping off-screen rows when the compose field expands.
             Grid(horizontalSpacing: Spacing.sm, verticalSpacing: Spacing.sm) {
-                ForEach(0..<suggestions.count / 2, id: \.self) { row in
+                ForEach(0..<(suggestions.count + 1) / 2, id: \.self) { row in
                     GridRow {
                         ForEach(0..<2, id: \.self) { col in
                             let index = row * 2 + col
@@ -59,6 +59,7 @@ struct WelcomeView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.lg)
         .onAppear {
+            guard suggestions.isEmpty else { return }
             suggestions = SuggestionProvider.suggestions(enabledCapabilityIDs: enabledCapabilityIDs)
         }
     }
