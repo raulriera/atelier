@@ -48,13 +48,13 @@ Stand up the sandbox and lock it down. Get the container running, file sharing w
 
 | # | Opportunity | Type | Status | Link |
 |---|-----------|------|--------|------|
-| 2.1 | Sandboxed Execution | Improvement | 🔨 In progress | [→](opportunities/architecture/02-sandboxed-execution.md) |
-| 2.2 | File Sharing (Host ↔ VM) | Improvement | 🔲 Not started | [→](opportunities/architecture/03-file-sharing.md) |
-| 2.3 | Network Isolation | Improvement | 🔲 Not started | [→](opportunities/security/01-network-isolation.md) |
-| 2.4 | File Access Permissions | Improvement | 🔲 Not started | [→](opportunities/security/02-file-access-permissions.md) |
-| 2.5 | File Deletion Safety | New | 🔲 Not started | [→](opportunities/security/06-file-deletion-safety.md) |
-| 2.6 | Credential Storage | Improvement | 🔲 Not started | [→](opportunities/security/04-credential-storage.md) |
-| 2.7 | CLI Filesystem Boundary | New | 🔨 In progress (Phase 1–2 ✅) | [→](opportunities/security/07-cli-filesystem-boundary.md) |
+| 2.1 | Sandboxed Execution | Improvement | 🔨 In progress (XPC ✅, Containerization not started) | [→](opportunities/architecture/02-sandboxed-execution.md) |
+| 2.2 | File Sharing (Host ↔ VM) | Improvement | 🔨 In progress (bookmarks ✅, VirtioFS mounts blocked on 2.1) | [→](opportunities/architecture/03-file-sharing.md) |
+| 2.3 | Network Isolation | Improvement | 🔨 In progress (policy engine ✅, enforcement blocked on 2.1) | [→](opportunities/security/01-network-isolation.md) |
+| 2.4 | File Access Permissions | Improvement | ✅ Done | [→](opportunities/security/02-file-access-permissions.md) |
+| 2.5 | File Deletion Safety | New | ✅ Done (optional enhancements deferred) | [→](opportunities/security/06-file-deletion-safety.md) |
+| 2.6 | Credential Storage | Improvement | ✅ Done (Secure Enclave/biometric deferred) | [→](opportunities/security/04-credential-storage.md) |
+| 2.7 | CLI Filesystem Boundary | New | ✅ Done (Phase 1–2) | [→](opportunities/security/07-cli-filesystem-boundary.md) |
 
 ---
 
