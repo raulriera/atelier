@@ -77,7 +77,7 @@ If it's not faster or more native than Cowork, it has no reason to exist.
 
 ## Current status
 
-M0–M3 substantially complete. M1 security shipped (file scoping, path guard, sensitive denials — containers deferred for now). Key gaps: living context bugs, scheduled task execution (needs MCP capabilities), more capabilities (Calendar, Mail, Reminders).
+M0–M3 substantially complete. M1 security shipped (file scoping, path guard, sensitive denials — containers deferred for now). Living Context complete including project fingerprinting (Haiku-powered auto-generated context.md on first session). Key gaps: scheduled task execution (needs MCP capabilities), more capabilities (Calendar, Mail, Reminders).
 
 ## Milestones (build order)
 

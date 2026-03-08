@@ -309,11 +309,14 @@ Smart loading reduces token waste; compaction snapshots preserve work state acro
 - Snapshot rotation: keeps only the 5 most recent snapshots, prunes older ones automatically
 - The user never loses their thread of work — compaction becomes invisible
 
-### Future — Project Fingerprinting
+### ✅ Project Fingerprinting (shipped)
 
-- On first session, scan project directory structure
-- Identify primary domain(s) based on file types, names, and directory patterns
-- Generate initial `context.md` with inferred project identity
+- On first session open, scans the project file tree in the background (non-blocking)
+- Sends the file tree to Haiku for a natural-language summary — works for code projects, document folders, data collections, anything
+- Writes `.atelier/context.md` with a human-readable briefing (purpose, structure, key technologies)
+- Falls back to heuristic rendering when the CLI is unavailable
+- Excludes `.atelier/` and `.claude/` from the scan to avoid describing own metadata
+- Write-once: never overwrites an existing `context.md`
 
 ### Future — Proactive Suggestions
 
