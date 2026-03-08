@@ -1,9 +1,17 @@
+import AppKit
 import SwiftUI
 import AtelierDesign
 import AtelierKit
 
 @main
 struct AtelierApp: App {
+    // Each project is its own window — disable macOS tab merging.
+    // The SwiftUI `windowTabBehavior` modifier was removed in macOS 26;
+    // use the AppKit class property instead.
+    init() {
+        NSWindow.allowsAutomaticWindowTabbing = false
+    }
+
     @State private var projectStore: ProjectStore = {
         let base = ProjectStore.defaultBaseDirectory
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
@@ -49,7 +57,6 @@ struct AtelierApp: App {
             height: Layout.defaultWindowHeight
         )
         .windowResizability(.contentSize)
-        .windowTabBehavior(.disabled)
         .commands {
             CommandGroup(after: .toolbar) {
                 Button {

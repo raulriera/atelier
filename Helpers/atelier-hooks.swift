@@ -502,6 +502,140 @@ func handleDistill(input: HookInput) {
             FileHandle.standardError.write(Data("Failed to write \(filename): \(error)\n".utf8))
         }
     }
+
+    // Record observations for proactive suggestion tracking.
+    // Each entry is tracked per session — when the same learning appears
+    // across enough distinct sessions, it becomes suggestable on startup.
+    // Reuse the already-parsed sections instead of re-parsing the result.
+    if let sessionId = input.sessionId {
+        let entries = sections.flatMap { heading, body in
+            body.components(separatedBy: .newlines)
+                .filter { $0.hasPrefix("- ") }
+                .compactMap { line -> (text: String, category: String)? in
+                    let text = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                    guard !text.isEmpty else { return nil }
+                    let category = String(heading.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                    return (text, category)
+                }
+        }
+        if !entries.isEmpty {
+            recordPatternObservations(entries: entries, sessionID: sessionId, memoryDir: memoryDir)
+            let currentKeys = Set(entries.map { normalizePatternText($0.text) })
+            prunePatternObservations(currentKeys: currentKeys, memoryDir: memoryDir)
+        }
+    }
+}
+
+// MARK: - Pattern Tracking
+
+/// Mirrors `PatternTracker.Observation` in AtelierKit — same JSON schema.
+struct PatternObservation: Codable {
+    var text: String
+    var category: String
+    var sessions: Set<String>
+}
+
+/// Mirrors `PatternTracker.State` in AtelierKit — same JSON schema.
+struct PatternTrackerState: Codable {
+    var observations: [String: PatternObservation]
+    var dismissed: Set<String>
+
+    init(observations: [String: PatternObservation] = [:], dismissed: Set<String> = []) {
+        self.observations = observations
+        self.dismissed = dismissed
+    }
+}
+
+/// Number of distinct sessions before a pattern becomes suggestable.
+let patternThreshold = 3
+
+/// Maximum proactive suggestions to inject per startup.
+let maxProactiveSuggestions = 2
+
+/// Normalizes entry text for stable matching across distillation runs.
+func normalizePatternText(_ text: String) -> String {
+    var t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    if t.hasPrefix("- ") {
+        t = String(t.dropFirst(2))
+    } else if t == "-" {
+        return ""
+    }
+    return t.trimmingCharacters(in: .whitespaces).lowercased()
+}
+
+/// Loads the pattern tracker state from disk.
+func loadPatternTracker(memoryDir: String) -> PatternTrackerState {
+    let path = "\(memoryDir)/pattern-tracker.json"
+    guard let data = FileManager.default.contents(atPath: path),
+          let state = try? JSONDecoder().decode(PatternTrackerState.self, from: data)
+    else { return PatternTrackerState() }
+    return state
+}
+
+/// Saves the pattern tracker state to disk.
+func savePatternTracker(_ state: PatternTrackerState, memoryDir: String) {
+    let path = "\(memoryDir)/pattern-tracker.json"
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    guard let data = try? encoder.encode(state) else { return }
+    try? data.write(to: URL(fileURLWithPath: path), options: .atomic)
+}
+
+/// Records pre-parsed entries into the pattern tracker.
+func recordPatternObservations(entries: [(text: String, category: String)], sessionID: String, memoryDir: String) {
+    var state = loadPatternTracker(memoryDir: memoryDir)
+
+    for entry in entries {
+        let key = normalizePatternText(entry.text)
+        guard !key.isEmpty else { continue }
+        if var existing = state.observations[key] {
+            existing.sessions.insert(sessionID)
+            existing.text = entry.text
+            state.observations[key] = existing
+        } else {
+            state.observations[key] = PatternObservation(
+                text: entry.text,
+                category: entry.category,
+                sessions: [sessionID]
+            )
+        }
+    }
+
+    savePatternTracker(state, memoryDir: memoryDir)
+}
+
+/// Maximum observations to keep. Mirrors `PatternTracker.maxObservations`.
+let maxPatternObservations = 200
+
+/// Prunes stale single-session observations when the dictionary exceeds the cap.
+func prunePatternObservations(currentKeys: Set<String>, memoryDir: String) {
+    var state = loadPatternTracker(memoryDir: memoryDir)
+    guard state.observations.count > maxPatternObservations else { return }
+
+    let staleKeys = state.observations.filter { key, obs in
+        obs.sessions.count == 1 && !currentKeys.contains(key)
+    }.map(\.key)
+
+    for key in staleKeys {
+        state.observations.removeValue(forKey: key)
+        if state.observations.count <= maxPatternObservations { break }
+    }
+
+    savePatternTracker(state, memoryDir: memoryDir)
+}
+
+/// Returns suggestable patterns — those observed across enough sessions and not dismissed.
+func suggestablePatterns(memoryDir: String) -> [PatternObservation] {
+    let state = loadPatternTracker(memoryDir: memoryDir)
+    return Array(
+        state.observations
+            .filter { key, obs in
+                obs.sessions.count >= patternThreshold && !state.dismissed.contains(key)
+            }
+            .map(\.value)
+            .sorted { $0.sessions.count > $1.sessions.count }
+            .prefix(maxProactiveSuggestions)
+    )
 }
 
 // MARK: - Structure Map
@@ -646,6 +780,30 @@ func handleReinject(input: HookInput, trigger: String) {
     }
 
     print("</project-memory>")
+
+    // Proactive suggestions — only on brand new sessions (startup).
+    // After enough distinct sessions produce the same learning, suggest it
+    // to the user so they can confirm, refine, or dismiss.
+    if trigger == "startup" {
+        let suggestions = suggestablePatterns(memoryDir: memoryDir)
+        if !suggestions.isEmpty {
+            print("")
+            print("<proactive-suggestions>")
+            print("The following learnings have appeared consistently across multiple conversations.")
+            print("At a natural point early in this conversation, briefly mention one or two:")
+            print("\"I've learned that you [pattern]. Is that still accurate?\"")
+            print("")
+            for suggestion in suggestions {
+                print("- \(suggestion.text) (\(suggestion.category), \(suggestion.sessions.count) sessions)")
+            }
+            print("")
+            print("Keep it brief and conversational. Only mention 1-2 per session.")
+            print("If the user confirms, no action needed — the learning is already saved.")
+            print("If they correct you, update the relevant memory file.")
+            print("If they say stop suggesting, respect that preference.")
+            print("</proactive-suggestions>")
+        }
+    }
 
     // Compaction snapshot goes AFTER project-memory, at the end of the prompt,
     // in the recency-favored attention position. This is the most important

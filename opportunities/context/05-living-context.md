@@ -318,10 +318,17 @@ Smart loading reduces token waste; compaction snapshots preserve work state acro
 - Excludes `.atelier/` and `.claude/` from the scan to avoid describing own metadata
 - Write-once: never overwrites an existing `context.md`
 
-### Future — Proactive Suggestions
+### ✅ Proactive Suggestions (shipped)
 
-- Track patterns across sessions, offer to save after confidence threshold
-- Respect dismissals permanently
+- `PatternTracker` records every distilled learning with its session ID
+- Entries keyed by normalized text (lowercased, bullet-stripped) for stable matching across runs
+- After 3 distinct brand new sessions (SessionStart[startup], not compacts/resumes) produce the same learning, it becomes suggestable
+- On `reinject startup`, injects a `<proactive-suggestions>` block telling Claude to naturally mention 1-2 patterns to the user for confirmation
+- Permanent dismissal: dismissed patterns never fire again, persisted in `pattern-tracker.json`
+- Pruning: caps observations at 200 entries, evicts stale single-session entries not in the current distillation
+- Maximum 2 suggestions surfaced per startup, sorted by frequency
+- Mirrored logic in both `PatternTracker` (AtelierKit, for app-side dismissal) and `atelier-hooks.swift` (for hook-side recording/injection)
+- 23 tests covering normalization, parsing, recording, suggestions, dismissal, pruning, and persistence
 
 ## Dependencies
 
