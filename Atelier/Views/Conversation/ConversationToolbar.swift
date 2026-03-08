@@ -2,58 +2,29 @@ import SwiftUI
 import AtelierDesign
 import AtelierKit
 
+/// Toolbar with inspector tab icons.
 struct ConversationToolbar: ToolbarContent {
-    let isStreaming: Bool
-    @Binding var showingCapabilities: Bool
-    @Binding var showingContextFiles: Bool
     @Binding var showInspector: Bool
-    @Binding var selectedModel: ModelConfiguration
-    @Bindable var capabilityStore: CapabilityStore
-    let activeContextFiles: [ContextFile]
-    let onNewConversation: () -> Void
+    @Binding var inspectorTab: InspectorTab
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .automatic) {
-            Button {
-                onNewConversation()
-            } label: {
-                Label("New Conversation", systemImage: "plus.message")
+            HStack(spacing: 0) {
+                ForEach(InspectorTab.allCases) { tab in
+                    Button {
+                        inspectorTab = tab
+                        showInspector = true
+                    } label: {
+                        Image(systemName: tab.systemImage)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.accessoryBar)
+                    .opacity(inspectorTab == tab && showInspector ? 1 : 0.5)
+                    .accessibilityAddTraits(inspectorTab == tab && showInspector ? .isSelected : [])
+                    .help(tab.label)
+                }
             }
-            .keyboardShortcut("t", modifiers: [.command, .shift])
-            .disabled(isStreaming)
-        }
-        ToolbarItem(placement: .automatic) {
-            Button {
-                showingCapabilities.toggle()
-            } label: {
-                Label("Capabilities", systemImage: "puzzlepiece.extension")
-            }
-            .help("Capabilities")
-            .sheet(isPresented: $showingCapabilities) {
-                CapabilitiesSheet(capabilityStore: capabilityStore)
-            }
-        }
-        ToolbarItem(placement: .automatic) {
-            Button {
-                showingContextFiles.toggle()
-            } label: {
-                Label("Context Files", systemImage: "doc.text")
-            }
-            .help("Context Files")
-            .popover(isPresented: $showingContextFiles) {
-                ContextFilesCard(files: activeContextFiles)
-            }
-        }
-        ToolbarItem(placement: .automatic) {
-            ModelPickerView(selection: $selectedModel)
-        }
-        ToolbarItem(placement: .automatic) {
-            Button {
-                showInspector.toggle()
-            } label: {
-                Label("Inspector", systemImage: "sidebar.right")
-            }
-            .help("Toggle Inspector")
         }
     }
 }

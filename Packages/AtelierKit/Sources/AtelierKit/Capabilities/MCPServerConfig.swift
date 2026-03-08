@@ -1,7 +1,7 @@
 import Foundation
 
 /// Configuration for launching an MCP server as a child process.
-public struct MCPServerConfig: Codable, Sendable, Equatable {
+public struct MCPServerConfig: Codable, Sendable, Hashable {
     /// The absolute path to the server executable.
     public let command: String
     /// Arguments passed to the executable.

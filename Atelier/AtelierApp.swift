@@ -1,4 +1,5 @@
 import SwiftUI
+import AtelierDesign
 import AtelierKit
 
 @main
@@ -19,20 +20,46 @@ struct AtelierApp: App {
         return store
     }()
 
+    @State private var scheduleStore: ScheduleStore = {
+        let url = ScheduleStore.defaultPersistenceURL
+        let store = ScheduleStore(persistenceURL: url)
+        store.load()
+        return store
+    }()
+
+    @FocusedValue(\.inspectorVisibility) private var inspectorVisibility
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some Scene {
         WindowGroup(for: UUID.self) { $projectID in
-            ProjectWindow(projectID: projectID, projectStore: projectStore)
+            ProjectWindow(
+                projectID: projectID,
+                projectStore: projectStore,
+                scheduleStore: scheduleStore
+            )
         } defaultValue: {
             // macOS restores window count and geometry, but SwiftUI may not
             // persist the UUID binding (e.g. after Xcode rebuilds). Fall back
             // to existing projects so restored windows aren't empty.
             (try? projectStore.nextUnclaimedProject())?.id ?? UUID()
         }
+        .defaultSize(
+            width: Layout.defaultWindowWidth,
+            height: Layout.defaultWindowHeight
+        )
         .windowResizability(.contentSize)
         .commands {
+            CommandGroup(after: .toolbar) {
+                Button {
+                    inspectorVisibility?.wrappedValue.toggle()
+                } label: {
+                    Text(inspectorVisibility?.wrappedValue == true ? "Hide Inspector" : "Show Inspector")
+                }
+                .keyboardShortcut("i", modifiers: [.command, .option])
+                .disabled(inspectorVisibility == nil)
+            }
+
             CommandGroup(replacing: .newItem) {
                 Button("New Window") {
                     let metadata = try? projectStore.createProject(rootURL: nil)

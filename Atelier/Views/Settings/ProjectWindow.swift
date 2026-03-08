@@ -4,12 +4,14 @@ import AtelierSecurity
 
 struct ProjectWindow: View {
     let projectStore: ProjectStore
+    let scheduleStore: ScheduleStore
 
     @State private var project: Project?
     @State private var loadError: String?
 
-    init(projectID: UUID, projectStore: ProjectStore) {
+    init(projectID: UUID, projectStore: ProjectStore, scheduleStore: ScheduleStore) {
         self.projectStore = projectStore
+        self.scheduleStore = scheduleStore
         do {
             let loaded = try projectStore.materialize(projectID)
             self._project = State(initialValue: loaded)
@@ -25,7 +27,8 @@ struct ProjectWindow: View {
                     ConversationWindow(
                         capabilityStore: project.capabilityStore,
                         sessionPersistence: project.sessionPersistence,
-                        workingDirectory: project.rootURL
+                        workingDirectory: project.rootURL,
+                        scheduleStore: scheduleStore
                     )
                 } else {
                     FolderSelectionView { url in

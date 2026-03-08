@@ -18,6 +18,11 @@ public final class ScheduleStore {
         category: "Schedule"
     )
 
+    /// Default persistence URL: `~/Library/Application Support/Atelier/schedules.json`.
+    public static let defaultPersistenceURL: URL =
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Atelier/schedules.json")
+
     /// Creates a new schedule store.
     ///
     /// - Parameters:
@@ -46,6 +51,11 @@ public final class ScheduleStore {
 
         tasks = loaded
         Self.logger.info("Loaded \(loaded.count) scheduled task(s)")
+    }
+
+    /// Returns tasks whose `projectPath` matches the given path.
+    public func tasks(forProjectPath path: String) -> [ScheduledTask] {
+        tasks.filter { $0.projectPath == path }
     }
 
     // MARK: - CRUD

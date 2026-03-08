@@ -2,7 +2,7 @@ import Foundation
 
 /// A built-in capability that Atelier can enable to give Claude access
 /// to external applications via an MCP server.
-public struct Capability: Identifiable, Codable, Sendable, Equatable {
+public struct Capability: Identifiable, Codable, Sendable, Hashable {
     public let id: String
     public let name: String
     public let description: String

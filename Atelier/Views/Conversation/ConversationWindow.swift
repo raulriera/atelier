@@ -5,21 +5,24 @@ import AtelierKit
 struct ConversationWindow: View {
     @State private var controller: ConversationController
     @State private var draft = ""
-    @State private var showingCapabilities = false
-    @State private var showingContextFiles = false
-    @State private var showInspector = false
+    @State private var showInspector = true
+    @State private var inspectorTab: InspectorTab = .capabilities
     @State private var showComposeField = false
+
+    let scheduleStore: ScheduleStore
 
     init(
         capabilityStore: CapabilityStore,
         sessionPersistence: SessionPersistence,
-        workingDirectory: URL?
+        workingDirectory: URL?,
+        scheduleStore: ScheduleStore
     ) {
         self._controller = State(initialValue: ConversationController(
             capabilityStore: capabilityStore,
             sessionPersistence: sessionPersistence,
             workingDirectory: workingDirectory
         ))
+        self.scheduleStore = scheduleStore
     }
 
     var body: some View {
@@ -29,6 +32,7 @@ struct ConversationWindow: View {
                         controller.selectedToolEvent = nil
                     } else {
                         controller.selectedToolEvent = event
+                        inspectorTab = .detail
                         showInspector = true
                     }
                 }, onApprovalDecision: { id, toolName, decision in
@@ -98,22 +102,22 @@ struct ConversationWindow: View {
             // uses holdingPriority). Wrapping in NavigationStack prevents the window
             // from growing. File FB to Apple.
             .inspector(isPresented: $showInspector) {
-                InspectorSidebar(selectedTool: controller.selectedToolEvent)
-                    .inspectorColumnWidth(min: 260, ideal: 320, max: 480)
+                InspectorPanel(
+                    selectedTab: $inspectorTab,
+                    capabilityStore: controller.capabilityStore,
+                    scheduleStore: scheduleStore,
+                    projectPath: controller.workingDirectory?.path,
+                    selectedTool: controller.selectedToolEvent
+                )
+                .inspectorColumnWidth(min: 260, ideal: 320, max: 480)
             }
         }
         .frame(minWidth: Layout.minimumWindowWidth, minHeight: Layout.minimumWindowHeight)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .toolbar {
             ConversationToolbar(
-                isStreaming: controller.session.isStreaming,
-                showingCapabilities: $showingCapabilities,
-                showingContextFiles: $showingContextFiles,
                 showInspector: $showInspector,
-                selectedModel: $controller.selectedModel,
-                capabilityStore: controller.capabilityStore,
-                activeContextFiles: controller.activeContextFiles,
-                onNewConversation: controller.startNewConversation
+                inspectorTab: $inspectorTab
             )
         }
         .onKeyPress(.escape) {
@@ -135,6 +139,7 @@ struct ConversationWindow: View {
         .onChange(of: controller.selectedToolEvent?.id) { _, newID in
             controller.loadToolPayloadIfNeeded(for: newID)
         }
+        .focusedSceneValue(\.inspectorVisibility, $showInspector)
         .onAppear {
             controller.checkAvailability()
         }

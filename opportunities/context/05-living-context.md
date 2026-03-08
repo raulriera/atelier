@@ -279,6 +279,10 @@ Memory split from a single `learnings.md` into separate category files that grow
 
 **Merge strategy:** Haiku receives all existing category file contents and produces a merged update. New entries are added, contradicted entries are replaced, still-valid entries are preserved.
 
+### Gap — Infinite Session via Compaction Index
+
+Each compaction writes a summary file to `.atelier/memory/compacts/`. These files form a living index of every compaction in the project — not just learnings, but what was being worked on and the state of things at that moment. The `SessionStart[compact]` hook re-injects the relevant summaries so the session continues seamlessly. The user never has to start over; one session lasts forever.
+
 ### Phase 3 — Smart Loading
 
 - Add file size monitoring — split a file when it exceeds ~100 lines

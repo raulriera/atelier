@@ -10,10 +10,14 @@ import SwiftUI
 public enum Layout {
     /// 720pt — maximum width for timeline content and compose field.
     public static let readingWidth: CGFloat = 720
-    /// 420pt — narrowest usable window width.
-    public static let minimumWindowWidth: CGFloat = 420
+    /// 780pt — narrowest usable window width (conversation + inspector).
+    public static let minimumWindowWidth: CGFloat = 780
+    /// 1100pt — default window width when the inspector is open.
+    public static let defaultWindowWidth: CGFloat = 1100
     /// 480pt — shortest usable window height.
     public static let minimumWindowHeight: CGFloat = 480
+    /// 700pt — default window height.
+    public static let defaultWindowHeight: CGFloat = 700
     /// 360pt — compact folder picker panel width.
     public static let folderPickerWidth: CGFloat = 360
     /// 280pt — compact folder picker panel height.

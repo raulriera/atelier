@@ -234,4 +234,14 @@ The Shortcuts integration is the key to workflows. We don't build a workflow bui
 
 ---
 
+## Gaps
+
+- **Open Recent menu:** When all project windows are closed, scheduled tasks for those projects are invisible. Need File → Open Recent populated from `ProjectStore` so users can reopen any project and see its automations. Standard macOS `CommandGroup(replacing: .recentFiles)` pattern.
+- **Relocated toolbar items need a new home:** The inspector redesign removed three toolbar items that still need to be accessible somewhere:
+  - **New session button** (plus.message, Cmd+Shift+T) — could move to File menu or compose field area
+  - **Context files popover** (doc.text) — could move to a menu or become part of the inspector
+  - **Model picker** (Claude Haiku dropdown) — could move to the compose field area, a menu, or a status bar element
+
+---
+
 *Back to [Index](../../INDEX.md)*

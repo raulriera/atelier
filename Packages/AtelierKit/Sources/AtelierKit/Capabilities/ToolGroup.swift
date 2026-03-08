@@ -4,7 +4,7 @@ import Foundation
 ///
 /// For example, a Mail capability might have groups for "Read", "Manage", and "Send",
 /// letting users enable reading without granting send access.
-public struct ToolGroup: Identifiable, Codable, Sendable, Equatable {
+public struct ToolGroup: Identifiable, Codable, Sendable, Hashable {
     /// Unique identifier within the capability (e.g. "read", "send").
     public let id: String
     /// Human-readable name (e.g. "Read", "Send").
