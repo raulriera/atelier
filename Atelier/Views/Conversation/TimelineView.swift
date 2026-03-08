@@ -5,6 +5,7 @@ import AtelierKit
 struct TimelineView: View {
     let session: Session
     let capabilityStore: CapabilityStore
+    @Binding var draft: String
     var selectedToolID: String?
     var onSelectTool: ((ToolUseEvent) -> Void)?
     var onApprovalDecision: ((String, String, ApprovalDecision) -> Void)?
@@ -48,7 +49,7 @@ struct TimelineView: View {
                 }
 
                 if items.isEmpty && !session.hasOlderItems {
-                    WelcomeMessage()
+                    WelcomeView(draft: $draft, enabledCapabilityIDs: capabilityStore.enabledIDs)
                         .scaleEffect(x: 1, y: -1)
                 }
             }

@@ -24,7 +24,7 @@ struct ConversationWindow: View {
 
     var body: some View {
         NavigationStack {
-            TimelineView(session: controller.session, capabilityStore: controller.capabilityStore, selectedToolID: controller.selectedToolEvent?.id, onSelectTool: { event in
+            TimelineView(session: controller.session, capabilityStore: controller.capabilityStore, draft: $draft, selectedToolID: controller.selectedToolEvent?.id, onSelectTool: { event in
                     if controller.selectedToolEvent?.id == event.id {
                         controller.selectedToolEvent = nil
                     } else {
