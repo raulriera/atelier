@@ -299,8 +299,6 @@ Smart loading reduces token waste; compaction snapshots preserve work state acro
 - All other memory files appear as one-line manifest entries with preview — Claude reads on demand
 - Per-file line budgets in distillation prompt enforce condensation (Preferences: 25, Corrections: 15, Decisions: 30, Patterns: 25)
 - Hard cap at injection time (40 lines) as defense-in-depth — truncates with "read full file" note
-- `PostToolUse[Write|Edit]` hook tracks file changes → updates `.atelier/structure.json` automatically
-
 **Compaction index (infinite session):**
 - `PreCompact` saves the transcript summary to `.atelier/memory/compacts/{timestamp}.md` — zero extra LLM calls, reuses the summary already built for distillation
 - `SessionStart[compact]` re-injects the latest snapshot in a `<session-state>` block at the end of the prompt (recency-favored attention position)
@@ -329,6 +327,42 @@ Smart loading reduces token waste; compaction snapshots preserve work state acro
 - Maximum 2 suggestions surfaced per startup, sorted by frequency
 - Mirrored logic in both `PatternTracker` (AtelierKit, for app-side dismissal) and `atelier-hooks.swift` (for hook-side recording/injection)
 - 24 tests covering normalization, parsing, recording, suggestions, dismissal, pruning, and persistence
+
+### ✅ Vocabulary Learning (shipped)
+
+- New `## Vocabulary` category with 30-entry budget for domain-specific terms, acronyms, and project jargon
+- Format: "TERM — definition" or "TERM (expansion) — definition"
+- Added to `MemoryStore` categories, `DistillationEngine` prompt, and `atelier-hooks` prompt (kept in sync)
+- Automatically managed as a manifest-only file (not always-injected) via `ContextFileLoader`
+
+### ✅ Progressive Decay (shipped)
+
+- `EntryAgeTracker` tracks `runsSinceLastSeen` per memory entry, incremented per distillation run (not per session)
+- Aging entries (5-19 runs) get `[age: N runs]` annotations in the distillation prompt for Haiku to condense
+- Entries crossing 20 runs are archived to `.atelier/memory/archive/` and removed from active files
+- Archive files listed as manifest entries in reinject for recovery if the topic resurfaces
+- Works equally well for many short sessions and few long conversations
+- 15 tests covering load/save, age tracking, archival, annotations, and normalization
+
+### ✅ Stale Context Detection (shipped)
+
+- On `reinject startup`, loads entry age state and finds entries with 10-19 runs since last seen
+- Injects up to 2 entries in a `<stale-context>` block asking Claude to verify them with the user
+- Reuses `PatternTracker.dismissed` for permanent dismissal of stale entries
+- Thresholds: `staleContextThreshold = 10`, `maxStaleContextEntries = 2`
+
+### ✅ Pattern Conflict Detection (shipped)
+
+- Distillation prompt instructs Haiku to append `[corrected]` when a conversation contradicts an existing learning
+- On `reinject startup`, scans memory files for `[corrected]` markers
+- Surfaces corrections in a `<recent-corrections>` block telling Claude to acknowledge the change
+- Strips `[corrected]` marker from file after one reinject cycle (one-time visibility)
+
+### Structure Map — Removed
+
+- `PostToolUse[Write|Edit]` hook tracked file changes into `.atelier/structure.json`
+- Provided no practical value: Claude already knows what it modified within a session, and `Glob`/`Grep` + project fingerprinting handle cross-session navigation
+- Hook registration, handler, helper functions, and all tests removed
 
 ## Dependencies
 
