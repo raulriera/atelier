@@ -157,7 +157,6 @@ The foundation — native app shell, sessions, memory.
 | [08-mcp-helper-kit.md](opportunities/architecture/08-mcp-helper-kit.md) | M3 |
 | [09-hooks-infrastructure.md](opportunities/architecture/09-hooks-infrastructure.md) | M2 |
 | [10-multi-window-isolation.md](opportunities/architecture/10-multi-window-isolation.md) | — |
-| [11-session-continuity.md](opportunities/architecture/11-session-continuity.md) | M2 |
 
 ### Security (`opportunities/security/`)
 File permissions, prompt injection, credentials, audit, deletion safety.
