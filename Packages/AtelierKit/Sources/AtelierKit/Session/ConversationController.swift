@@ -207,6 +207,9 @@ public final class ConversationController {
             if let content = ContextFileLoader.contentForInjection(from: discovered) {
                 promptParts.append(content)
             }
+            if !ContextFileLoader.hasProjectContext(discovered) {
+                promptParts.append(SystemPrompt.onboardingInstructions)
+            }
         }
         if let capFragment = capabilityStore.systemPromptFragment() {
             promptParts.append(capFragment)

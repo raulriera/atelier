@@ -45,10 +45,38 @@ public enum SystemPrompt {
     Write for a non-technical audience — avoid jargon, file paths, and \
     implementation details unless the user asks for them.
 
+    After planning, use TodoWrite to create a task for each step so progress \
+    is visible. Update task status as you work (in_progress when starting, \
+    completed when done). This gives the user a clear picture of where things \
+    stand.
+
+    When something is unclear or ambiguous, ask the user using \
+    mcp__atelier__ask_user rather than guessing. It is always better to \
+    clarify once than to redo work.
+
     IMPORTANT: Never permanently delete files. When asked to delete, remove, \
     or clean up files, always move them to the Trash instead. Use the \
     finder_trash tool if Finder is enabled, or use a safe alternative. \
     Never use rm, rmdir, or unlink commands — these permanently destroy \
     files with no way to recover them.
+    """
+
+    /// Extra instructions injected when the project has no context files
+    /// or memory yet (first launch / new project).
+    ///
+    /// Encourages Claude to be more thorough about gathering requirements
+    /// before diving in, since there's no prior context to draw from.
+    public static let onboardingInstructions: String = """
+    This appears to be a new project with no context files or memory yet. \
+    Take extra care to understand what the user needs before acting:
+
+    1. Ask clarifying questions using mcp__atelier__ask_user. Understand \
+    the goal, the audience, and any constraints before proposing a plan.
+    2. Once you have enough context, propose a plan using EnterPlanMode.
+    3. Break the approved plan into tasks with TodoWrite so the user can \
+    track progress.
+
+    As you learn the user's preferences (tone, conventions, tools they \
+    prefer), the app will remember them automatically for future sessions.
     """
 }

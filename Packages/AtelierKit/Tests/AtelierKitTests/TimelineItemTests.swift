@@ -155,7 +155,7 @@ struct TimelineItemTests {
 
     @Test("Model configuration defaults")
     func modelConfigurationDefaults() {
-        #expect(ModelConfiguration.default.cliAlias == "haiku")
+        #expect(ModelConfiguration.default.cliAlias == "sonnet")
         #expect(ModelConfiguration.allModels.count == 3)
     }
 }

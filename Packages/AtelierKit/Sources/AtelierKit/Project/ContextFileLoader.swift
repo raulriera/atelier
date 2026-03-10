@@ -87,6 +87,13 @@ public enum ContextFileLoader {
             }
     }
 
+    /// Whether the discovered files include any project-specific context
+    /// (injected context files or memory). Returns `false` for a brand-new
+    /// project that has no COWORK.md, .atelier/context.md, or memory files.
+    public static func hasProjectContext(_ files: [ContextFile]) -> Bool {
+        files.contains { $0.source == .injected || $0.source == .memory }
+    }
+
     /// Memory files that are always injected in full (high-value, small).
     /// Everything else is listed as a manifest entry for on-demand reading.
     private static let alwaysInjectFilenames: Set<String> = [
