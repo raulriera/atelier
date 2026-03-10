@@ -202,6 +202,12 @@ func buildDistillationPrompt(summary: String, existingLearnings: String?) -> Str
     - Drop entries that are subsumed by newer, more specific ones
     - Prefer fewer, richer entries over many granular ones
 
+    Progressive decay — some entries may have an [age: N runs] suffix:
+    - Entries with [age: 5–19 runs] are aging: condense to key facts only, drop rationale and detail
+    - Entries with [age: 20+ runs] are stale: condense to a minimal one-liner or omit entirely
+    - Do NOT include the [age: ...] suffix in your output — it is metadata, not content
+    - Recently active entries (no age suffix) should be preserved at full detail
+
     Begin output:
     """
 }
@@ -475,8 +481,10 @@ func handleDistill(input: HookInput) {
         withIntermediateDirectories: true
     )
 
-    // Read all existing memory files
-    let existing = readAllMemoryFiles(memoryDir: memoryDir)
+    // Read all existing memory files and annotate with age metadata
+    var ageState = loadEntryAgeState(memoryDir: memoryDir)
+    let rawExisting = readAllMemoryFiles(memoryDir: memoryDir)
+    let existing = rawExisting.map { annotateWithAge($0, state: ageState) }
 
     // Summarize transcript
     guard let summary = summarizeTranscript(at: transcriptPath) else {
@@ -511,27 +519,145 @@ func handleDistill(input: HookInput) {
         }
     }
 
+    // Update entry age tracker — reset age for current entries, increment for absent ones.
+    // Entries that cross the archive threshold get moved to .atelier/memory/archive/.
+    let allEntries = sections.flatMap { heading, body in
+        body.components(separatedBy: .newlines)
+            .filter { $0.hasPrefix("- ") }
+            .compactMap { line -> (text: String, category: String)? in
+                let text = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                guard !text.isEmpty else { return nil }
+                let category = String(heading.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                return (text, category)
+            }
+    }
+    let archivableKeys = updateEntryAges(state: &ageState, currentEntries: allEntries)
+    archiveStaleEntries(keys: archivableKeys, state: &ageState, memoryDir: memoryDir)
+    saveEntryAgeState(ageState, memoryDir: memoryDir)
+
     // Record observations for proactive suggestion tracking.
     // Each entry is tracked per session — when the same learning appears
     // across enough distinct sessions, it becomes suggestable on startup.
-    // Reuse the already-parsed sections instead of re-parsing the result.
+    // Reuse the already-parsed entries instead of re-parsing the result.
     if let sessionId = input.sessionId {
-        let entries = sections.flatMap { heading, body in
-            body.components(separatedBy: .newlines)
-                .filter { $0.hasPrefix("- ") }
-                .compactMap { line -> (text: String, category: String)? in
-                    let text = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-                    guard !text.isEmpty else { return nil }
-                    let category = String(heading.dropFirst(3)).trimmingCharacters(in: .whitespaces)
-                    return (text, category)
-                }
-        }
-        if !entries.isEmpty {
-            recordPatternObservations(entries: entries, sessionID: sessionId, memoryDir: memoryDir)
-            let currentKeys = Set(entries.map { normalizePatternText($0.text) })
+        if !allEntries.isEmpty {
+            recordPatternObservations(entries: allEntries, sessionID: sessionId, memoryDir: memoryDir)
+            let currentKeys = Set(allEntries.map { normalizePatternText($0.text) })
             prunePatternObservations(currentKeys: currentKeys, memoryDir: memoryDir)
         }
     }
+}
+
+// MARK: - Entry Age Tracking
+
+/// Mirrors `EntryAgeTracker.Entry` in AtelierKit — same JSON schema.
+struct EntryAgeEntry: Codable {
+    var category: String
+    var runsSinceLastSeen: Int
+}
+
+/// Mirrors `EntryAgeTracker.State` in AtelierKit — same JSON schema.
+struct EntryAgeState: Codable {
+    var entries: [String: EntryAgeEntry]
+
+    init(entries: [String: EntryAgeEntry] = [:]) {
+        self.entries = entries
+    }
+}
+
+let entryAgeFilename = "entry-age.json"
+let agingThreshold = 5
+let archiveThreshold = 20
+
+func loadEntryAgeState(memoryDir: String) -> EntryAgeState {
+    let path = "\(memoryDir)/\(entryAgeFilename)"
+    guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+          let state = try? JSONDecoder().decode(EntryAgeState.self, from: data)
+    else { return EntryAgeState() }
+    return state
+}
+
+func saveEntryAgeState(_ state: EntryAgeState, memoryDir: String) {
+    let path = "\(memoryDir)/\(entryAgeFilename)"
+    guard let data = try? JSONEncoder().encode(state) else { return }
+    try? data.write(to: URL(fileURLWithPath: path), options: .atomic)
+}
+
+/// Annotates existing learnings with `[age: N runs]` suffixes
+/// so Haiku can apply progressive decay during distillation.
+func annotateWithAge(_ content: String, state: EntryAgeState) -> String {
+    content.components(separatedBy: .newlines).map { line in
+        guard line.hasPrefix("- ") else { return line }
+        let text = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+        let key = normalizeAgeText(text)
+        guard let entry = state.entries[key],
+              entry.runsSinceLastSeen >= agingThreshold
+        else { return line }
+        return "\(line) [age: \(entry.runsSinceLastSeen) runs]"
+    }.joined(separator: "\n")
+}
+
+/// Updates the age tracker after distillation. Returns keys that crossed
+/// the archive threshold.
+func updateEntryAges(
+    state: inout EntryAgeState,
+    currentEntries: [(text: String, category: String)]
+) -> [String] {
+    let currentKeys = Set(currentEntries.map { normalizeAgeText($0.text) })
+
+    for (text, category) in currentEntries {
+        let key = normalizeAgeText(text)
+        state.entries[key] = EntryAgeEntry(category: category, runsSinceLastSeen: 0)
+    }
+
+    var archivableKeys: [String] = []
+    for (key, var entry) in state.entries where !currentKeys.contains(key) {
+        entry.runsSinceLastSeen += 1
+        state.entries[key] = entry
+        if entry.runsSinceLastSeen >= archiveThreshold {
+            archivableKeys.append(key)
+        }
+    }
+
+    return archivableKeys
+}
+
+/// Moves stale entries to `.atelier/memory/archive/` and removes them
+/// from the age tracker and active memory files.
+func archiveStaleEntries(keys: [String], state: inout EntryAgeState, memoryDir: String) {
+    guard !keys.isEmpty else { return }
+
+    let archiveDir = "\(memoryDir)/archive"
+    try? FileManager.default.createDirectory(
+        atPath: archiveDir,
+        withIntermediateDirectories: true
+    )
+
+    // Collect entries to archive, grouped by category
+    var archived: [String: [String]] = [:]
+    for key in keys {
+        if let entry = state.entries[key] {
+            archived[entry.category, default: []].append(key)
+        }
+        state.entries.removeValue(forKey: key)
+    }
+
+    // Append archived entries to per-category archive files
+    for (category, entryKeys) in archived {
+        let filename = memoryCategories.first { $0.heading == "## \(category)" }?.filename ?? "\(category.lowercased()).md"
+        let archivePath = "\(archiveDir)/\(filename)"
+        var existing = (try? String(contentsOfFile: archivePath, encoding: .utf8)) ?? "## \(category) (archived)\n"
+        for key in entryKeys {
+            existing += "- \(key)\n"
+        }
+        try? existing.write(toFile: archivePath, atomically: true, encoding: .utf8)
+    }
+}
+
+func normalizeAgeText(_ text: String) -> String {
+    var t = text
+    if t.hasPrefix("- ") { t = String(t.dropFirst(2)) }
+    return t.lowercased().trimmingCharacters(in: .whitespaces)
 }
 
 // MARK: - Pattern Tracking
@@ -784,6 +910,24 @@ func handleReinject(input: HookInput, trigger: String) {
         print("Files modified in previous sessions:")
         for path in structureMap {
             print("- \(path)")
+        }
+    }
+
+    // Archived memory — old entries that aged out of active files.
+    // Listed as a manifest so Claude can read them if the topic resurfaces.
+    let archiveDir = "\(memoryDir)/archive"
+    if let archiveFiles = try? manager.contentsOfDirectory(atPath: archiveDir) {
+        let mdFiles = archiveFiles.filter { $0.hasSuffix(".md") }.sorted()
+        if !mdFiles.isEmpty {
+            print("")
+            print("Archived memory (old entries, read with Read tool if the topic comes up again):")
+            for file in mdFiles {
+                let path = "\(archiveDir)/\(file)"
+                let preview = (try? String(contentsOfFile: path, encoding: .utf8))?
+                    .components(separatedBy: .newlines)
+                    .first { !$0.trimmingCharacters(in: .whitespaces).isEmpty } ?? file
+                print("- archive/\(file): \(preview)")
+            }
         }
     }
 

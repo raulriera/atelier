@@ -121,6 +121,17 @@ struct DistillationEngineTests {
         #expect(prompt.contains("Merge related entries"))
     }
 
+    @Test func promptIncludesProgressiveDecayInstructions() async {
+        let engine = makeEngine()
+        let prompt = await engine.buildDistillationPrompt(
+            conversationSummary: "User: Hello",
+            existingLearnings: nil
+        )
+        #expect(prompt.contains("Progressive decay"))
+        #expect(prompt.contains("[age:"))
+        #expect(prompt.contains("Do NOT include the [age: ...] suffix"))
+    }
+
     @Test func promptInstructsMerging() async {
         let engine = makeEngine()
         let prompt = await engine.buildDistillationPrompt(

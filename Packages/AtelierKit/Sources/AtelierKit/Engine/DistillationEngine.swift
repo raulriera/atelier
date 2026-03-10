@@ -144,6 +144,12 @@ public actor DistillationEngine {
         - Drop entries that are subsumed by newer, more specific ones
         - Prefer fewer, richer entries over many granular ones
 
+        Progressive decay — some entries may have an [age: N runs] suffix:
+        - Entries with [age: 5–19 runs] are aging: condense to key facts only, drop rationale and detail
+        - Entries with [age: 20+ runs] are stale: condense to a minimal one-liner or omit entirely
+        - Do NOT include the [age: ...] suffix in your output — it is metadata, not content
+        - Recently active entries (no age suffix) should be preserved at full detail
+
         Begin output:
         """
     }
