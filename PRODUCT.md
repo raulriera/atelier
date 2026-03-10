@@ -94,7 +94,7 @@ You never see technical jargon — no "plugins," no "connectors," no setup scree
 
 When Claude wants to do something sensitive — delete a file, run a command, make a network request — you see it first. An approval appears in the conversation, showing exactly what will happen. You approve with a click.
 
-Files go to Trash, never deleted permanently. Your credentials live in the macOS Keychain. The work happens in an isolated container that can't reach the rest of your system. Token usage is visible when you want to see it.
+Files go to Trash, never deleted permanently. File access is scoped to the project directory, and sensitive paths are blocked automatically. Token usage is visible when you want to see it.
 
 You're always in control, but you're not constantly interrupted. The app learns which actions you trust and which you want to review.
 

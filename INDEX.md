@@ -52,7 +52,7 @@ Lock down tool access so projects can be opened safely. File tools scoped to pro
 |---|-----------|------|--------|------|
 | 2.4 | File Access Permissions | Improvement | ✅ Done | [→](opportunities/security/02-file-access-permissions.md) |
 | 2.5 | File Deletion Safety | New | ✅ Done | [→](opportunities/security/06-file-deletion-safety.md) |
-| 2.6 | Credential Storage | Improvement | ✅ Done | [→](opportunities/security/04-credential-storage.md) |
+| 2.6 | Credential Storage | Improvement | 🔲 Not started | [→](opportunities/security/04-credential-storage.md) |
 | 2.7 | CLI Filesystem Boundary | New | ✅ Done | [→](opportunities/security/07-cli-filesystem-boundary.md) |
 
 ---

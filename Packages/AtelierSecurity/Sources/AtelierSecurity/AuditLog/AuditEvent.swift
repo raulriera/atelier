@@ -31,7 +31,6 @@ extension AuditEvent {
         case filePermission
         case fileOperation
         case networkPolicy
-        case credentialAccess
         case snapshot
     }
 }

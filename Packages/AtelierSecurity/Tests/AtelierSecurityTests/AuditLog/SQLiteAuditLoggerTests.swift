@@ -191,16 +191,11 @@ struct SQLiteAuditLoggerTests {
         #expect(limited.count == 1)
     }
 
-    @Test func supportsNewAuditCategories() async throws {
+    @Test func supportsSnapshotCategory() async throws {
         let connection = SystemSQLiteConnection()
         let logger = try SQLiteAuditLogger(connection: connection, path: ":memory:")
 
-        await logger.log(AuditEvent(category: .credentialAccess, action: "store", subject: "api-key"))
         await logger.log(AuditEvent(category: .snapshot, action: "create", subject: "snap-1"))
-
-        let credentials = await logger.events(category: .credentialAccess, since: nil, limit: nil)
-        #expect(credentials.count == 1)
-        #expect(credentials[0].action == "store")
 
         let snapshots = await logger.events(category: .snapshot, since: nil, limit: nil)
         #expect(snapshots.count == 1)
