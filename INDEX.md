@@ -118,7 +118,7 @@ Expand the product surface. Chat integration, onboarding, workflows, and all the
 | 6.4 | Capability Health | Improvement | 🔲 Not started | [→](opportunities/hub/04-mcp-connector-health.md) |
 | 6.5 | Multi-Agent Orchestration | Improvement | 🔲 Not started | [→](opportunities/context/03-multi-agent-orchestration.md) |
 | 6.6 | Spotlight & System Search | New | 🔲 Not started | [→](opportunities/macos/02-spotlight-search.md) |
-| 6.7 | Drag & Drop | New | 🔲 Not started | [→](opportunities/macos/03-drag-and-drop.md) |
+| 6.7 | Drag & Drop | New | 🔨 In progress | [→](opportunities/macos/03-drag-and-drop.md) |
 | 6.8 | Clipboard Integration | New | 🔲 Not started | [→](opportunities/macos/09-clipboard-integration.md) |
 | 6.9 | Document Generation | Improvement | 🔲 Not started | [→](opportunities/macos/10-document-generation.md) |
 | 6.10 | Quick Look Previews | New | 🔲 Not started | [→](opportunities/macos/04-quick-look-previews.md) |

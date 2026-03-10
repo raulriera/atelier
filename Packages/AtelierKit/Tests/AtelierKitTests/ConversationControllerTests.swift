@@ -15,7 +15,8 @@ private struct MockEngine: ConversationEngine {
         workingDirectory: URL?,
         appendSystemPrompt: String?,
         approvalSocketPath: String?,
-        enabledCapabilities: [EnabledCapability]
+        enabledCapabilities: [EnabledCapability],
+        allowedReadPaths: [String]
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         let captured = events
         return AsyncThrowingStream { continuation in
@@ -33,6 +34,7 @@ private struct MockEngine: ConversationEngine {
 private final class SpyEngine: ConversationEngine, @unchecked Sendable {
     var sentMessages: [String] = []
     var sentModels: [ModelConfiguration] = []
+    var sentAllowedReadPaths: [[String]] = []
     var events: [StreamEvent] = []
 
     nonisolated func send(
@@ -42,12 +44,14 @@ private final class SpyEngine: ConversationEngine, @unchecked Sendable {
         workingDirectory: URL?,
         appendSystemPrompt: String?,
         approvalSocketPath: String?,
-        enabledCapabilities: [EnabledCapability]
+        enabledCapabilities: [EnabledCapability],
+        allowedReadPaths: [String]
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         // Capture events before entering nonisolated context
         let captured = MainActor.assumeIsolated {
             sentMessages.append(message)
             sentModels.append(model)
+            sentAllowedReadPaths.append(allowedReadPaths)
             return events
         }
         return AsyncThrowingStream { continuation in
@@ -326,6 +330,61 @@ struct ConversationControllerTests {
 
             let sentModel = try #require(spy.sentModels.first)
             #expect(sentModel.modelId == ModelConfiguration.opus.modelId)
+        }
+    }
+
+    @Suite("Attachment read paths")
+    struct AttachmentReadPaths {
+
+        @Test("Dropped file paths are passed to the engine as allowedReadPaths", .timeLimit(.minutes(1)))
+        @MainActor func passesPathsToEngine() async throws {
+            let spy = SpyEngine()
+            spy.events = [.messageComplete(TokenUsage())]
+            let controller = await makeController(engine: spy)
+
+            let attachment = FileAttachment(url: URL(fileURLWithPath: "/Users/someone/Documents/report.pdf"))
+            controller.sendMessage("Check this", attachments: [attachment])
+
+            try await Task.sleep(for: .milliseconds(50))
+
+            let paths = try #require(spy.sentAllowedReadPaths.first)
+            let expected = URL(fileURLWithPath: "/Users/someone/Documents/report.pdf").standardizedFileURL.path
+            #expect(paths.contains(expected))
+        }
+
+        @Test("Multiple attachments across messages accumulate paths", .timeLimit(.minutes(1)))
+        @MainActor func accumulatesPathsAcrossMessages() async throws {
+            let spy = SpyEngine()
+            spy.events = [.messageComplete(TokenUsage())]
+            let controller = await makeController(engine: spy)
+
+            let first = FileAttachment(url: URL(fileURLWithPath: "/tmp/a.txt"))
+            controller.sendMessage("First", attachments: [first])
+            try await Task.sleep(for: .milliseconds(50))
+
+            let second = FileAttachment(url: URL(fileURLWithPath: "/tmp/b.txt"))
+            controller.sendMessage("Second", attachments: [second])
+            try await Task.sleep(for: .milliseconds(50))
+
+            // Second call should contain both paths
+            let paths = try #require(spy.sentAllowedReadPaths.last)
+            let expectedA = URL(fileURLWithPath: "/tmp/a.txt").standardizedFileURL.path
+            let expectedB = URL(fileURLWithPath: "/tmp/b.txt").standardizedFileURL.path
+            #expect(paths.contains(expectedA))
+            #expect(paths.contains(expectedB))
+        }
+
+        @Test("Text-only message passes empty allowedReadPaths", .timeLimit(.minutes(1)))
+        @MainActor func textOnlyHasEmptyPaths() async throws {
+            let spy = SpyEngine()
+            spy.events = [.messageComplete(TokenUsage())]
+            let controller = await makeController(engine: spy)
+
+            controller.sendMessage("Just text")
+            try await Task.sleep(for: .milliseconds(50))
+
+            let paths = try #require(spy.sentAllowedReadPaths.first)
+            #expect(paths.isEmpty)
         }
     }
 

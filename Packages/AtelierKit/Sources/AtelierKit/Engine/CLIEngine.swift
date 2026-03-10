@@ -16,7 +16,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
         workingDirectory: URL? = nil,
         appendSystemPrompt: String? = nil,
         approvalSocketPath: String? = nil,
-        enabledCapabilities: [EnabledCapability] = []
+        enabledCapabilities: [EnabledCapability] = [],
+        allowedReadPaths: [String] = []
     ) -> AsyncThrowingStream<StreamEvent, Error> {
         let path = cliPath
         let alias = model.cliAlias
@@ -44,7 +45,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
                         appendSystemPrompt: appendSystemPrompt,
                         mcpConfigPath: mcpConfigPath,
                         capabilityConfigs: enabledCapabilities,
-                        workingDirectoryPath: cwd.path
+                        workingDirectoryPath: cwd.path,
+                        allowedReadPaths: allowedReadPaths
                     )
 
                     // Use the project's root directory so the CLI can see project files,
@@ -343,7 +345,8 @@ public final class CLIEngine: ConversationEngine, Sendable {
         appendSystemPrompt: String? = nil,
         mcpConfigPath: String? = nil,
         capabilityConfigs: [EnabledCapability] = [],
-        workingDirectoryPath: String? = nil
+        workingDirectoryPath: String? = nil,
+        allowedReadPaths: [String] = []
     ) -> [String] {
         var args = [
             "-p",
@@ -382,6 +385,13 @@ public final class CLIEngine: ConversationEngine, Sendable {
                 for tool in cap.approvedTools {
                     args += ["--allowedTools", "mcp__\(cap.config.serverName)__\(tool)"]
                 }
+            }
+
+            // Auto-approve Read for user-dropped file attachments.
+            // Paths use // prefix for absolute filesystem paths (gitignore-style rules
+            // treat a single / as relative to the project root).
+            for path in allowedReadPaths {
+                args += ["--allowedTools", "Read(/\(path))"]
             }
         }
 

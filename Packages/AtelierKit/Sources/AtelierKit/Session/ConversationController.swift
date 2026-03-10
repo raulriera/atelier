@@ -22,6 +22,9 @@ public final class ConversationController {
     /// Tools the user approved for the lifetime of this conversation.
     public private(set) var sessionApprovedTools: Set<String> = []
 
+    /// File paths the user dropped into the conversation, auto-approved for Read.
+    private var allowedAttachmentPaths: Set<String> = []
+
     // MARK: - Dependencies
 
     private let engine: any ConversationEngine
@@ -157,9 +160,9 @@ public final class ConversationController {
 
     /// Sends a user message, handling plan denial, ask-user dismissal,
     /// message queuing, context injection, and streaming.
-    public func sendMessage(_ text: String) {
+    public func sendMessage(_ text: String, attachments: [FileAttachment] = []) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
 
         if let deniedID = session.denyPendingPlanApproval(reason: trimmed) {
             if let server = approvalServer {
@@ -173,12 +176,28 @@ public final class ConversationController {
             }
         }
 
+        // Build the CLI message: user text + file paths for Claude to read
+        let cliMessage = Self.buildCLIMessage(text: trimmed, attachments: attachments)
+
+        // Register attachment paths for auto-approval before the queueing check
+        // so queued messages also get their files approved when eventually sent.
+        for attachment in attachments {
+            allowedAttachmentPaths.insert(attachment.url.standardizedFileURL.path)
+        }
+
         if session.isStreaming {
-            session.enqueuePendingMessage(trimmed)
+            session.enqueuePendingMessage(cliMessage)
             return
         }
 
-        session.appendUserMessage(trimmed)
+        // Attachments and text are separate timeline items (like iMessage):
+        // first the attachment-only bubble, then the text bubble.
+        if !attachments.isEmpty {
+            session.appendUserMessage("", attachments: attachments)
+        }
+        if !trimmed.isEmpty {
+            session.appendUserMessage(trimmed)
+        }
         session.beginAssistantMessage()
 
         var promptParts: [String] = [SystemPrompt.coreInstructions, SystemPrompt.currentDate]
@@ -194,7 +213,17 @@ public final class ConversationController {
         }
         let injectedPrompt = promptParts.isEmpty ? nil : promptParts.joined(separator: "\n\n")
 
-        startStreaming(message: trimmed, appendSystemPrompt: injectedPrompt)
+        startStreaming(message: cliMessage, appendSystemPrompt: injectedPrompt)
+    }
+
+    /// Builds the message string sent to the CLI, appending file paths if attachments are present.
+    private static func buildCLIMessage(text: String, attachments: [FileAttachment]) -> String {
+        guard !attachments.isEmpty else { return text }
+        let paths = attachments.map(\.url.path).joined(separator: "\n")
+        if text.isEmpty {
+            return "[Attached files]\n\(paths)"
+        }
+        return "\(text)\n\n[Attached files]\n\(paths)"
     }
 
     // MARK: - Stop
@@ -281,6 +310,7 @@ public final class ConversationController {
         saveTask = nil
         let captured = session.snapshot()
         sessionApprovedTools.removeAll()
+        allowedAttachmentPaths.removeAll()
         session.reset()
         capabilityHealthMonitor.reset()
         if let captured {
@@ -304,7 +334,7 @@ public final class ConversationController {
         streamingTask = Task {
             let socketPath = await approvalServer?.socketPath
             let capConfigs = capabilityStore.enabledCapabilityConfigs()
-            let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath, enabledCapabilities: capConfigs)
+            let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath, enabledCapabilities: capConfigs, allowedReadPaths: Array(allowedAttachmentPaths))
             do {
                 for try await event in stream {
                     handleStreamEvent(event)

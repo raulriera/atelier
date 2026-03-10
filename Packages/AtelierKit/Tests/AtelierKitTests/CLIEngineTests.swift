@@ -182,6 +182,50 @@ struct CLIEngineTests {
         }
     }
 
+    @Suite("Attachment read paths")
+    struct AttachmentReadPaths {
+        @Test("allowedReadPaths emit --allowedTools Read(//path) for each file")
+        func emitsReadRulesForEachPath() {
+            let args = CLIEngine.buildArguments(
+                message: "check this", modelAlias: "opus", sessionId: nil,
+                mcpConfigPath: "/tmp/test-config.json",
+                allowedReadPaths: [
+                    "/Users/someone/Documents/report.pdf",
+                    "/Users/someone/Desktop/photo.png"
+                ]
+            )
+            let allowedValues = values(after: "--allowedTools", in: args)
+            // Double-slash prefix marks absolute filesystem paths (single / is project-relative)
+            #expect(allowedValues.contains("Read(//Users/someone/Documents/report.pdf)"))
+            #expect(allowedValues.contains("Read(//Users/someone/Desktop/photo.png)"))
+        }
+
+        @Test("allowedReadPaths are omitted without MCP config")
+        func omittedWithoutMcpConfig() {
+            let args = CLIEngine.buildArguments(
+                message: "check this", modelAlias: "opus", sessionId: nil,
+                mcpConfigPath: nil,
+                allowedReadPaths: ["/Users/someone/file.txt"]
+            )
+            let allowedValues = values(after: "--allowedTools", in: args)
+            #expect(!allowedValues.contains { $0.hasPrefix("Read(") })
+        }
+
+        @Test("allowedReadPaths are independent of project-scoped rules")
+        func independentOfProjectRules() {
+            let args = CLIEngine.buildArguments(
+                message: "check this", modelAlias: "opus", sessionId: nil,
+                mcpConfigPath: "/tmp/test-config.json",
+                workingDirectoryPath: "/Users/test/project",
+                allowedReadPaths: ["/Users/someone/Documents/outside.pdf"]
+            )
+            let allowedValues = values(after: "--allowedTools", in: args)
+            // Both project-scoped and attachment-specific rules present
+            #expect(allowedValues.contains("Read(/Users/test/project/*)"))
+            #expect(allowedValues.contains("Read(//Users/someone/Documents/outside.pdf)"))
+        }
+    }
+
     @Suite("Append system prompt")
     struct AppendSystemPrompt {
         @Test("Non-empty value adds --append-system-prompt flag")

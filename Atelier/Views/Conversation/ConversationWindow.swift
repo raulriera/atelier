@@ -5,6 +5,8 @@ import AtelierKit
 struct ConversationWindow: View {
     @State private var controller: ConversationController
     @State private var draft = ""
+    @State private var pendingAttachments: [FileAttachment] = []
+    @State private var isDropTargeted = false
     @State private var showInspector = false
     @State private var inspectorTab: InspectorTab = .capabilities
     @State private var showComposeField = false
@@ -71,12 +73,19 @@ struct ConversationWindow: View {
                 // Keeping ComposeField always in the layout (stable safe area from
                 // frame 1) and fading opacity avoids the position animation. Revisit.
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    ComposeField(
-                        text: $draft,
-                        isStreaming: controller.session.isStreaming,
-                        onSubmit: { sendMessage() },
-                        onStop: { controller.stopGeneration() }
-                    )
+                    VStack(spacing: Spacing.xs) {
+                        if !pendingAttachments.isEmpty {
+                            ComposeAttachmentStrip(attachments: $pendingAttachments)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
+
+                        ComposeField(
+                            text: $draft,
+                            isStreaming: controller.session.isStreaming,
+                            onSubmit: { sendMessage() },
+                            onStop: { controller.stopGeneration() }
+                        )
+                    }
                     .disabled(!controller.cliAvailable)
                     .frame(maxWidth: Layout.readingWidth)
                     .padding(Spacing.md)
@@ -94,6 +103,7 @@ struct ConversationWindow: View {
                             }
                             .ignoresSafeArea(edges: .bottom)
                     }
+                    .animation(Motion.morph, value: pendingAttachments.isEmpty)
                     .opacity(showComposeField ? 1 : 0)
                     .animation(Motion.appear, value: showComposeField)
                 }
@@ -112,6 +122,37 @@ struct ConversationWindow: View {
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 480)
             }
         }
+        .dropDestination(for: URL.self) { urls, _ in
+            let valid = DropPathValidator.validated(urls, workingDirectory: controller.workingDirectory)
+            let remaining = FileAttachment.maxAttachments - pendingAttachments.count
+            let attachments = valid.prefix(remaining).map { FileAttachment(url: $0) }
+            guard !attachments.isEmpty else { return }
+            withAnimation(Motion.morph) {
+                pendingAttachments.append(contentsOf: attachments)
+            }
+        }
+        .dropConfiguration { _ in
+            DropConfiguration(operation: .copy)
+        }
+        .onDropSessionUpdated { session in
+            switch session.phase {
+            case .entering, .active:
+                isDropTargeted = true
+            default:
+                isDropTargeted = false
+            }
+        }
+        .dropPreviewsFormation(.pile)
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: Radii.lg, style: .continuous)
+                    .strokeBorder(.contentAccent.opacity(0.4), lineWidth: 2)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
+        .animation(Motion.settle, value: isDropTargeted)
         .frame(minWidth: Layout.minimumWindowWidth, minHeight: Layout.minimumWindowHeight)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .toolbar {
@@ -150,7 +191,9 @@ struct ConversationWindow: View {
 
     private func sendMessage() {
         let text = draft
+        let attachments = pendingAttachments
         draft = ""
-        controller.sendMessage(text)
+        pendingAttachments = []
+        controller.sendMessage(text, attachments: attachments)
     }
 }

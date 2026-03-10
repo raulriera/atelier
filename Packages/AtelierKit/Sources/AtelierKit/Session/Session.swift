@@ -257,8 +257,8 @@ public final class Session {
     }
 
     @MainActor
-    public func appendUserMessage(_ text: String) {
-        let item = TimelineItem(content: .userMessage(UserMessage(text: text)))
+    public func appendUserMessage(_ text: String, attachments: [FileAttachment] = []) {
+        let item = TimelineItem(content: .userMessage(UserMessage(text: text, attachments: attachments)))
         activeUserItemID = item.id
         appendItem(item)
     }
