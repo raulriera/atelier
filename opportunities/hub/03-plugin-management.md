@@ -1,152 +1,59 @@
 # Capabilities
 
 > **Category:** Hub / Unified Experience
-> **Type:** Improvement · **Priority:** 🟠 High
-> **Milestone:** M3
+> **Type:** Improvement · **Priority:** High
+> **Milestone:** M3 · **Status:** ✅ Done (Phase 1-3)
 
 ---
 
-## Current State (Electron / Cowork)
+## Problem
 
-11+ starter plugins, private enterprise marketplaces via GitHub — but management is clunky and the failure rate is approximately 25%. Plugins fail silently, there's no crash isolation (a bad plugin can destabilize the app), and no health monitoring. Users have to install, configure, and manage plugins manually. Most people never bother.
+Cowork has 11+ plugins with a ~25% failure rate, no crash isolation, and no health monitoring. Users have to manually install and configure plugins. Most people never bother.
 
-## Native macOS Approach
+## Solution
 
 No plugins. No marketplace. No configuration screens. **Capabilities** — things Claude can do — that surface when needed and disappear when they're not.
 
 ### How it works
 
-Capabilities are the things Claude can do beyond basic conversation: read files, search the web, access a calendar, send an email, query a database. Some are built-in. Some need a one-time connection. None require manual installation or configuration.
+Built-in capabilities just work. On-demand capabilities surface when Claude needs them: "I can check your calendar if you connect it. Allow?" → One tap → Done.
 
-**Built-in capabilities** just work. File reading, writing, searching within a project — these are part of the app. No setup.
+The user never sees "MCP," "plugin," or "connector." They see capability names and permission prompts. The infrastructure is invisible.
 
-**On-demand capabilities** surface when Claude needs them:
+### Progressive disclosure
 
-> "I can look up flight prices if you enable web search. Allow?"
-> → One tap. Done.
-
-> "I can check your calendar if you connect Google Calendar."
-> → One tap → OAuth sign-in → Done.
-
-The user never sees "MCP," "plugin," or "connector." They see a capability name ("web search," "Google Calendar") and a permission prompt. The app manages the underlying MCP server lifecycle invisibly — starting, connecting, health-checking, restarting on crash.
-
-### Progressive disclosure layers
-
-| User level | Experience |
-|-----------|-----------|
+| Level | Experience |
+|-------|-----------|
 | Everyone | Built-in capabilities work out of the box |
 | Regular users | Claude asks to enable things when needed, one-tap approval |
-| Power users | A capabilities section in project settings to browse and pre-configure |
-| Developers | Can add custom MCP server URLs in the context file |
+| Power users | Capabilities section in project settings to browse and configure |
+| Developers | Custom MCP server URLs in the context file |
 
-### The context file connection
+## Status
 
-Capabilities can be declared in a project's context file:
-
-```
-capabilities: [web-search, google-calendar]
-```
-
-Just names. Not server URLs, not commands, not port numbers. Atelier resolves them from a built-in registry. When the project opens, those capabilities are available immediately.
-
-For developers building custom tools, the deepest layer supports full MCP server configuration — but this is explicitly a power-user feature that nobody else ever sees.
-
-## Current Implementation
-
-The capabilities architecture is live with iWork, Safari, and Mail as built-in capabilities:
-
-- **Capability models** — `Capability`, `ToolGroup`, `MCPServerConfig`, `EnabledCapability`, `CapabilityRegistry` in `AtelierKit/Capabilities/`
-- **Tool groups** — each capability defines named groups of tools (e.g. Mail has Read, Manage, Send). Users enable/disable groups independently for granular control
-- **CapabilityStore** — per-project persistence of enabled groups (`capabilities.json`), with migration from legacy flat format
-- **CLIEngine integration** — merges capability MCP servers into the temp config, auto-approves tools from enabled groups via `--allowedTools`
-- **System prompt injection** — Claude knows about available/enabled capabilities (including which groups are active) and can suggest enabling them
-- **UI** — toolbar sheet with NavigationStack drill-down to per-group toggles
-- **iWork MCP helper** — `Helpers/atelier-iwork-mcp.swift`, 12 tools across Keynote/Pages/Numbers via JXA, 2 groups (Create, Export)
-- **Safari MCP helper** — `Helpers/atelier-safari-mcp.swift`, 6 tools via JXA, 2 groups (Browse, Script)
-- **Mail MCP helper** — `Helpers/atelier-mail-mcp.swift`, 10 tools via JXA, 3 groups (Read, Manage, Send)
-- **Reminders MCP helper** — `Helpers/atelier-reminders-mcp.swift`, 6 tools via JXA, 3 groups (Read, Create, Manage)
-- **Calendar MCP helper** — `Helpers/atelier-calendar-mcp.swift`, 5 tools via JXA, 3 groups (Read, Create, Manage)
-- **Notes MCP helper** — `Helpers/atelier-notes-mcp.swift`, 6 tools via JXA, 3 groups (Read, Create, Manage)
-- **Finder MCP helper** — `Helpers/atelier-finder-mcp.swift`, 9 tools via JXA, 2 groups (Browse, Organize)
-- **Export defaults** — saves to project working directory when no path specified
-- **Plain-English tool names** — `MCPToolMetadata` maps MCP tool identifiers to human-readable names and SF Symbols in both tool use cards and approval cards (e.g. "Move to Trash" instead of `mcp__atelier-finder__finder_trash`)
-- **Destructive tool gating** — destructive tools (trash, delete, send) are excluded from auto-approve so they go through the approval flow
-
-Pattern for adding new capabilities: add a new helper in `Helpers/`, register in `CapabilityRegistry`, add a build phase in the Xcode project.
-
-## Planned Built-in Capabilities
-
-### High Priority — Native Mac Differentiators
-
-| Capability | App | What it unlocks | Complexity |
-|-----------|-----|----------------|------------|
-| ✅ **iWork** | Keynote, Pages, Numbers | Create/edit presentations, documents, spreadsheets | Shipped |
-| ✅ **Mail** | Mail.app | Draft, send, reply to emails. "Summarize this and email it to the team." | Shipped |
-| ✅ **Reminders** | Reminders.app | Create tasks, lists, due dates. "Remind me to review the budget Friday." | Shipped |
-| ✅ **Calendar** | Calendar.app | Create events, check availability. "Block 2 hours tomorrow for this project." | Shipped |
-| ✅ **Notes** | Notes.app | Read/write Apple Notes. "Save these meeting notes to my Work folder." | Shipped |
-| ✅ **Preview / PDF** | PDFKit | Read, merge, split, extract text from PDFs. "Combine these three PDFs into one." | Shipped |
-
-### Medium Priority — Productivity Multipliers
-
-| Capability | App | What it unlocks | Complexity |
-|-----------|-----|----------------|------------|
-| ✅ **Safari** | Safari | Open URLs, read page content, bookmark. "Research competitors and save the links." | Shipped |
-| ✅ **Finder** | Finder | Organize files, create folders, tag files. "Organize my Downloads by type." Smart folders. | Shipped |
-| 🔲 **Shortcuts** | Shortcuts.app | Trigger any user-defined Shortcut. Meta-capability — unlocks everything the user has already automated. | Low — `shortcuts run` CLI |
-
-### Lower Priority — Delight
-
-| Capability | App | What it unlocks |
-|-----------|-----|----------------|
-| 🔲 **Music** | Music.app | "Play some focus music." Simple but charming. |
-| 🔲 **Maps** | Maps.app | Location lookup, directions export for travel planning docs. |
-
-## Implementation Phases
-
-### Phase 1 — Built-in Capabilities (current)
-
-- ✅ Capability registry and store architecture
-- ✅ iWork capability (Keynote, Pages, Numbers)
-- ✅ Safari capability (Browse, Script)
-- ✅ Mail capability (Read, Manage, Send)
-- ✅ Reminders capability (Read, Create, Manage)
-- ✅ Calendar capability (Read, Create, Manage)
-- ✅ Notes capability (Read, Create, Manage)
-- ✅ Finder capability (Browse, Organize)
-- ✅ Tool groups — granular per-group enablement with NavigationStack sheet UI
-- ✅ Preview/PDF capability (PDFKit — info, extract text, merge, split)
-- 🔲 Shortcuts capability
-
-### Phase 2 — On-Demand Activation
-
-- ✅ Claude detects when a capability would help and suggests enabling it (via system prompt injection)
-- ✅ One-click enable directly from the conversation (inline suggestion bar below assistant messages)
-- 🔲 OAuth flows for capabilities that need authentication (Google Calendar, etc.)
-
-### Phase 3 — Capability Health (Invisible)
-
-- ✅ Background health monitoring — tracks tool call success/failure per capability via `CapabilityHealthMonitor`
-- ✅ Only surfaces to the user if something is genuinely broken: "[Capability] is temporarily unavailable"
-- ✅ No health dashboard, no status cards, no management UI — health is tracked silently, alerts shown as system events
-- Health states: healthy → degraded → unavailable (after 3 consecutive failures)
-- Automatically resets on new conversation (CLI spawns fresh MCP servers)
-
-### Phase 4 — Custom MCP Servers (Power Users)
-
-- Context file supports full MCP server configuration for custom capabilities
-- XPC-based isolation: custom servers can't crash the app
-- Only relevant for developers building their own tools
-
-## Dependencies
-
-- architecture/06-conversation-model.md (capabilities surface in the conversation timeline)
-- context/01-project-context-files.md (capability declarations in context files)
-- security/04-credential-storage.md (OAuth tokens in Keychain)
+| Feature | Status |
+|---------|--------|
+| Capability registry, store, tool groups | ✅ Shipped |
+| iWork (Keynote, Pages, Numbers) | ✅ Shipped |
+| Mail (Read, Manage, Send) | ✅ Shipped |
+| Reminders (Read, Create, Manage) | ✅ Shipped |
+| Calendar (Read, Create, Manage) | ✅ Shipped |
+| Notes (Read, Create, Manage) | ✅ Shipped |
+| Safari (Browse, Script) | ✅ Shipped |
+| Finder (Browse, Organize) | ✅ Shipped |
+| Preview/PDF (info, extract, merge, split) | ✅ Shipped |
+| System prompt injection for capability suggestions | ✅ Shipped |
+| Inline suggestion bar for one-click enable | ✅ Shipped |
+| Health monitoring (CapabilityHealthMonitor) | ✅ Shipped |
+| Destructive tool gating | ✅ Shipped |
+| Plain-English tool names (MCPToolMetadata) | ✅ Shipped |
+| Shortcuts capability | 🔲 Not started |
+| Music, Maps | 🔲 Not started |
+| Custom MCP servers (power users) | 🔲 Not started |
 
 ## Notes
 
-The word "plugin" should never appear in the UI. The word "MCP" should never appear in the UI. Users see capabilities — things Claude can do. The infrastructure is invisible. This is the phone model: you don't configure your GPS chip, you just open Maps and it knows where you are.
+The word "plugin" should never appear in the UI. The word "MCP" should never appear in the UI. This is the phone model: you don't configure your GPS chip, you just open Maps and it knows where you are.
 
 ---
 

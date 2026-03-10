@@ -1,46 +1,32 @@
 # Clipboard Integration
 
 > **Category:** macOS Integration
-> **Type:** 🆕 New Capability · **Priority:** 🟡 Medium
-> **Milestone:** M5
+> **Type:** New Capability · **Priority:** Medium
+> **Milestone:** M5 · **Status:** 🔲 Not started
 
 ---
 
-## Current State (Electron / Cowork)
+## Problem
 
-No clipboard awareness — cannot process clipboard contents or output to clipboard. Users must save content to a file, grant Cowork access to the folder, and then ask it to process the file. For quick operations on copied text or data, this is painfully slow.
+No clipboard awareness — processing copied text or data requires saving to a file first, granting folder access, then asking Claude to process it. Painfully slow for quick operations.
 
-## Native macOS Approach
+## Solution
 
-**NSPasteboard monitoring**: "Process clipboard with Cowork" from the menu bar. Rich clipboard output — paste generated tables directly into Keynote/Numbers as native objects.
+**NSPasteboard** integration: "Process Clipboard" from the menu bar agent, plus rich clipboard output — paste generated tables directly into Numbers/Keynote as native objects.
 
-### Implementation Strategy
-
-- **Clipboard input:** The menu bar agent includes a "Process Clipboard" action. It reads the current clipboard content (text, images, files, URLs) and creates a quick Cowork session with that content as input.
-- **Rich clipboard output:** When Cowork generates structured data (tables, formatted text, images), it places rich `NSPasteboard` representations:
-  - Tables → `NSPasteboardTypeTabularText` + HTML + plain text (paste into Numbers/Excel as a formatted table)
-  - Formatted text → `NSAttributedString` (paste into Pages/Word with formatting preserved)
-  - Images → `NSPasteboardTypeTIFF` + PNG (paste into Keynote/Preview)
-- **Clipboard history:** Optional clipboard history integration — track the last N items processed through Cowork for quick re-access.
-- **Global hotkey:** `⌘⇧V` (or configurable) to invoke "Process Clipboard" from any app — no need to open Cowork.
-
-### Example User Flow
+### How it works
 
 ```
-1. User copies a table of sales data from an email
-2. Presses ⌘⇧V (global hotkey)
-3. Menu bar popover appears: "What should I do with this table?"
-4. User types: "Add a totals row and sort by revenue descending"
-5. Processed table is placed on clipboard
-6. User pastes (⌘V) into Numbers — arrives as a formatted table
+1. Copy a table of sales data from an email
+2. Press ⌘⇧V (global hotkey)
+3. Menu bar popover: "What should I do with this table?"
+4. "Add a totals row and sort by revenue descending"
+5. Processed table placed on clipboard
+6. Paste into Numbers — arrives as a formatted table
 ```
 
-### Key Dependencies
-
-- `NSPasteboard` for clipboard read/write
-- Rich pasteboard types (TabularText, AttributedString, TIFF)
-- Global hotkey registration
-- Menu bar popover UI
+- **Rich output** — tables paste as `NSPasteboardTypeTabularText`, formatted text as `NSAttributedString`, images as TIFF/PNG
+- **Global hotkey** — invoke from any app without opening Atelier
 
 ---
 

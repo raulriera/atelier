@@ -1,51 +1,36 @@
 # Shortcuts & Automation
 
 > **Category:** macOS Integration
-> **Type:** 🆕 New Capability · **Priority:** 🟠 High
-> **Milestone:** M4
+> **Type:** New Capability · **Priority:** High
+> **Milestone:** M4 · **Status:** 🔲 Not started
 
 ---
 
-## Current State (Electron / Cowork)
+## Problem
 
-No Shortcuts.app or AppleScript support. Cowork cannot be triggered or controlled by any macOS automation system. Users cannot integrate Cowork into larger workflows involving other apps.
+Atelier cannot be triggered or controlled by any macOS automation system. Users cannot integrate it into larger workflows involving other apps — everything requires manual interaction.
 
-## Native macOS Approach
+## Solution
 
-Full **SiriShortcuts / Shortcuts.app** integration via App Intents framework. **AppleScript/JXA** dictionary for power users. Automator actions for legacy workflows.
+Full **Shortcuts.app** integration via App Intents framework, plus an **AppleScript/JXA** dictionary for power users.
 
-### Implementation Strategy
+### App Intents
 
-- **App Intents:** Define 10–15 core intents that appear in Shortcuts.app:
-  - `ProcessFiles` — run a Cowork task on specified files/folders
-  - `GenerateDocument` — create a report/deck/spreadsheet from data
-  - `OrganizeFolder` — sort and organize files
-  - `RunWorkflow` — execute a named saved workflow
-  - `GetTaskStatus` — check if a background task is complete
-  - `GetTokenUsage` — return current billing period usage
-- **Parameterized intents:** Each intent accepts parameters (file paths, output formats, model preference) that can be configured in Shortcuts.app's visual editor.
-- **AppleScript dictionary:** Expose a Scripting Definition (`.sdef`) file for AppleScript/JXA control. Power users can script Cowork from Terminal, BBEdit, or any scriptable app.
-- **Shortcuts automations:** Combine with Shortcuts' triggers: time-of-day, when a file appears in a folder, when connecting to a specific Wi-Fi network, Focus mode changes, etc.
+Core intents that appear in Shortcuts.app: ProcessFiles, GenerateDocument, OrganizeFolder, RunWorkflow, GetTaskStatus, GetTokenUsage. Each accepts parameters configurable in Shortcuts' visual editor.
 
-### Example Shortcut: "Morning Briefing"
+### Automation power
+
+Combined with Shortcuts' triggers (time-of-day, folder actions, Focus mode changes), this enables fully automated workflows:
 
 ```
 Trigger: 8:00 AM on weekdays
-  │
-  ├─ Shortcuts: Get today's calendar events (Calendar app)
-  ├─ Shortcuts: Get unread email count (Mail app)
-  ├─ Cowork Intent: GenerateDocument
-  │   - Input: calendar events + email summary
-  │   - Template: "daily-briefing"
-  │   - Output: ~/Desktop/briefing-2026-02-27.md
-  └─ Shortcuts: Open file in Preview
+  ├─ Get today's calendar events (Calendar app)
+  ├─ Get unread email count (Mail app)
+  ├─ Atelier: GenerateDocument(template: "daily-briefing")
+  └─ Open file in Preview
 ```
 
-### Key Dependencies
-
-- App Intents framework (macOS 26)
-- Scripting Definition (`.sdef`) for AppleScript
-- `NSUserActivity` for Handoff support
+This is impossible in Electron — App Intents require a native app bundle.
 
 ---
 

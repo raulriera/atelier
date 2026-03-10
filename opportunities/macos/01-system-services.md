@@ -1,45 +1,25 @@
 # System Services
 
 > **Category:** macOS Integration
-> **Type:** 🆕 New Capability · **Priority:** 🟠 High
-> **Milestone:** M4
+> **Type:** New Capability · **Priority:** High
+> **Milestone:** M4 · **Status:** 🔲 Not started
 
 ---
 
-## Current State (Electron / Cowork)
+## Problem
 
-None — Electron apps cannot register as macOS Services. Users must manually copy text, switch to Claude, paste, get a result, copy it back, and switch to the original app.
+To use Claude with text from another app, users must copy text, switch to Atelier, paste, get a result, copy it back, and switch to the original app. Six steps and two context switches for what should be one action.
 
-## Native macOS Approach
+## Solution
 
-Register as a **macOS Service**: select text in any app → right-click → "Process with Cowork." Implemented via `NSServicesProvider`.
+Register as a **macOS Service** via `NSServicesProvider`: select text in any app → right-click → "Process with Claude." Results replace the selection in-place — zero context switches.
 
-### Implementation Strategy
+- **Service actions:** Summarize, Rewrite, Translate, Analyze (opens a full session)
+- **In-place replacement:** For rewrite/translate, the result replaces the selection in the source app
+- **Keyboard shortcuts:** Users assign global shortcuts via System Settings → Keyboard → Services
+- **Rich content:** Accepts both `NSAttributedString` and file selections
 
-- **Service registration:** Declare services in `Info.plist` under `NSServices`. Register handlers via `NSApp.servicesProvider`:
-  - "Summarize with Claude" — returns a summary of selected text
-  - "Rewrite with Claude" — rewrites selected text (replaces in-place)
-  - "Analyze with Claude" — opens a Cowork session with the selected text as context
-  - "Translate with Claude" — translates selected text
-- **In-place replacement:** For services that return text (rewrite, translate), the result replaces the selection in the source app — no context switching needed.
-- **Keyboard shortcuts:** Users can assign global keyboard shortcuts to each service via System Settings → Keyboard → Keyboard Shortcuts → Services.
-- **Rich content:** Services can accept `NSAttributedString` and `NSFilenamesPboardType` — handle both text and file selections.
-
-### Example User Flow
-
-```
-1. User selects 3 paragraphs in TextEdit
-2. Right-click → Services → "Rewrite with Claude"
-3. Claude processes (small spinner in menu bar)
-4. Rewritten text replaces selection in TextEdit
-5. Total time: ~3 seconds, zero context switches
-```
-
-### Key Dependencies
-
-- `NSServicesProvider` protocol
-- `Info.plist` NSServices declarations
-- `NSPasteboard` for content exchange
+This is impossible in Electron — macOS Services require a native app bundle with `Info.plist` declarations.
 
 ---
 

@@ -1,29 +1,20 @@
 # Quick Look Previews
 
 > **Category:** macOS Integration
-> **Type:** 🆕 New Capability · **Priority:** 🟡 Low
-> **Milestone:** M5
+> **Type:** New Capability · **Priority:** Low
+> **Milestone:** M5 · **Status:** 🔲 Not started
 
 ---
 
-## Current State (Electron / Cowork)
+## Problem
 
-None — generated files require opening in external apps to preview. Users must leave Cowork, find the file in Finder, and open it in Excel/Word/Preview to see what was generated.
+Generated files require opening in external apps to see what was produced. Users must leave Atelier, find the file in Finder, and open it in the appropriate app.
 
-## Native macOS Approach
+## Solution
 
-**QLPreviewPanel integration**: spacebar to preview any Cowork-generated document inline. Custom Quick Look generators for session summaries.
+**QLPreviewPanel integration**: press spacebar on any output file in the conversation to preview it inline. A custom Quick Look generator for session files shows task summary, inputs, outputs, and token usage in a formatted preview.
 
-### Implementation Strategy
-
-- Implement `QLPreviewPanelDataSource` and `QLPreviewPanelDelegate` so pressing spacebar on any output file in the session view opens a Quick Look preview.
-- Build a custom Quick Look generator (`.qlgenerator` / `QLPreviewingController`) for Cowork session files — showing task summary, inputs, outputs, and token usage in a formatted preview.
-- Embed `QLPreviewView` directly in the session detail view for always-visible output previews without needing a separate panel.
-
-### Key Dependencies
-
-- Quick Look framework (`QLPreviewPanel`, `QLPreviewView`)
-- Custom QLPreviewingController for session files
+Embed `QLPreviewView` directly in the session for always-visible output previews without a separate panel.
 
 ---
 

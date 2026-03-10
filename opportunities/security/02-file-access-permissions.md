@@ -1,44 +1,33 @@
 # File Access Permissions
 
 > **Category:** Security & Privacy
-> **Type:** Improvement · **Priority:** 🔴 Critical
-> **Milestone:** M1
+> **Type:** Improvement · **Priority:** Critical
+> **Milestone:** M1 · **Status:** 🔨 In progress
 
 ---
 
-## Current State (Electron / Cowork)
+## Problem
 
-Folder-scoped access via VirtioFS mount — but no per-file granularity or audit trail. Once a user grants access to a folder, the agent has read/write access to everything inside it with no logging of individual file operations.
+The macOS App Sandbox restricts Atelier to its container by default. Users need to grant access to project folders — and that access needs to persist across launches without re-prompting.
 
-## Native macOS Approach
+The bookmark system restricts the app process, but the Claude CLI runs as the user's process with full access. Both need parallel controls.
 
-macOS **App Sandbox** with **Security-Scoped Bookmarks** for persistent folder access. `NSFileCoordinator` for safe concurrent access. Full audit log of every file read/write/delete with timestamps.
+## Solution
 
-### Implementation Strategy
+**App side:** Security-Scoped Bookmarks for persistent folder access. User picks a folder once via `NSOpenPanel`, bookmark is saved, access persists across launches.
 
-- **Security-Scoped Bookmarks:** When users grant folder access via `NSOpenPanel`, create Security-Scoped Bookmarks that persist across app launches. Users grant access once and it's remembered, but revocable at any time.
-- **Per-file audit log:** Every file operation (read, write, create, delete, move, rename) is logged to a local encrypted SQLite database with: timestamp, file path, operation type, session ID, and whether the operation was user-approved.
-- **NSFileCoordinator:** Wrap all file operations in `NSFileCoordinator` to safely handle concurrent access from Finder, Time Machine, and other apps.
-- **Read-only mode:** For analysis tasks, mount folders as read-only in the VM. The agent can read files but cannot modify them without explicit mode escalation.
-- **Access revocation:** A settings panel shows all granted folder accesses with one-click revocation. Revoking access immediately invalidates the Security-Scoped Bookmark and unmounts the folder from the VM.
+**CLI side:** `--allowedTools` patterns scope file tools to the project directory. `--disallowedTools` blocks sensitive paths. `PreToolUse` hook validates as defense-in-depth. See `security/07-cli-filesystem-boundary.md`.
 
-### Gap: bookmarks don't restrict the CLI
+## Status
 
-Security-scoped bookmarks restrict the **app process** (`Atelier.app`). The Claude Code CLI is a separate binary (`~/.local/bin/claude`) that runs as the user's process — outside the app sandbox, with full filesystem access. The bookmark system has no effect on what the CLI can read or write.
-
-This means there are two parallel access control systems that don't talk to each other:
-1. **App-level:** Bookmarks restrict Atelier.app to user-granted folders (works correctly)
-2. **CLI-level:** No restrictions whatsoever (the gap)
-
-The granted folder list from bookmarks must be projected onto the CLI via `--allowedTools` path patterns and `PreToolUse` hooks. See `security/07-cli-filesystem-boundary.md` for the full solution.
-
-### Key Dependencies
-
-- App Sandbox entitlements
-- `NSURL` Security-Scoped Bookmarks
-- `NSFileCoordinator` and `NSFilePresenter`
-- SQLite audit database with encryption
-- security/07-cli-filesystem-boundary.md (projecting bookmark grants onto CLI flags)
+| Feature | Status |
+|---------|--------|
+| Security-Scoped Bookmarks (BookmarkStore) | ✅ Shipped |
+| CLI path scoping via --allowedTools | ✅ Shipped |
+| Sensitive path denylist | ✅ Shipped |
+| PreToolUse path guard hook | ✅ Shipped |
+| NSFileCoordinator for concurrent file ops | 🔲 Not started |
+| Audit logging to encrypted SQLite | 🔲 Not started |
 
 ---
 

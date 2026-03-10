@@ -1,35 +1,24 @@
 # Rich Notifications
 
 > **Category:** macOS Integration
-> **Type:** Improvement · **Priority:** 🟡 Medium
-> **Milestone:** M4
+> **Type:** Improvement · **Priority:** Medium
+> **Milestone:** M4 · **Status:** 🔲 Not started
 
 ---
 
-## Current State (Electron / Cowork)
+## Problem
 
-Basic Electron notifications — no inline actions, no grouping, no threading. Notifications are plain text with no ability to take action without switching to the app.
+Basic notifications with no inline actions, no grouping, no threading. Users must switch to the app for any interaction — even a simple approve/reject decision.
 
-## Native macOS Approach
+## Solution
 
-**UNUserNotificationCenter**: rich notifications with inline actions (Approve/Reject/View), thread grouping per session, critical alerts for destructive operations.
+**UNUserNotificationCenter** with rich, actionable notifications:
 
-### Implementation Strategy
-
-- **Actionable notifications:** Define `UNNotificationCategory` with custom actions:
-  - Task complete: [Open Output] [View Summary]
-  - Approval needed: [Approve] [View Diff] [Reject]
-  - Error occurred: [Retry] [View Details] [Cancel Task]
-- **Thread grouping:** Group notifications by session ID so multiple updates from the same task stack neatly.
-- **Rich content:** Use `UNNotificationAttachment` to include thumbnails of generated files directly in the notification banner.
-- **Critical alerts:** Destructive operations (file deletion, external API calls) use `UNNotificationSound.defaultCritical` and bypass Do Not Disturb.
-- **Inline text reply:** For simple follow-up prompts, users can type a response directly in the notification without opening Atelier.
-
-### Key Dependencies
-
-- `UserNotifications` framework
-- `UNNotificationCategory`, `UNNotificationAction`
-- `UNNotificationAttachment` for rich media
+- **Inline actions** — Approve/Reject/View directly from the notification banner
+- **Thread grouping** — notifications stack per session, not a flood of individual items
+- **Rich content** — thumbnails of generated files attached to the notification
+- **Critical alerts** — destructive operations bypass Do Not Disturb
+- **Inline text reply** — respond to simple follow-up prompts without opening the app
 
 ---
 
