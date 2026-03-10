@@ -25,6 +25,7 @@ struct ProjectWindow: View {
             if let project {
                 if project.rootURL != nil {
                     ConversationWindow(
+                        projectName: project.displayName,
                         capabilityStore: project.capabilityStore,
                         sessionPersistence: project.sessionPersistence,
                         workingDirectory: project.rootURL,
@@ -43,7 +44,7 @@ struct ProjectWindow: View {
                 )
             }
         }
-        .navigationTitle(project?.displayName ?? "")
+        .navigationTitle(project?.rootURL != nil ? "" : (project?.displayName ?? ""))
         .task(id: project?.rootURL) {
             guard let project, project.rootURL != nil else { return }
             await project.fileAccessStore.load()

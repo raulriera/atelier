@@ -5,13 +5,17 @@ public struct SessionSnapshot: Sendable, Codable {
     public var sessionId: String
     public var items: [TimelineItem]
     public var savedAt: Date
+    public var createdAt: Date
+    public var title: String
     public var wasInterrupted: Bool
     public var pendingMessages: [String]
 
-    public init(sessionId: String, items: [TimelineItem], savedAt: Date = Date(), wasInterrupted: Bool = false, pendingMessages: [String] = []) {
+    public init(sessionId: String, items: [TimelineItem], savedAt: Date = Date(), createdAt: Date? = nil, title: String = "", wasInterrupted: Bool = false, pendingMessages: [String] = []) {
         self.sessionId = sessionId
         self.items = items
         self.savedAt = savedAt
+        self.createdAt = createdAt ?? savedAt
+        self.title = title
         self.wasInterrupted = wasInterrupted
         self.pendingMessages = pendingMessages
     }
@@ -24,23 +28,30 @@ public struct SessionSnapshot: Sendable, Codable {
         let lossy = try container.decode([LossyDecodable<TimelineItem>].self, forKey: .items)
         items = lossy.compactMap(\.value)
         savedAt = try container.decode(Date.self, forKey: .savedAt)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? savedAt
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
         wasInterrupted = try container.decodeIfPresent(Bool.self, forKey: .wasInterrupted) ?? false
         pendingMessages = try container.decodeIfPresent([String].self, forKey: .pendingMessages) ?? []
     }
 
     private enum CodingKeys: String, CodingKey {
-        case sessionId, items, savedAt, wasInterrupted, pendingMessages
+        case sessionId, items, savedAt, createdAt, title, wasInterrupted, pendingMessages
     }
 }
 
 /// Lightweight metadata for listing saved sessions without loading items.
-public struct SessionSnapshotMetadata: Sendable {
+public struct SessionSnapshotMetadata: Sendable, Identifiable {
+    public var id: String { sessionId }
     public var sessionId: String
     public var savedAt: Date
+    public var createdAt: Date
+    public var title: String
 
-    public init(sessionId: String, savedAt: Date) {
+    public init(sessionId: String, savedAt: Date, createdAt: Date? = nil, title: String = "") {
         self.sessionId = sessionId
         self.savedAt = savedAt
+        self.createdAt = createdAt ?? savedAt
+        self.title = title
     }
 }
 
@@ -195,6 +206,15 @@ public actor DiskSessionPersistence: SessionPersistence {
         baseDirectory.appendingPathComponent("\(sessionId)-payloads.json")
     }
 
+    /// Lightweight struct for partial JSON decode — only the fields needed for listing.
+    private struct PartialSnapshot: Decodable {
+        var savedAt: Date
+        var createdAt: Date?
+        var title: String?
+        /// Legacy field from older snapshots — used as fallback when `title` is missing.
+        var preview: String?
+    }
+
     private func listMetadata() -> [SessionSnapshotMetadata] {
         let manager = FileManager.default
         guard let files = try? manager.contentsOfDirectory(
@@ -205,15 +225,34 @@ public actor DiskSessionPersistence: SessionPersistence {
             return []
         }
 
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
         return files.compactMap { fileURL -> SessionSnapshotMetadata? in
             guard fileURL.pathExtension == "json" else { return nil }
             let name = fileURL.deletingPathExtension().lastPathComponent
             // Skip sidecar files
             guard !name.hasSuffix("-payloads") else { return nil }
+
             let modDate = (try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? Date.distantPast
-            return SessionSnapshotMetadata(sessionId: name, savedAt: modDate)
+
+            // Partial decode for title and createdAt without loading all items.
+            let partial = try? decoder.decode(PartialSnapshot.self, from: Data(contentsOf: fileURL))
+
+            // Use title if present, otherwise fall back to the legacy preview field.
+            let title = partial?.title.flatMap { $0.isEmpty ? nil : $0 }
+                ?? partial?.preview
+                ?? ""
+
+            return SessionSnapshotMetadata(
+                sessionId: name,
+                savedAt: partial?.savedAt ?? modDate,
+                createdAt: partial?.createdAt,
+                title: title
+            )
         }
     }
+
 }
 
 /// In-memory session persistence for testing.
@@ -251,7 +290,7 @@ public actor InMemorySessionPersistence: SessionPersistence {
 
     public func list() -> [SessionSnapshotMetadata] {
         snapshots.values.map {
-            SessionSnapshotMetadata(sessionId: $0.sessionId, savedAt: $0.savedAt)
+            SessionSnapshotMetadata(sessionId: $0.sessionId, savedAt: $0.savedAt, createdAt: $0.createdAt, title: $0.title)
         }
     }
 

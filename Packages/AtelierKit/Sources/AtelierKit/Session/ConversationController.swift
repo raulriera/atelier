@@ -18,6 +18,7 @@ public final class ConversationController {
     public internal(set) var toolPayloads: [String: ToolPayload] = [:]
     public var selectedToolEvent: ToolUseEvent?
     public var selectedModel: ModelConfiguration = .default
+    public private(set) var sessionList: [SessionSnapshotMetadata] = []
 
     /// Tools the user approved for the lifetime of this conversation.
     public private(set) var sessionApprovedTools: Set<String> = []
@@ -71,6 +72,8 @@ public final class ConversationController {
                 toolPayloads = (try? await sessionPersistence.loadToolPayloads(sessionId: id)) ?? [:]
             }
         }
+
+        await refreshSessionList()
 
         guard approvalServer == nil else { return }
         let server = ApprovalServer()
@@ -304,9 +307,44 @@ public final class ConversationController {
         }
     }
 
-    // MARK: - New conversation
+    // MARK: - Session management
 
     public func startNewConversation() {
+        let captured = teardownCurrentSession()
+        if let captured {
+            let persistence = sessionPersistence
+            saveTask = Task {
+                try? await persistence.save(captured)
+                await self.refreshSessionList()
+            }
+        }
+    }
+
+    /// Switches to a previously saved session by ID.
+    public func switchToSession(id: String) {
+        // Don't switch to the already-active session.
+        guard id != session.sessionId else { return }
+
+        let captured = teardownCurrentSession()
+
+        let persistence = sessionPersistence
+        saveTask = Task {
+            if let captured {
+                try? await persistence.save(captured)
+            }
+            guard !Task.isCancelled else { return }
+            if let snapshot = try? await persistence.load(id: id) {
+                guard !Task.isCancelled else { return }
+                session = Session.restore(from: snapshot)
+                toolPayloads = (try? await persistence.loadToolPayloads(sessionId: id)) ?? [:]
+            }
+            await refreshSessionList()
+        }
+    }
+
+    /// Tears down the current session: cancels tasks, snapshots state, and resets.
+    @discardableResult
+    private func teardownCurrentSession() -> SessionSnapshot? {
         streamingTask?.cancel()
         streamingTask = nil
         saveTask?.cancel()
@@ -316,10 +354,15 @@ public final class ConversationController {
         allowedAttachmentPaths.removeAll()
         session.reset()
         capabilityHealthMonitor.reset()
-        if let captured {
-            let persistence = sessionPersistence
-            saveTask = Task { try? await persistence.save(captured) }
-        }
+        toolPayloads = [:]
+        return captured
+    }
+
+    /// Reloads the list of saved sessions from persistence.
+    public func refreshSessionList() async {
+        let list = await sessionPersistence.list()
+        // Sort by creation date, newest first — stable order that never shifts.
+        sessionList = list.sorted { $0.createdAt > $1.createdAt }
     }
 
     // MARK: - Private

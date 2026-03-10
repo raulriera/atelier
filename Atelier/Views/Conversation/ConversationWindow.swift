@@ -10,15 +10,19 @@ struct ConversationWindow: View {
     @State private var showInspector = false
     @State private var inspectorTab: InspectorTab = .capabilities
     @State private var showComposeField = false
+    @State private var showSessionMenu = false
 
+    let projectName: String
     let scheduleStore: ScheduleStore
 
     init(
+        projectName: String,
         capabilityStore: CapabilityStore,
         sessionPersistence: SessionPersistence,
         workingDirectory: URL?,
         scheduleStore: ScheduleStore
     ) {
+        self.projectName = projectName
         self._controller = State(initialValue: ConversationController(
             capabilityStore: capabilityStore,
             sessionPersistence: sessionPersistence,
@@ -154,8 +158,18 @@ struct ConversationWindow: View {
         }
         .animation(Motion.settle, value: isDropTargeted)
         .frame(minWidth: Layout.minimumWindowWidth, minHeight: Layout.minimumWindowHeight)
+        .navigationTitle("")
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .toolbar {
+            SessionMenuToolbarItem(
+                projectName: projectName,
+                showMenu: $showSessionMenu,
+                sessions: controller.sessionList,
+                currentSessionId: controller.session.sessionId,
+                onSelect: { controller.switchToSession(id: $0) },
+                onNewConversation: { controller.startNewConversation() }
+            )
+
             ConversationToolbar(
                 showInspector: $showInspector,
                 inspectorTab: $inspectorTab

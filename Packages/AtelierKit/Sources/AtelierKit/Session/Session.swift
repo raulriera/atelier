@@ -10,7 +10,15 @@ public final class Session {
     public private(set) var thinkingText: String = ""
     public private(set) var pendingMessages: [String] = []
     public private(set) var cancelledItemIDs: Set<UUID> = []
-    public var sessionId: String?
+    public var sessionId: String? {
+        didSet {
+            if sessionId != nil && sessionCreatedAt == nil {
+                sessionCreatedAt = Date()
+            }
+        }
+    }
+    /// When this session was first created. Preserved across saves/restores.
+    public private(set) var sessionCreatedAt: Date?
 
     private var activeItemID: UUID?
     private var activeToolIndices: [String: Int] = [:]
@@ -160,9 +168,18 @@ public final class Session {
 
         let persistableItems = items.filter { Self.isPersistable($0) && !cancelledItemIDs.contains($0.id) }
 
+        // Title: first user message text, truncated.
+        let title = persistableItems.lazy.compactMap { item -> String? in
+            guard case .userMessage(let msg) = item.content, !msg.text.isEmpty else { return nil }
+            let line = msg.text.prefix(80)
+            return line.count < msg.text.count ? line + "…" : String(line)
+        }.first ?? ""
+
         return SessionSnapshot(
             sessionId: sessionId,
             items: persistableItems,
+            createdAt: sessionCreatedAt,
+            title: title,
             wasInterrupted: wasInterrupted,
             pendingMessages: pendingMessages
         )
@@ -175,6 +192,7 @@ public final class Session {
     @MainActor
     public static func restore(from snapshot: SessionSnapshot) -> Session {
         let session = Session()
+        session.sessionCreatedAt = snapshot.createdAt
         session.sessionId = snapshot.sessionId
         session.items = snapshot.items.compactMap { item in
             guard isPersistable(item) else { return nil }
@@ -240,6 +258,7 @@ public final class Session {
         isThinking = false
         thinkingText = ""
         sessionId = nil
+        sessionCreatedAt = nil
         pendingMessages = []
         pendingItemIDs = []
         activeUserItemID = nil
