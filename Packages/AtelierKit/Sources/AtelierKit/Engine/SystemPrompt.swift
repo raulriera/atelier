@@ -1,3 +1,5 @@
+import Foundation
+
 /// Core system prompt fragments that shape how Claude behaves inside Atelier.
 ///
 /// These are injected via `--append-system-prompt` on every message send.
@@ -5,6 +7,17 @@
 /// system prompt, so these should only override or supplement where Atelier's
 /// UX requires different behavior.
 public enum SystemPrompt {
+
+    /// The current date in the user's locale, e.g. "Today is Monday, March 9, 2026."
+    ///
+    /// Injected on every message so Claude can answer date-relative questions
+    /// ("what's on my calendar today?") without guessing.
+    public static var currentDate: String {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMMM d, yyyy"
+        f.locale = Locale.current
+        return "Today is \(f.string(from: Date()))."
+    }
 
     /// Instructions injected at the start of every conversation.
     ///

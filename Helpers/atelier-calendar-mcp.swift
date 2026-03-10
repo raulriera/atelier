@@ -97,10 +97,31 @@ enum AnyCodableValue: Codable {
 
 // MARK: - JXA Execution
 
+/// JXA helper that formats a Date as a local ISO 8601 string with timezone
+/// offset (e.g. "2026-03-10T20:00:00-04:00") instead of UTC.
+/// Injected into every JXA script so Claude sees correct local times.
+private let jxaLocalISOHelper = """
+function localISO(d) {
+    var off = d.getTimezoneOffset();
+    var sign = off <= 0 ? "+" : "-";
+    off = Math.abs(off);
+    var hh = String(Math.floor(off/60)).padStart(2,"0");
+    var mm = String(off%60).padStart(2,"0");
+    var Y = d.getFullYear();
+    var M = String(d.getMonth()+1).padStart(2,"0");
+    var D = String(d.getDate()).padStart(2,"0");
+    var h = String(d.getHours()).padStart(2,"0");
+    var m = String(d.getMinutes()).padStart(2,"0");
+    var s = String(d.getSeconds()).padStart(2,"0");
+    return Y+"-"+M+"-"+D+"T"+h+":"+m+":"+s+sign+hh+":"+mm;
+}
+"""
+
 func executeJXA(_ script: String) -> (output: String, error: String, exitCode: Int32) {
+    let fullScript = jxaLocalISOHelper + "\n" + script
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-    process.arguments = ["-l", "JavaScript", "-e", script]
+    process.arguments = ["-l", "JavaScript", "-e", fullScript]
 
     let stdoutPipe = Pipe()
     let stderrPipe = Pipe()
@@ -130,21 +151,61 @@ func jxaEscape(_ s: String) -> String {
      .replacingOccurrences(of: "\t", with: "\\t")
 }
 
+/// Returns a JXA expression that creates a `Date` in **local** time.
+///
+/// JavaScript's `new Date("2026-03-09")` parses as UTC midnight, which shifts
+/// the date by the timezone offset. Appending `T00:00:00` (no trailing `Z`)
+/// forces the local-time interpretation. Strings that already contain a `T`
+/// (e.g. `"2026-03-09T14:00:00"`) are used as-is.
+func jxaLocalDateExpr(_ iso: String) -> String {
+    let safe = jxaEscape(iso)
+    if safe.contains("T") {
+        return "new Date(\"\(safe)\")"
+    }
+    return "new Date(\"\(safe)T00:00:00\")"
+}
+
+/// Returns a JXA expression for the **end** of a date range.
+///
+/// For date-only strings like `"2026-03-10"`, returns midnight of the
+/// **next** day so the range covers the full day. For datetime strings
+/// (containing `T`), uses the exact time as-is.
+func jxaLocalEndDateExpr(_ iso: String) -> String {
+    let safe = jxaEscape(iso)
+    if safe.contains("T") {
+        return "new Date(\"\(safe)\")"
+    }
+    // Date-only: end of day = start of next day
+    return "(function(){ var d = new Date(\"\(safe)T00:00:00\"); d.setDate(d.getDate()+1); return d; })()"
+}
+
 /// Generates a JXA snippet that looks up a calendar by name and throws
 /// a descriptive error listing available calendars if it doesn't exist.
+///
+/// Uses a trimmed comparison so trailing whitespace in calendar names
+/// (common with synced calendars) doesn't cause lookup failures.
 /// - Parameters:
 ///   - name: The calendar name to look up (already jxaEscaped).
 ///   - target: The JXA variable to assign the result to ("cal" or "cals").
 ///   - asArray: If true, wraps the result in an array: `cals = [found]`.
 func calendarLookupScript(name: String, target: String, asArray: Bool) -> String {
-    let assignment = asArray ? "\(target) = [app.calendars.byName(\"\(name)\")]; \(target)[0].name();" : "\(target) = app.calendars.byName(\"\(name)\"); \(target).name();"
+    // Search by iterating and trimming, rather than byName() which requires exact match.
+    let foundVar = asArray ? target : target
     return """
-    try { \(assignment) } catch(e) {
-        var names = [];
+    (function() {
         var all = app.calendars();
-        for (var i = 0; i < all.length; i++) { names.push(all[i].name()); }
-        throw new Error("Calendar \\"\(name)\\" not found. Available calendars: " + names.join(", "));
-    }
+        var needle = "\(name)".trim();
+        var found = null;
+        for (var i = 0; i < all.length; i++) {
+            if (all[i].name().trim() === needle) { found = all[i]; break; }
+        }
+        if (!found) {
+            var names = [];
+            for (var i = 0; i < all.length; i++) { names.push(all[i].name()); }
+            throw new Error("Calendar \\"" + needle + "\\" not found. Available calendars: " + names.join(", "));
+        }
+        \(asArray ? "\(foundVar) = [found];" : "\(foundVar) = found;")
+    })();
     """
 }
 
@@ -296,7 +357,7 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
         var results = [];
         for (var i = 0; i < cals.length; i++) {
             var c = cals[i];
-            results.push(c.name() + " (" + c.description() + ")");
+            results.push(c.name().trim() + " (" + c.description() + ")");
         }
         results.length > 0 ? results.join("\\n") : "No calendars found";
         """
@@ -310,13 +371,13 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
         let limit = args["limit"]?.intValue ?? 50
         let startDateExpr: String
         if let startDate = args["startDate"]?.stringValue {
-            startDateExpr = "new Date(\"\(jxaEscape(startDate))\")"
+            startDateExpr = jxaLocalDateExpr(startDate)
         } else {
             startDateExpr = "new Date(new Date().setHours(0,0,0,0))"
         }
         let endDateExpr: String
         if let endDate = args["endDate"]?.stringValue {
-            endDateExpr = "new Date(\"\(jxaEscape(endDate))\")"
+            endDateExpr = jxaLocalEndDateExpr(endDate)
         } else {
             endDateExpr = "new Date(startDate.getTime() + 24*60*60*1000)"
         }
@@ -337,19 +398,19 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
         for (var c = 0; c < cals.length && results.length < limit; c++) {
             var events = cals[c].events.whose({
                 _and: [
-                    {startDate: {_greaterThan: startDate}},
+                    {startDate: {_greaterThanEquals: startDate}},
                     {startDate: {_lessThan: endDate}}
                 ]
             })();
             for (var i = 0; i < events.length && results.length < limit; i++) {
                 var e = events[i];
-                var start = e.startDate().toISOString();
-                var end = e.endDate().toISOString();
+                var start = localISO(e.startDate());
+                var end = localISO(e.endDate());
                 var line = e.summary() + " | " + start + " → " + end;
                 if (e.alldayEvent()) { line += " | all-day"; }
                 var loc = e.location();
                 if (loc && loc.length > 0) { line += " | " + loc; }
-                line += " | [" + cals[c].name() + "]";
+                line += " | [" + cals[c].name().trim() + "]";
                 results.push(line);
             }
         }
@@ -370,13 +431,13 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
         let safeQuery = jxaEscape(query)
         let startDateExpr: String
         if let startDate = args["startDate"]?.stringValue {
-            startDateExpr = "new Date(\"\(jxaEscape(startDate))\")"
+            startDateExpr = jxaLocalDateExpr(startDate)
         } else {
             startDateExpr = "new Date(Date.now() - 30*24*60*60*1000)"
         }
         let endDateExpr: String
         if let endDate = args["endDate"]?.stringValue {
-            endDateExpr = "new Date(\"\(jxaEscape(endDate))\")"
+            endDateExpr = jxaLocalEndDateExpr(endDate)
         } else {
             endDateExpr = "new Date(Date.now() + 30*24*60*60*1000)"
         }
@@ -391,7 +452,7 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
         for (var c = 0; c < cals.length && results.length < limit; c++) {
             var events = cals[c].events.whose({
                 _and: [
-                    {startDate: {_greaterThan: startDate}},
+                    {startDate: {_greaterThanEquals: startDate}},
                     {startDate: {_lessThan: endDate}}
                 ]
             })();
@@ -399,11 +460,11 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
                 var e = events[i];
                 var title = e.summary() || "";
                 if (title.toLowerCase().indexOf(query) !== -1) {
-                    var start = e.startDate().toISOString();
-                    var end = e.endDate().toISOString();
+                    var start = localISO(e.startDate());
+                    var end = localISO(e.endDate());
                     var line = title + " | " + start + " → " + end;
                     if (e.alldayEvent()) { line += " | all-day"; }
-                    line += " | [" + cals[c].name() + "]";
+                    line += " | [" + cals[c].name().trim() + "]";
                     results.push(line);
                 }
             }
@@ -427,7 +488,7 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
 
         let endDateExpr: String
         if let endDate = args["endDate"]?.stringValue {
-            endDateExpr = "new Date(\"\(jxaEscape(endDate))\")"
+            endDateExpr = jxaLocalDateExpr(endDate)
         } else {
             endDateExpr = "new Date(startDate.getTime() + 60*60*1000)"
         }
@@ -449,7 +510,7 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
 
         let script = """
         var app = Application("Calendar");
-        var startDate = new Date("\(safeStartDate)");
+        var startDate = \(jxaLocalDateExpr(startDate));
         var endDate = \(endDateExpr);
         var cal = app.calendars[0];
         \(calLookup)
@@ -461,7 +522,7 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
         });
         cal.events.push(e);
         \(extraProps)
-        "Created event: " + e.summary() + " on " + e.startDate().toISOString() + " in " + cal.name();
+        "Created event: " + e.summary() + " on " + localISO(e.startDate()) + " in " + cal.name();
         """
         let result = executeJXA(script)
         if result.exitCode != 0 {
@@ -477,10 +538,9 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
 
         let dateFilter: String
         if let date = args["date"]?.stringValue {
-            let safeDate = jxaEscape(date)
             dateFilter = """
-            var targetDate = new Date("\(safeDate)");
-            var dayStart = new Date(targetDate.setHours(0,0,0,0));
+            var targetDate = \(jxaLocalDateExpr(date));
+            var dayStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
             var dayEnd = new Date(dayStart.getTime() + 24*60*60*1000);
             events = events.filter(function(e) {
                 var s = e.startDate();
@@ -581,11 +641,11 @@ func handleToolsCall(id: AnyCodableValue?, params: AnyCodableValue?) {
 
     let args = dict["arguments"]?.dictValue ?? [:]
 
-    FileHandle.standardError.write(Data("calendar: calling \(toolName)\n".utf8))
+    FileHandle.standardError.write(Data("calendar: calling \(toolName) args=\(args)\n".utf8))
 
     let (output, isError) = handleToolCall(name: toolName, args: args)
 
-    FileHandle.standardError.write(Data("calendar: \(toolName) -> \(isError ? "error" : "ok")\n".utf8))
+    FileHandle.standardError.write(Data("calendar: \(toolName) -> \(isError ? "error" : "ok") output=\(output.prefix(500))\n".utf8))
 
     if isError {
         respond(id: id, result: .dict([

@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import AtelierKit
 
@@ -33,5 +34,15 @@ struct SystemPromptTests {
     @Test("Core instructions reference project context files")
     func referencesContextFiles() {
         #expect(SystemPrompt.coreInstructions.contains("context file"))
+    }
+
+    @Test("Current date contains today's date")
+    func currentDateContainsToday() {
+        let date = SystemPrompt.currentDate
+        #expect(date.hasPrefix("Today is "))
+        #expect(date.hasSuffix("."))
+        // Should contain the current year
+        let year = Calendar.current.component(.year, from: Date())
+        #expect(date.contains(String(year)))
     }
 }

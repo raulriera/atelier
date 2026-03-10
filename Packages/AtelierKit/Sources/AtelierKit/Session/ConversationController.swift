@@ -181,7 +181,7 @@ public final class ConversationController {
         session.appendUserMessage(trimmed)
         session.beginAssistantMessage()
 
-        var promptParts: [String] = [SystemPrompt.coreInstructions]
+        var promptParts: [String] = [SystemPrompt.coreInstructions, SystemPrompt.currentDate]
         if let cwd = workingDirectory {
             let discovered = ContextFileLoader.discover(from: cwd)
             activeContextFiles = discovered

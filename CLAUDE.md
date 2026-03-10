@@ -129,6 +129,13 @@ Examples:
 - Preserve the existing markdown structure when editing
 - Categories are organized by domain; milestones define build order
 
+### Workflow — MANDATORY
+
+- **NEVER start writing code without discussing the approach first.** Present the plan, get approval, then implement. No exceptions.
+- **NEVER commit without being asked.** The user decides when to commit, not you.
+- **NEVER add features, tools, or capabilities beyond what was explicitly discussed and approved.** If you think something extra would be useful, propose it — don't just build it.
+- **Discussion first, action second.** When the user raises an issue, analyze it, present options, and wait for direction. Do not jump straight into implementation.
+
 ### Problem-solving approach
 
 - **NEVER reimplement system components.** `SplitView`, `NavigationStack`, `.inspector()`, `.sheet()`, `.popover()`, `.alert()`, `.confirmationDialog()`, and other built-in SwiftUI containers are ALWAYS the right choice — no custom HStack/VStack replacements, no manual reimplementations. If a system component has a bug, work around the bug with clear comments (including radar/FB numbers when available) so the workaround can be removed when Apple fixes it.
