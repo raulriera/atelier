@@ -15,6 +15,7 @@
 		4C0BECDE2F52B00200A608CC /* AtelierSandbox in Frameworks */ = {isa = PBXBuildFile; productRef = 4C0BECDD2F52B00200A608CC /* AtelierSandbox */; };
 		4C0BECE52F52B10000A608CC /* AtelierSandbox in Frameworks */ = {isa = PBXBuildFile; productRef = 4C0BECE62F52B10000A608CC /* AtelierSandbox */; };
 		4C0BECEB2F52B10000A608CC /* AtelierSandboxService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 4C0BECDF2F52B10000A608CC /* AtelierSandboxService.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4CA1B1002F80000000000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 4CA1B1012F80000000000001 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +97,7 @@
 				4C0BECD02F52A29000A608CC /* AtelierDesign in Frameworks */,
 				4C0BECDB2F52B00100A608CC /* AtelierSecurity in Frameworks */,
 				4C0BECDE2F52B00200A608CC /* AtelierSandbox in Frameworks */,
+				4CA1B1002F80000000000001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -183,6 +185,7 @@
 				4C0BECD72F52A4C200A608CC /* AtelierKit */,
 				4C0BECDA2F52B00100A608CC /* AtelierSecurity */,
 				4C0BECDD2F52B00200A608CC /* AtelierSandbox */,
+				4CA1B1012F80000000000001 /* Sparkle */,
 			);
 			productName = Atelier;
 			productReference = 4C0BEC982F52A19B00A608CC /* Atelier.app */;
@@ -297,6 +300,7 @@
 				4C0BECD62F52A4C100A608CC /* XCLocalSwiftPackageReference "Packages/AtelierKit" */,
 				4C0BECD92F52B00100A608CC /* XCLocalSwiftPackageReference "Packages/AtelierSecurity" */,
 				4C0BECDC2F52B00200A608CC /* XCLocalSwiftPackageReference "Packages/AtelierSandbox" */,
+				4CA1B1022F80000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4C0BEC992F52A19B00A608CC /* Products */;
@@ -895,6 +899,17 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		4CA1B1022F80000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCLocalSwiftPackageReference section */
 		4C0BECD32F52A4B600A608CC /* XCLocalSwiftPackageReference "Packages/AtelierDesign" */ = {
 			isa = XCLocalSwiftPackageReference;
@@ -942,6 +957,11 @@
 		4C0BECE62F52B10000A608CC /* AtelierSandbox */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AtelierSandbox;
+		};
+		4CA1B1012F80000000000001 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CA1B1022F80000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

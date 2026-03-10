@@ -5,6 +5,8 @@ import AtelierKit
 
 @main
 struct AtelierApp: App {
+    private let appUpdater = AppUpdater()
+
     // Each project is its own window — disable macOS tab merging.
     // The SwiftUI `windowTabBehavior` modifier was removed in macOS 26;
     // use the AppKit class property instead.
@@ -58,6 +60,10 @@ struct AtelierApp: App {
         )
         .windowResizability(.contentSize)
         .commands {
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesView(updater: appUpdater.updater)
+            }
+
             CommandGroup(after: .toolbar) {
                 Button {
                     inspectorVisibility?.wrappedValue.toggle()
