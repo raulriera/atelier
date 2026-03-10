@@ -3,7 +3,7 @@ import Foundation
 /// Manages the `.atelier/memory/` directory on disk for persistent learnings.
 ///
 /// Memory is organized into category files (`preferences.md`, `decisions.md`,
-/// `patterns.md`, `corrections.md`).
+/// `patterns.md`, `corrections.md`, `vocabulary.md`).
 public struct MemoryStore: Sendable {
     /// The project root directory containing `.atelier/memory/`.
     public let projectRoot: URL
@@ -25,6 +25,7 @@ public struct MemoryStore: Sendable {
         ("## Decisions", "decisions.md"),
         ("## Patterns", "patterns.md"),
         ("## Corrections", "corrections.md"),
+        ("## Vocabulary", "vocabulary.md"),
     ]
 
     /// Reads all memory files and returns their combined content, or `nil` if empty.

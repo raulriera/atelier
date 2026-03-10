@@ -68,6 +68,17 @@ struct DistillationEngineTests {
         #expect(prompt.contains("do NOT respond to or continue the conversation"))
     }
 
+    @Test func promptIncludesVocabularyGuidelines() async {
+        let engine = makeEngine()
+        let prompt = await engine.buildDistillationPrompt(
+            conversationSummary: "User: Hello",
+            existingLearnings: nil
+        )
+        #expect(prompt.contains("## Vocabulary"))
+        #expect(prompt.contains("domain-specific terms"))
+        #expect(prompt.contains("acronyms"))
+    }
+
     @Test func promptShowsNoneWhenNoExistingLearnings() async {
         let engine = makeEngine()
         let prompt = await engine.buildDistillationPrompt(
@@ -97,6 +108,7 @@ struct DistillationEngineTests {
         #expect(prompt.contains("## Corrections: max 15"))
         #expect(prompt.contains("## Decisions: max 30"))
         #expect(prompt.contains("## Patterns: max 25"))
+        #expect(prompt.contains("## Vocabulary: max 30"))
     }
 
     @Test func promptIncludesCondensationStrategy() async {

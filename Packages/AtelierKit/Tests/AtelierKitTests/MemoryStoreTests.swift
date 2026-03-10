@@ -144,5 +144,6 @@ struct MemoryStoreTests {
         #expect(map["## Decisions"] == "decisions.md")
         #expect(map["## Patterns"] == "patterns.md")
         #expect(map["## Corrections"] == "corrections.md")
+        #expect(map["## Vocabulary"] == "vocabulary.md")
     }
 }
