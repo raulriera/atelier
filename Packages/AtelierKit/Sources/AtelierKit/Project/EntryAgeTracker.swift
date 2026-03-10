@@ -40,6 +40,12 @@ public struct EntryAgeTracker: Sendable {
     /// Entries between these bounds get age annotations in the prompt.
     public static let agingThreshold = 5
 
+    /// Entries older than this are surfaced for user verification on startup.
+    public static let staleContextThreshold = 10
+
+    /// Maximum stale entries to surface per startup.
+    public static let maxStaleContextEntries = 2
+
     static let filename = "entry-age.json"
 
     private let memoryDirectory: URL

@@ -166,6 +166,20 @@ struct EntryAgeTrackerTests {
         #expect(annotated.contains("## Preferences"))
     }
 
+    // MARK: - Stale Context Thresholds
+
+    @Test("stale context threshold is between aging and archive")
+    func staleContextThresholdBounds() {
+        #expect(EntryAgeTracker.staleContextThreshold > EntryAgeTracker.agingThreshold)
+        #expect(EntryAgeTracker.staleContextThreshold < EntryAgeTracker.archiveThreshold)
+    }
+
+    @Test("max stale context entries is reasonable")
+    func maxStaleContextEntries() {
+        #expect(EntryAgeTracker.maxStaleContextEntries > 0)
+        #expect(EntryAgeTracker.maxStaleContextEntries <= 3)
+    }
+
     // MARK: - Normalize
 
     @Test("normalizes text consistently")

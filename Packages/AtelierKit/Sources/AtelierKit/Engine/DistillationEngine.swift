@@ -122,6 +122,8 @@ public actor DistillationEngine {
         - Keep entries concise — one line per learning
         - No session-specific details (no timestamps, no tool names, no "currently working on")
         - If existing learnings are provided, merge: update if changed, add if new, keep if still valid, remove if contradicted
+        - When a conversation CONTRADICTS an existing learning, update the entry and append [corrected] at the end of the line
+        - Only use [corrected] when the user explicitly changed a previous preference or decision — not for new entries
         - If there is nothing meaningful to extract, output exactly: NO_LEARNINGS
 
         Per-file line budgets (bullet entries, NOT counting the heading):

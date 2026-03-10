@@ -10,9 +10,6 @@
 //   reinject   — Reads learnings from disk and writes to stdout for context injection.
 //                Used by SessionStart[compact/startup/resume] hooks.
 //
-//   track-file — Records file paths modified by Claude into .atelier/structure.json.
-//                Used by PostToolUse[Write|Edit] hook.
-//
 //   path-guard — Validates file tool paths against the project boundary and
 //                sensitive path denylist. Exits 2 to deny, 0 to allow.
 //                Used by PreToolUse[Read|Glob|Grep|Write|Edit|MultiEdit|NotebookEdit] hook.
@@ -180,6 +177,8 @@ func buildDistillationPrompt(summary: String, existingLearnings: String?) -> Str
     - Keep entries concise — one line per learning
     - No session-specific details (no timestamps, no tool names, no "currently working on")
     - If existing learnings are provided, merge: update if changed, add if new, keep if still valid, remove if contradicted
+    - When a conversation CONTRADICTS an existing learning, update the entry and append [corrected] at the end of the line
+    - Only use [corrected] when the user explicitly changed a previous preference or decision — not for new entries
     - If there is nothing meaningful to extract, output exactly: NO_LEARNINGS
 
     Per-file line budgets (bullet entries, NOT counting the heading):
@@ -569,6 +568,11 @@ let entryAgeFilename = "entry-age.json"
 let agingThreshold = 5
 let archiveThreshold = 20
 
+/// Entries older than this are surfaced for user verification on startup.
+let staleContextThreshold = 10
+/// Maximum stale entries to surface per startup.
+let maxStaleContextEntries = 2
+
 func loadEntryAgeState(memoryDir: String) -> EntryAgeState {
     let path = "\(memoryDir)/\(entryAgeFilename)"
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
@@ -772,57 +776,6 @@ func suggestablePatterns(memoryDir: String) -> [PatternObservation] {
     )
 }
 
-// MARK: - Structure Map
-
-/// Reads the structure map (list of files Claude has modified).
-func readStructureMap(at path: String) -> [String] {
-    guard let data = FileManager.default.contents(atPath: path),
-          let array = try? JSONDecoder().decode([String].self, from: data)
-    else { return [] }
-    return array
-}
-
-/// Writes the structure map to disk.
-func writeStructureMap(_ paths: [String], to filePath: String) {
-    guard let data = try? JSONEncoder().encode(paths) else { return }
-    try? data.write(to: URL(fileURLWithPath: filePath), options: .atomic)
-}
-
-func handleTrackFile(input: HookInput) {
-    guard let cwd = input.cwd else { exit(0) }
-    guard let filePath = input.toolInput?.filePath
-    else { exit(0) }
-
-    // Make the path relative to cwd for portability
-    let relativePath: String
-    if filePath.hasPrefix(cwd) {
-        var path = String(filePath.dropFirst(cwd.count))
-        if path.hasPrefix("/") { path = String(path.dropFirst()) }
-        relativePath = path
-    } else {
-        relativePath = filePath
-    }
-
-    // Skip files inside .atelier/ — those are our own memory files
-    if relativePath.hasPrefix(".atelier/") { exit(0) }
-
-    let atelierDir = "\(cwd)/.atelier"
-    try? FileManager.default.createDirectory(
-        atPath: atelierDir,
-        withIntermediateDirectories: true
-    )
-
-    let mapPath = "\(atelierDir)/structure.json"
-    var existing = readStructureMap(at: mapPath)
-
-    // Add if not already tracked
-    if !existing.contains(relativePath) {
-        existing.append(relativePath)
-        existing.sort()
-        writeStructureMap(existing, to: mapPath)
-    }
-}
-
 /// Memory files that are always injected in full (high-value, small).
 /// Mirrors `ContextFileLoader.alwaysInjectFilenames` in AtelierKit.
 let alwaysInjectFilenames: Set<String> = ["preferences.md", "corrections.md"]
@@ -871,10 +824,6 @@ func handleReinject(input: HookInput, trigger: String) {
         }
     }
 
-    // Read structure map
-    let mapPath = "\(cwd)/.atelier/structure.json"
-    let structureMap = readStructureMap(at: mapPath)
-
     // Read compaction snapshot — only after compaction, not on fresh startup/resume
     let compactionSnapshot: String? = if trigger == "compact" {
         readLatestCompactionSnapshot(in: "\(memoryDir)/compacts")
@@ -884,7 +833,7 @@ func handleReinject(input: HookInput, trigger: String) {
 
     // Need at least one source to output anything
     guard !alwaysInjectContents.isEmpty || !manifestEntries.isEmpty
-            || !structureMap.isEmpty || compactionSnapshot != nil
+            || compactionSnapshot != nil
     else { exit(0) }
 
     print("<project-memory>")
@@ -901,15 +850,6 @@ func handleReinject(input: HookInput, trigger: String) {
         print("Additional memory files available (read with the Read tool when relevant):")
         for entry in manifestEntries {
             print(entry)
-        }
-    }
-
-    if !structureMap.isEmpty {
-        print("")
-        print("## Project Files")
-        print("Files modified in previous sessions:")
-        for path in structureMap {
-            print("- \(path)")
         }
     }
 
@@ -932,6 +872,81 @@ func handleReinject(input: HookInput, trigger: String) {
     }
 
     print("</project-memory>")
+
+    // Stale context detection — only on startup.
+    // Surface aging entries (10-19 runs old) so Claude can verify them with the user.
+    if trigger == "startup" {
+        let ageState = loadEntryAgeState(memoryDir: memoryDir)
+        let patternState = loadPatternTracker(memoryDir: memoryDir)
+        let staleEntries = ageState.entries
+            .filter { key, entry in
+                entry.runsSinceLastSeen >= staleContextThreshold
+                && entry.runsSinceLastSeen < archiveThreshold
+                && !patternState.dismissed.contains(key)
+            }
+            .sorted { $0.value.runsSinceLastSeen > $1.value.runsSinceLastSeen }
+            .prefix(maxStaleContextEntries)
+
+        if !staleEntries.isEmpty {
+            print("")
+            print("<stale-context>")
+            print("These learnings haven't appeared recently and may be outdated.")
+            print("At a natural point, briefly verify one with the user:")
+            print("\"I have a note that you [learning]. Is that still the case?\"")
+            print("")
+            for (key, entry) in staleEntries {
+                print("- \(key) (\(entry.category), last seen \(entry.runsSinceLastSeen) runs ago)")
+            }
+            print("")
+            print("If confirmed, no action needed. If corrected, update the memory file.")
+            print("If the user says stop asking, dismiss this entry.")
+            print("</stale-context>")
+        }
+    }
+
+    // Recent corrections — only on startup.
+    // Scan memory files for [corrected] markers and surface them so Claude
+    // mentions the change. Strip the marker after one cycle.
+    if trigger == "startup" {
+        var corrections: [(file: String, entry: String)] = []
+        if let files = try? manager.contentsOfDirectory(atPath: memoryDir) {
+            for file in files.sorted() where file.hasSuffix(".md") {
+                let path = "\(memoryDir)/\(file)"
+                guard let content = try? String(contentsOfFile: path, encoding: .utf8) else { continue }
+                var updatedLines: [String] = []
+                var fileChanged = false
+                for line in content.components(separatedBy: .newlines) {
+                    if line.hasSuffix("[corrected]") {
+                        let cleaned = String(line.dropLast("[corrected]".count))
+                            .trimmingCharacters(in: .whitespaces)
+                        let entryText = cleaned.hasPrefix("- ") ? String(cleaned.dropFirst(2)) : cleaned
+                        corrections.append((file: file, entry: entryText))
+                        updatedLines.append(cleaned)
+                        fileChanged = true
+                    } else {
+                        updatedLines.append(line)
+                    }
+                }
+                if fileChanged {
+                    let updated = updatedLines.joined(separator: "\n")
+                    try? updated.write(toFile: path, atomically: true, encoding: .utf8)
+                }
+            }
+        }
+
+        if !corrections.isEmpty {
+            print("")
+            print("<recent-corrections>")
+            print("These learnings were recently corrected based on user feedback.")
+            print("Briefly acknowledge the change early in the conversation:")
+            print("\"I've updated my understanding — [correction]. Let me know if that's right.\"")
+            print("")
+            for correction in corrections {
+                print("- \(correction.entry) (from \(correction.file))")
+            }
+            print("</recent-corrections>")
+        }
+    }
 
     // Proactive suggestions — only on brand new sessions (startup).
     // After enough distinct sessions produce the same learning, suggest it
@@ -1083,7 +1098,7 @@ func handlePathGuard(input: HookInput) {
 
 let args = CommandLine.arguments
 guard args.count >= 2 else {
-    FileHandle.standardError.write(Data("Usage: atelier-hooks <distill|reinject [compact|startup|resume]|track-file|path-guard>\n".utf8))
+    FileHandle.standardError.write(Data("Usage: atelier-hooks <distill|reinject [compact|startup|resume]|path-guard>\n".utf8))
     exit(1)
 }
 
@@ -1099,8 +1114,6 @@ case "distill":
 case "reinject":
     let trigger = args.count >= 3 ? args[2] : "startup"
     handleReinject(input: input, trigger: trigger)
-case "track-file":
-    handleTrackFile(input: input)
 case "path-guard":
     handlePathGuard(input: input)
 default:

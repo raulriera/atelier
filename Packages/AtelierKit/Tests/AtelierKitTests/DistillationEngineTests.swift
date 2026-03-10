@@ -132,6 +132,16 @@ struct DistillationEngineTests {
         #expect(prompt.contains("Do NOT include the [age: ...] suffix"))
     }
 
+    @Test func promptIncludesConflictDetectionRules() async {
+        let engine = makeEngine()
+        let prompt = await engine.buildDistillationPrompt(
+            conversationSummary: "User: Hello",
+            existingLearnings: nil
+        )
+        #expect(prompt.contains("[corrected]"))
+        #expect(prompt.contains("CONTRADICTS"))
+    }
+
     @Test func promptInstructsMerging() async {
         let engine = makeEngine()
         let prompt = await engine.buildDistillationPrompt(

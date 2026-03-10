@@ -164,22 +164,7 @@ public struct HooksManager: Sendable {
             ]
         }
 
-        // File tracking and distillation hooks require the helper binary
-        if let trackCommand = trackFileCommandString() {
-            hooks["PostToolUse"] = [
-                [
-                    "matcher": "Write|Edit",
-                    "hooks": [[
-                        "type": "command",
-                        "command": trackCommand,
-                        "timeout": 5,
-                        "async": true,
-                        "statusMessage": "\(Self.statusMessagePrefix) Tracking file changes",
-                    ] as [String: Any]],
-                ] as [String: Any],
-            ]
-        }
-
+        // Distillation hooks require the helper binary
         if distillCommand != nil {
             hooks["Stop"] = [
                 [
@@ -243,12 +228,6 @@ public struct HooksManager: Sendable {
     func distillCommandString() -> String? {
         guard let helper = helperPath else { return nil }
         return "'\(helper)' distill"
-    }
-
-    /// Builds the track-file command string, or nil if the helper binary is unavailable.
-    func trackFileCommandString() -> String? {
-        guard let helper = helperPath else { return nil }
-        return "'\(helper)' track-file"
     }
 
     /// Builds the path-guard command string, or nil if the helper binary is unavailable.
