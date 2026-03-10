@@ -483,7 +483,6 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
             return ("Missing required parameters: title, startDate", true)
         }
         let safeTitle = jxaEscape(title)
-        let safeStartDate = jxaEscape(startDate)
         let allDay = args["allDay"]?.boolValue ?? false
 
         let endDateExpr: String
