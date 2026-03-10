@@ -44,14 +44,14 @@ Atelier exposes App Intents (`RunTemplate`, `ScheduleTask`, `AskClaude`, `OpenPr
 |---------|--------|
 | Schedule model and persistence | ✅ Shipped |
 | launchd Launch Agent lifecycle | ✅ Shipped |
-| Headless execution via `claude -p` | 🔨 Needs scheduler helper binary |
+| Headless execution via `claude -p` | ✅ Shipped |
 | Save as template | 🔲 Not started |
 | Shortcuts integration (App Intents) | 🔲 Not started |
 | Folder triggers (FSEvents) | 🔲 Not started |
 
 ## Gaps
 
-- **Scheduler helper binary:** `LaunchAgentManager` installs a plist pointing to `Contents/Helpers/atelier-scheduler`, but the binary doesn't exist yet. launchd fires on schedule but silently fails. `runNow()` works because it executes in-process.
+- **~~Scheduler helper binary~~** — Shipped. `atelier-scheduler` matches due tasks by calendar components and executes them concurrently.
 - **Relocated toolbar items:** Inspector redesign removed new session button, context files popover, and model picker. Need new homes.
 
 ## Notes

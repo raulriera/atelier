@@ -75,6 +75,42 @@ public enum TaskSchedule: Sendable, Codable, Hashable {
         }
     }
 
+    /// Whether this schedule is due at the given date.
+    ///
+    /// Matches current calendar components against `calendarIntervals`
+    /// using the same algorithm launchd uses for `StartCalendarInterval`:
+    /// each key must match the corresponding component; absent keys are wildcards.
+    /// Allows +/- 1 minute tolerance for sleep/wake edge cases.
+    public func isDue(at date: Date) -> Bool {
+        guard let intervals = calendarIntervals else { return false }
+
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.minute, .hour, .weekday, .day, .month], from: date)
+        let currentMinute = components.minute!
+        let currentHour = components.hour!
+        // launchd uses 0=Sunday; Calendar uses 1=Sunday — adjust
+        let currentWeekday = components.weekday! - 1
+        let currentDay = components.day!
+        let currentMonth = components.month!
+
+        for interval in intervals {
+            var matches = true
+
+            if let minute = interval["Minute"] {
+                let diff = abs(currentMinute - minute)
+                if diff > 1 && diff < 59 { matches = false }
+            }
+            if let hour = interval["Hour"], hour != currentHour { matches = false }
+            if let weekday = interval["Weekday"], weekday != currentWeekday { matches = false }
+            if let day = interval["Day"], day != currentDay { matches = false }
+            if let month = interval["Month"], month != currentMonth { matches = false }
+
+            if matches { return true }
+        }
+
+        return false
+    }
+
     // MARK: - Private Helpers
 
     private static func formatTime(hour: Int, minute: Int) -> String {

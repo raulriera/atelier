@@ -320,18 +320,25 @@ public final class CLIEngine: ConversationEngine, Sendable {
         return args
     }
 
+    /// All file tools that can access paths — used for sensitive path deny rules.
+    private static let allFileTools = ["Read", "Glob", "Grep", "Write", "Edit"]
+
     /// Generates `--disallowedTools` rules that block file tools from accessing sensitive paths.
+    ///
+    /// Covers both read and write tools. In interactive mode, Write/Edit require
+    /// per-call approval so the deny rules are defense-in-depth. In scheduled
+    /// execution, Write/Edit are auto-approved, making these deny rules critical.
     static func sensitivePathDenyRules() -> [String] {
         let home = CLIDiscovery.realHomeDirectory
         var args: [String] = []
         for relativePath in sensitiveRelativePaths {
             let absolutePath = "\(home)/\(relativePath)"
-            for tool in readOnlyFileTools {
+            for tool in allFileTools {
                 args += ["--disallowedTools", "\(tool)(\(absolutePath))"]
             }
         }
         for pattern in sensitiveGlobalPatterns {
-            for tool in readOnlyFileTools {
+            for tool in allFileTools {
                 args += ["--disallowedTools", "\(tool)(\(pattern))"]
             }
         }
