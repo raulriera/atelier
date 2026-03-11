@@ -17,14 +17,23 @@ struct TimelineView: View {
     var body: some View {
         let items = session.visibleTimelineItems
 
-        ScrollView {
+        ChatScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(items.reversed().enumerated()), id: \.element.id) { reversedIndex, item in
-                    let originalIndex = items.count - 1 - reversedIndex
+                if session.hasOlderItems {
+                    Color.clear
+                        .frame(height: 1)
+                        .onAppear { session.loadOlderItems() }
+                }
+
+                if items.isEmpty && !session.hasOlderItems {
+                    WelcomeView(draft: $draft, enabledCapabilityIDs: capabilityStore.enabledIDs)
+                }
+
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     let currentSender = item.content.groupableSender
-                    let nextSender = items.indices.contains(originalIndex + 1) ? items[originalIndex + 1].content.groupableSender : nil
+                    let nextSender = items.indices.contains(index + 1) ? items[index + 1].content.groupableSender : nil
                     let showsTail = currentSender == nil || nextSender != currentSender
-                    let bottomPadding: CGFloat = if let currentSender, currentSender == nextSender { Spacing.xxs } else { originalIndex < items.count - 1 ? Spacing.sm : 0 }
+                    let bottomPadding: CGFloat = if let currentSender, currentSender == nextSender { Spacing.xxs } else { index < items.count - 1 ? Spacing.sm : 0 }
 
                     TimelineItemView(
                         item: item,
@@ -40,19 +49,6 @@ struct TimelineView: View {
                         showsTail: showsTail
                     )
                     .padding(.bottom, bottomPadding)
-                    .scaleEffect(x: 1, y: -1)
-                }
-
-                // Auto-load earlier messages when scrolling to the top
-                if session.hasOlderItems {
-                    Color.clear
-                        .frame(height: 1)
-                        .onAppear { session.loadOlderItems() }
-                }
-
-                if items.isEmpty && !session.hasOlderItems {
-                    WelcomeView(draft: $draft, enabledCapabilityIDs: capabilityStore.enabledIDs)
-                        .scaleEffect(x: 1, y: -1)
                 }
             }
             .frame(maxWidth: Layout.readingWidth)
@@ -60,16 +56,12 @@ struct TimelineView: View {
             .frame(maxWidth: .infinity)
             .padding(.bottom, Spacing.md)
         }
-        .scaleEffect(x: 1, y: -1)
     }
 }
 
 // MARK: - Groupable Sender
 
 private extension TimelineContent {
-    /// Returns a sender identifier for grouping purposes.
-    /// Only user and assistant messages participate in groups;
-    /// system events and tool-use cards always break groups.
     var groupableSender: String? {
         switch self {
         case .userMessage: "user"

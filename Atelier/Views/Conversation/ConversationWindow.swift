@@ -85,10 +85,6 @@ struct ConversationWindow: View {
                     TaskListOverlay(session: controller.session)
                         .padding(.bottom, Spacing.xs)
                 }
-                // WORKAROUND: NavigationStack (required for .inspector() to compress
-                // content in-place) animates safeAreaInset content on first layout.
-                // Keeping ComposeField always in the layout (stable safe area from
-                // frame 1) and fading opacity avoids the position animation. Revisit.
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     VStack(spacing: Spacing.xs) {
                         if !pendingAttachments.isEmpty {
@@ -107,8 +103,6 @@ struct ConversationWindow: View {
                     .frame(maxWidth: Layout.readingWidth)
                     .padding(Spacing.md)
                     .background {
-                        // Fade gradient behind (not on top of) compose field so
-                        // text and button render at full brightness.
                         Rectangle()
                             .fill(.bar)
                             .mask {
@@ -124,10 +118,6 @@ struct ConversationWindow: View {
                     .opacity(showComposeField ? 1 : 0)
                     .animation(Motion.appear, value: showComposeField)
                 }
-            // WORKAROUND: SwiftUI .inspector() on macOS expands the window instead of
-            // compressing content in-place (unlike AppKit NSSplitViewController which
-            // uses holdingPriority). Wrapping in NavigationStack prevents the window
-            // from growing. File FB to Apple.
             .inspector(isPresented: $showInspector) {
                 InspectorPanel(
                     selectedTab: $inspectorTab,
@@ -192,11 +182,7 @@ struct ConversationWindow: View {
                 }
             }
 
-            // WORKAROUND continued: NavigationStack animates safeAreaInset content
-            // on first layout. Wait for that to settle, then reveal ComposeField.
-            // The scoped .animation(_:value:) on ComposeField handles the fade —
-            // no withAnimation here to avoid giving NavigationStack an animation
-            // context it can hijack for position changes.
+            // Let the initial layout settle before fading in ComposeField.
             try? await Task.sleep(for: .milliseconds(160))
             showComposeField = true
         }
