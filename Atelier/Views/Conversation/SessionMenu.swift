@@ -20,7 +20,7 @@ struct SessionMenuToolbarItem: ToolbarContent {
             Button {
                 showMenu.toggle()
             } label: {
-                HStack(spacing: Spacing.xxs) {
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.xxs ) {
                     Text(projectName)
                         .font(.sectionTitle)
                         .fontWeight(.semibold)
