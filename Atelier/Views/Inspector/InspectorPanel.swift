@@ -11,6 +11,7 @@ struct InspectorPanel: View {
     let projectPath: String?
     let projectId: UUID
     let selectedTool: ToolUseEvent?
+    let selectedTaskCompletion: TaskCompletionEvent?
 
     var body: some View {
         tabContent
@@ -26,7 +27,7 @@ struct InspectorPanel: View {
         case .automations:
             AutomationsInspector(scheduleStore: scheduleStore, capabilityStore: capabilityStore, projectPath: projectPath, projectId: projectId)
         case .detail:
-            InspectorSidebar(selectedTool: selectedTool)
+            InspectorSidebar(selectedTool: selectedTool, selectedTaskCompletion: selectedTaskCompletion)
         }
     }
 }
@@ -38,7 +39,8 @@ struct InspectorPanel: View {
         scheduleStore: .preview,
         projectPath: "/Users/demo/Projects/research",
         projectId: UUID(),
-        selectedTool: nil
+        selectedTool: nil,
+        selectedTaskCompletion: nil
     )
     .frame(width: 320, height: 600)
 }

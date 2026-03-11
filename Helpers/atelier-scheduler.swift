@@ -24,14 +24,30 @@ struct ScheduledTask: Codable {
     var projectPath: String
     var projectId: UUID
     var isPaused: Bool
-    var lastRunDate: Date?
-    var lastRunSucceeded: Bool?
+    var lastRunResult: TaskRunResult?
     var colorName: String
     var createdAt: Date
 
     var logURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Logs/Atelier/tasks/\(id.uuidString).log")
+    }
+}
+
+/// Mirrors AtelierKit.TaskRunResult for JSON compatibility.
+struct TaskRunResult: Codable {
+    var date: Date
+    var succeeded: Bool
+    var numTurns: Int
+    var resultText: String
+    var permissionDenials: [String]
+    var durationMs: Int
+    var health: Health
+    var userSummary: String
+    var userDetail: String?
+
+    enum Health: String, Codable {
+        case healthy, warning, failed
     }
 }
 
@@ -367,6 +383,87 @@ let automationSystemPrompt = """
 
 let taskTimeout: TimeInterval = 900 // 15 minutes
 
+/// Parses a task log file into a structured result.
+func parseTaskLog(logURL: URL) -> TaskRunResult? {
+    guard let raw = try? String(contentsOf: logURL, encoding: .utf8),
+          !raw.isEmpty else {
+        return nil
+    }
+
+    // Try the whole file first (fast path for clean logs).
+    // Fall back to scanning lines in reverse for the result object.
+    let json: [String: Any]
+    if let data = raw.data(using: .utf8),
+       let whole = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+       whole["result"] != nil {
+        json = whole
+    } else {
+        let lines = raw.components(separatedBy: .newlines)
+        guard let found = lines.last(where: { line in
+            guard let lineData = line.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+                  obj["result"] != nil else { return false }
+            return true
+        }),
+        let foundData = found.data(using: .utf8),
+        let parsed = try? JSONSerialization.jsonObject(with: foundData) as? [String: Any] else {
+            return nil
+        }
+        json = parsed
+    }
+
+    let isError = json["is_error"] as? Bool ?? true
+    let subtype = json["subtype"] as? String ?? ""
+    let numTurns = json["num_turns"] as? Int ?? 0
+    let resultText = json["result"] as? String ?? ""
+    let durationMs = json["duration_ms"] as? Int ?? 0
+
+    let denials: [String]
+    if let denialArray = json["permission_denials"] as? [[String: Any]] {
+        denials = denialArray.compactMap { $0["tool_name"] as? String }
+    } else {
+        denials = []
+    }
+
+    let health: TaskRunResult.Health
+    if isError || subtype == "error" {
+        health = .failed
+    } else if !denials.isEmpty || numTurns <= 1 {
+        health = .warning
+    } else {
+        health = .healthy
+    }
+
+    let userSummary: String
+    let userDetail: String?
+
+    switch health {
+    case .healthy:
+        userSummary = "completed successfully"
+        userDetail = nil
+    case .warning:
+        userSummary = "completed, but wasn't able to do everything it needed"
+        userDetail = !denials.isEmpty
+            ? "The task was blocked from using some tools."
+            : "The task finished without taking any actions."
+    case .failed:
+        userSummary = "ran into a problem"
+        userDetail = "Something went wrong while running this task."
+    }
+
+    return TaskRunResult(
+        date: Date(),
+        succeeded: !isError,
+        numTurns: numTurns,
+        resultText: resultText,
+        permissionDenials: denials,
+        durationMs: durationMs,
+        health: health,
+        userSummary: userSummary,
+        userDetail: userDetail
+    )
+}
+
 /// Executes a single task synchronously. Returns whether it succeeded.
 ///
 /// Shared `claudePath`, `denyRules`, `env`, and `capabilities` are computed
@@ -561,13 +658,11 @@ for task in dueTasks {
 group.wait()
 
 // Re-read schedules.json to pick up any changes the app made while tasks ran,
-// then merge only the lastRunDate/lastRunSucceeded fields we updated.
+// then merge only the lastRunResult field we updated.
 var freshTasks = loadTasks()
-let updateTime = Date()
-for (id, succeeded) in results {
+for (id, _) in results {
     if let index = freshTasks.firstIndex(where: { $0.id == id }) {
-        freshTasks[index].lastRunDate = updateTime
-        freshTasks[index].lastRunSucceeded = succeeded
+        freshTasks[index].lastRunResult = parseTaskLog(logURL: freshTasks[index].logURL)
     }
 }
 saveTasks(freshTasks)

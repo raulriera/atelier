@@ -24,6 +24,11 @@ struct SystemEventCell: View {
     }
 
     private var foregroundStyle: AnyShapeStyle {
-        event.kind == .error ? AnyShapeStyle(.statusError) : AnyShapeStyle(.contentSecondary)
+        switch event.kind {
+        case .error:
+            AnyShapeStyle(.statusError)
+        default:
+            AnyShapeStyle(.contentSecondary)
+        }
     }
 }

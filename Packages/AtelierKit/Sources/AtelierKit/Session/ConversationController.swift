@@ -17,6 +17,7 @@ public final class ConversationController {
     public private(set) var activeContextFiles: [ContextFile] = []
     public internal(set) var toolPayloads: [String: ToolPayload] = [:]
     public var selectedToolEvent: ToolUseEvent?
+    public var selectedTaskCompletion: TaskCompletionEvent?
     public var selectedModel: ModelConfiguration = .default
     public private(set) var sessionList: [SessionSnapshotMetadata] = []
 

@@ -254,8 +254,16 @@ struct ScheduledTaskTests {
             model: "sonnet",
             projectPath: "/tmp/project",
             projectId: fixedProjectId,
-            lastRunDate: fixedDate,
-            lastRunSucceeded: true,
+            lastRunResult: TaskRunResult(
+                date: fixedDate,
+                succeeded: true,
+                numTurns: 3,
+                resultText: "Done",
+                permissionDenials: [],
+                durationMs: 5000,
+                health: .healthy,
+                userSummary: "completed successfully"
+            ),
             createdAt: fixedDate
         )
 
@@ -276,8 +284,8 @@ struct ScheduledTaskTests {
         #expect(decoded.projectPath == task.projectPath)
         #expect(decoded.projectId == fixedProjectId)
         #expect(decoded.isPaused == task.isPaused)
-        #expect(decoded.lastRunDate == task.lastRunDate)
-        #expect(decoded.lastRunSucceeded == task.lastRunSucceeded)
+        #expect(decoded.lastRunResult?.succeeded == task.lastRunResult?.succeeded)
+        #expect(decoded.lastRunResult?.health == task.lastRunResult?.health)
         #expect(decoded.createdAt == task.createdAt)
     }
 
@@ -302,8 +310,7 @@ struct ScheduledTaskTests {
         #expect(decoded.schedule == .manual)
         #expect(decoded.projectId == pid)
         #expect(decoded.model == nil)
-        #expect(decoded.lastRunDate == nil)
-        #expect(decoded.lastRunSucceeded == nil)
+        #expect(decoded.lastRunResult == nil)
     }
 
     @Test func scheduledTaskWithCronScheduleRoundTrips() throws {

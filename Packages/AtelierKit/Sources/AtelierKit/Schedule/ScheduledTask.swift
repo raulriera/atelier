@@ -23,10 +23,8 @@ public struct ScheduledTask: Sendable, Codable, Identifiable {
     public var projectId: UUID
     /// Whether the task is paused (skipped during scheduled runs).
     public var isPaused: Bool
-    /// When the task last ran, if ever.
-    public var lastRunDate: Date?
-    /// Whether the last run succeeded, if ever run.
-    public var lastRunSucceeded: Bool?
+    /// Structured result from the most recent run, parsed from the log file.
+    public var lastRunResult: TaskRunResult?
     /// Card color name from ``TaskColor``.
     public var colorName: String
     /// When the task was created.
@@ -53,8 +51,7 @@ public struct ScheduledTask: Sendable, Codable, Identifiable {
         projectPath: String,
         projectId: UUID,
         isPaused: Bool = false,
-        lastRunDate: Date? = nil,
-        lastRunSucceeded: Bool? = nil,
+        lastRunResult: TaskRunResult? = nil,
         colorName: String = TaskColor.defaultName,
         createdAt: Date = Date()
     ) {
@@ -67,8 +64,7 @@ public struct ScheduledTask: Sendable, Codable, Identifiable {
         self.projectPath = projectPath
         self.projectId = projectId
         self.isPaused = isPaused
-        self.lastRunDate = lastRunDate
-        self.lastRunSucceeded = lastRunSucceeded
+        self.lastRunResult = lastRunResult
         self.colorName = colorName
         self.createdAt = createdAt
     }

@@ -8,6 +8,7 @@ struct TimelineView: View {
     @Binding var draft: String
     var selectedToolID: String?
     var onSelectTool: ((ToolUseEvent) -> Void)?
+    var onSelectTaskCompletion: ((TaskCompletionEvent) -> Void)?
     var onApprovalDecision: ((String, String, ApprovalDecision) -> Void)?
     var onAskUserResponse: ((String, Int, String?) -> Void)?
     var onPlanApprove: (() -> Void)?
@@ -31,6 +32,7 @@ struct TimelineView: View {
                         capabilityStore: capabilityStore,
                         selectedToolID: selectedToolID,
                         onSelectTool: onSelectTool,
+                        onSelectTaskCompletion: onSelectTaskCompletion,
                         onApprovalDecision: onApprovalDecision,
                         onAskUserResponse: onAskUserResponse,
                         onPlanApprove: onPlanApprove,
@@ -72,7 +74,7 @@ private extension TimelineContent {
         switch self {
         case .userMessage: "user"
         case .assistantMessage: "assistant"
-        case .system, .toolUse, .approval, .askUser: nil
+        case .system, .toolUse, .approval, .askUser, .taskCompletion: nil
         }
     }
 }
@@ -87,6 +89,7 @@ private struct TimelineItemView: View {
     let capabilityStore: CapabilityStore
     let selectedToolID: String?
     let onSelectTool: ((ToolUseEvent) -> Void)?
+    let onSelectTaskCompletion: ((TaskCompletionEvent) -> Void)?
     var onApprovalDecision: ((String, String, ApprovalDecision) -> Void)?
     var onAskUserResponse: ((String, Int, String?) -> Void)?
     var onPlanApprove: (() -> Void)?
@@ -118,6 +121,11 @@ private struct TimelineItemView: View {
             }
         case .system(let event):
             SystemEventCell(event: event)
+        case .taskCompletion(let event):
+            Button { onSelectTaskCompletion?(event) } label: {
+                TaskCompletionCell(event: event)
+            }
+            .buttonStyle(.plain)
         case .toolUse(let event):
             if event.isPlanReview {
                 PlanReviewCard(

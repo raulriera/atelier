@@ -425,12 +425,17 @@ struct ConversationControllerTests {
             let controller = await makeController(workingDirectory: dir)
             controller.checkAvailability()
 
-            // Wait for the background task to complete
-            try await Task.sleep(for: .milliseconds(200))
-
             let contextPath = dir
                 .appendingPathComponent(".atelier", isDirectory: true)
                 .appendingPathComponent("context.md")
+
+            // Poll for the file — the detached fingerprint task may take
+            // variable time depending on system load.
+            for _ in 0..<50 {
+                if FileManager.default.fileExists(atPath: contextPath.path) { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+
             #expect(FileManager.default.fileExists(atPath: contextPath.path))
 
             let content = try String(contentsOf: contextPath, encoding: .utf8)
@@ -445,6 +450,7 @@ struct ConversationControllerTests {
             let controller = await makeController(workingDirectory: dir)
             controller.checkAvailability()
 
+            // Short wait — the detached task returns immediately when the file exists.
             try await Task.sleep(for: .milliseconds(200))
 
             let contextPath = dir

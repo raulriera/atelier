@@ -12,6 +12,7 @@ struct ConversationWindow: View {
     @State private var inspectorTab: InspectorTab = .capabilities
     @State private var showComposeField = false
     @State private var showSessionMenu = false
+    @State private var didInjectCompletions = false
     @State private var showAttachmentPicker = false
 
     let projectName: String
@@ -43,9 +44,15 @@ struct ConversationWindow: View {
                         controller.selectedToolEvent = nil
                     } else {
                         controller.selectedToolEvent = event
+                        controller.selectedTaskCompletion = nil
                         inspectorTab = .detail
                         showInspector = true
                     }
+                }, onSelectTaskCompletion: { event in
+                    controller.selectedToolEvent = nil
+                    controller.selectedTaskCompletion = event
+                    inspectorTab = .detail
+                    showInspector = true
                 }, onApprovalDecision: { id, toolName, decision in
                     controller.handleApprovalDecision(id: id, toolName: toolName, decision: decision)
                 }, onAskUserResponse: { id, selectedIndex, customText in
@@ -127,7 +134,8 @@ struct ConversationWindow: View {
                     scheduleStore: scheduleStore,
                     projectPath: controller.workingDirectory?.path,
                     projectId: projectId,
-                    selectedTool: controller.selectedToolEvent
+                    selectedTool: controller.selectedToolEvent,
+                    selectedTaskCompletion: controller.selectedTaskCompletion
                 )
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 480)
             }
@@ -170,6 +178,17 @@ struct ConversationWindow: View {
         }
         .task {
             await controller.start()
+
+            // Inject last run results for this project's tasks when resuming
+            // a previous session. Skipped for empty sessions (fresh start).
+            // Guard prevents re-injection if .task fires again.
+            if !didInjectCompletions, !controller.session.items.isEmpty, let path = controller.workingDirectory?.path {
+                didInjectCompletions = true
+                for task in scheduleStore.tasks(forProjectPath: path) {
+                    guard let result = task.lastRunResult else { continue }
+                    controller.session.appendTaskCompletion(TaskCompletionEvent(name: task.name, result: result))
+                }
+            }
 
             // WORKAROUND continued: NavigationStack animates safeAreaInset content
             // on first layout. Wait for that to settle, then reveal ComposeField.

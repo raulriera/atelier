@@ -5,4 +5,5 @@ public enum TimelineContent: Sendable, Codable {
     case toolUse(ToolUseEvent)
     case approval(ApprovalEvent)
     case askUser(AskUserEvent)
+    case taskCompletion(TaskCompletionEvent)
 }

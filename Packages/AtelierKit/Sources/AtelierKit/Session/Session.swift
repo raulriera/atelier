@@ -245,6 +245,10 @@ public final class Session {
 
         case .userMessage:
             return true
+
+        case .taskCompletion:
+            // Re-derived from schedules.json on each launch
+            return false
         }
     }
 
@@ -643,6 +647,12 @@ public final class Session {
     @MainActor
     public func appendSystemEvent(_ event: SystemEvent) {
         let item = TimelineItem(content: .system(event))
+        appendItem(item)
+    }
+
+    @MainActor
+    public func appendTaskCompletion(_ event: TaskCompletionEvent) {
+        let item = TimelineItem(content: .taskCompletion(event))
         appendItem(item)
     }
 

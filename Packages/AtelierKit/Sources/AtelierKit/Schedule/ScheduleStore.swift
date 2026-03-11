@@ -114,15 +114,16 @@ public final class ScheduleStore {
 
         Self.logger.info("Running task '\(task.name)' now")
 
-        let succeeded = await Self.executeProcess(for: task, enabledCapabilities: enabledCapabilities)
+        let processSucceeded = await Self.executeProcess(for: task, enabledCapabilities: enabledCapabilities)
 
-        tasks[index].lastRunDate = Date()
-        tasks[index].lastRunSucceeded = succeeded
+        let result = TaskRunResult.parse(logURL: task.logURL)
+
+        tasks[index].lastRunResult = result
         persist()
 
         await ScheduleNotifier.postCompletion(
             taskName: task.name,
-            succeeded: succeeded,
+            succeeded: result?.succeeded ?? processSucceeded,
             logPath: task.logURL.path
         )
     }
@@ -335,8 +336,16 @@ public final class ScheduleStore {
                 schedule: .weekly(weekday: 5, hour: 17, minute: 0),
                 projectPath: "/Users/demo/Projects/research",
                 projectId: previewProjectId,
-                lastRunDate: Date().addingTimeInterval(-86400),
-                lastRunSucceeded: true,
+                lastRunResult: TaskRunResult(
+                    date: Date().addingTimeInterval(-86400),
+                    succeeded: true,
+                    numTurns: 4,
+                    resultText: "Weekly report generated.",
+                    permissionDenials: [],
+                    durationMs: 12000,
+                    health: .healthy,
+                    userSummary: "completed successfully"
+                ),
                 colorName: TaskColor.purple.rawValue
             ),
             ScheduledTask(
