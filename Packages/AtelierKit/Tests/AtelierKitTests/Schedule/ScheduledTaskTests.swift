@@ -7,78 +7,38 @@ struct ScheduledTaskTests {
 
     // MARK: - TaskSchedule.displayName
 
-    @Test func manualDisplayName() {
-        #expect(TaskSchedule.manual.displayName == "Manual")
-    }
-
-    @Test func hourlyDisplayName() {
-        #expect(TaskSchedule.hourly.displayName == "Every hour")
-    }
-
-    @Test func dailyDisplayName() {
-        let schedule = TaskSchedule.daily(hour: 8, minute: 0)
-        #expect(schedule.displayName == "Daily at 8:00 AM")
-    }
-
-    @Test func dailyPMDisplayName() {
-        let schedule = TaskSchedule.daily(hour: 15, minute: 30)
-        #expect(schedule.displayName == "Daily at 3:30 PM")
-    }
-
-    @Test func dailyNoonDisplayName() {
-        let schedule = TaskSchedule.daily(hour: 12, minute: 0)
-        #expect(schedule.displayName == "Daily at 12:00 PM")
-    }
-
-    @Test func dailyMidnightDisplayName() {
-        let schedule = TaskSchedule.daily(hour: 0, minute: 0)
-        #expect(schedule.displayName == "Daily at 12:00 AM")
-    }
-
-    @Test func weekdaysDisplayName() {
-        let schedule = TaskSchedule.weekdays(hour: 9, minute: 0)
-        #expect(schedule.displayName == "Weekdays at 9:00 AM")
-    }
-
-    @Test func weekendsDisplayName() {
-        let schedule = TaskSchedule.weekends(hour: 10, minute: 30)
-        #expect(schedule.displayName == "Weekends at 10:30 AM")
-    }
-
-    @Test func weeklyDisplayName() {
-        let schedule = TaskSchedule.weekly(weekday: 1, hour: 15, minute: 0)
-        #expect(schedule.displayName == "Monday at 3:00 PM")
-    }
-
-    @Test func weeklySundayDisplayName() {
-        let schedule = TaskSchedule.weekly(weekday: 0, hour: 9, minute: 30)
-        #expect(schedule.displayName == "Sunday at 9:30 AM")
-    }
-
-    @Test func monthlyDisplayName() {
-        let schedule = TaskSchedule.monthly(day: 1, hour: 9, minute: 0)
-        #expect(schedule.displayName == "Monthly on day 1 at 9:00 AM")
-    }
-
-    @Test func cronDisplayName() {
-        let schedule = TaskSchedule.cron(minute: 0, hour: 8, day: nil, month: nil, weekday: nil)
-        #expect(schedule.displayName == "Custom schedule")
+    @Test("displayName returns expected string", arguments: [
+        (TaskSchedule.manual, "Manual"),
+        (.hourly, "Every hour"),
+        (.daily(hour: 8, minute: 0), "Daily at 8:00 AM"),
+        (.daily(hour: 15, minute: 30), "Daily at 3:30 PM"),
+        (.daily(hour: 12, minute: 0), "Daily at 12:00 PM"),
+        (.daily(hour: 0, minute: 0), "Daily at 12:00 AM"),
+        (.weekdays(hour: 9, minute: 0), "Weekdays at 9:00 AM"),
+        (.weekends(hour: 10, minute: 30), "Weekends at 10:30 AM"),
+        (.weekly(weekday: 1, hour: 15, minute: 0), "Monday at 3:00 PM"),
+        (.weekly(weekday: 0, hour: 9, minute: 30), "Sunday at 9:30 AM"),
+        (.monthly(day: 1, hour: 9, minute: 0), "Monthly on day 1 at 9:00 AM"),
+        (.cron(minute: 0, hour: 8, day: nil, month: nil, weekday: nil), "Custom schedule"),
+    ])
+    func displayName(schedule: TaskSchedule, expected: String) {
+        #expect(schedule.displayName == expected)
     }
 
     // MARK: - TaskSchedule.calendarIntervals
 
-    @Test func manualCalendarIntervalsIsNil() {
-        #expect(TaskSchedule.manual.calendarIntervals == nil)
-    }
-
-    @Test func hourlyCalendarIntervals() {
-        let intervals = TaskSchedule.hourly.calendarIntervals
-        #expect(intervals == [["Minute": 0]])
-    }
-
-    @Test func dailyCalendarIntervals() {
-        let intervals = TaskSchedule.daily(hour: 8, minute: 0).calendarIntervals
-        #expect(intervals == [["Hour": 8, "Minute": 0]])
+    @Test("calendarIntervals returns expected value", arguments: [
+        (TaskSchedule.manual, nil as [[String: Int]]?),
+        (.hourly, [["Minute": 0]]),
+        (.daily(hour: 8, minute: 0), [["Hour": 8, "Minute": 0]]),
+        (.weekly(weekday: 1, hour: 15, minute: 0), [["Weekday": 1, "Hour": 15, "Minute": 0]]),
+        (.monthly(day: 15, hour: 9, minute: 30), [["Day": 15, "Hour": 9, "Minute": 30]]),
+        (.cron(minute: 30, hour: 14, day: 1, month: 6, weekday: 3), [["Minute": 30, "Hour": 14, "Day": 1, "Month": 6, "Weekday": 3]]),
+        (.cron(minute: 0, hour: nil, day: nil, month: nil, weekday: nil), [["Minute": 0]]),
+        (.cron(minute: nil, hour: nil, day: nil, month: nil, weekday: nil), nil),
+    ])
+    func calendarIntervals(schedule: TaskSchedule, expected: [[String: Int]]?) {
+        #expect(schedule.calendarIntervals == expected)
     }
 
     @Test func weekdaysCalendarIntervals() {
@@ -95,38 +55,10 @@ struct ScheduledTaskTests {
         #expect(intervals?[1] == ["Weekday": 6, "Hour": 10, "Minute": 30])
     }
 
-    @Test func weeklyCalendarIntervals() {
-        let intervals = TaskSchedule.weekly(weekday: 1, hour: 15, minute: 0).calendarIntervals
-        #expect(intervals == [["Weekday": 1, "Hour": 15, "Minute": 0]])
-    }
-
-    @Test func monthlyCalendarIntervals() {
-        let intervals = TaskSchedule.monthly(day: 15, hour: 9, minute: 30).calendarIntervals
-        #expect(intervals == [["Day": 15, "Hour": 9, "Minute": 30]])
-    }
-
-    @Test func cronCalendarIntervalsWithAllFields() {
-        let intervals = TaskSchedule.cron(minute: 30, hour: 14, day: 1, month: 6, weekday: 3)
-            .calendarIntervals
-        #expect(intervals == [["Minute": 30, "Hour": 14, "Day": 1, "Month": 6, "Weekday": 3]])
-    }
-
-    @Test func cronCalendarIntervalsWithPartialFields() {
-        let intervals = TaskSchedule.cron(minute: 0, hour: nil, day: nil, month: nil, weekday: nil)
-            .calendarIntervals
-        #expect(intervals == [["Minute": 0]])
-    }
-
-    @Test func cronCalendarIntervalsAllNilReturnsNil() {
-        let intervals = TaskSchedule.cron(minute: nil, hour: nil, day: nil, month: nil, weekday: nil)
-            .calendarIntervals
-        #expect(intervals == nil)
-    }
-
     // MARK: - TaskSchedule.isDue
 
     /// Helper: creates a Date for a specific calendar moment.
-    private func makeDate(
+    private static func makeDate(
         year: Int = 2026, month: Int = 3, day: Int = 10,
         hour: Int = 9, minute: Int = 0
     ) -> Date {
@@ -139,82 +71,46 @@ struct ScheduledTaskTests {
         return Calendar.current.date(from: components)!
     }
 
-    @Test func manualIsNeverDue() {
-        #expect(!TaskSchedule.manual.isDue(at: makeDate()))
+    @Test("isDue returns true when schedule matches", arguments: [
+        // hourly at top of hour
+        (TaskSchedule.hourly, makeDate(minute: 0)),
+        // hourly tolerates one minute late
+        (.hourly, makeDate(minute: 1)),
+        // hourly tolerance wraps around hour (minute 59)
+        (.hourly, makeDate(minute: 59)),
+        // daily at exact time
+        (.daily(hour: 9, minute: 0), makeDate(hour: 9, minute: 0)),
+        // weekdays on Tuesday (2026-03-10)
+        (.weekdays(hour: 9, minute: 0), makeDate(year: 2026, month: 3, day: 10, hour: 9, minute: 0)),
+        // weekends on Sunday (2026-03-08)
+        (.weekends(hour: 10, minute: 0), makeDate(year: 2026, month: 3, day: 8, hour: 10, minute: 0)),
+        // weekly on correct day (Tuesday = weekday 2)
+        (.weekly(weekday: 2, hour: 15, minute: 0), makeDate(year: 2026, month: 3, day: 10, hour: 15, minute: 0)),
+        // monthly on correct day
+        (.monthly(day: 10, hour: 9, minute: 0), makeDate(day: 10, hour: 9, minute: 0)),
+    ])
+    func isDue(schedule: TaskSchedule, date: Date) {
+        #expect(schedule.isDue(at: date))
     }
 
-    @Test func hourlyIsDueAtTopOfHour() {
-        #expect(TaskSchedule.hourly.isDue(at: makeDate(minute: 0)))
-    }
-
-    @Test func hourlyIsNotDueAtMinute30() {
-        #expect(!TaskSchedule.hourly.isDue(at: makeDate(minute: 30)))
-    }
-
-    @Test func hourlyToleratesOneMinuteLate() {
-        #expect(TaskSchedule.hourly.isDue(at: makeDate(minute: 1)))
-    }
-
-    @Test func dailyIsDueAtExactTime() {
-        let schedule = TaskSchedule.daily(hour: 9, minute: 0)
-        #expect(schedule.isDue(at: makeDate(hour: 9, minute: 0)))
-    }
-
-    @Test func dailyIsNotDueAtWrongHour() {
-        let schedule = TaskSchedule.daily(hour: 9, minute: 0)
-        #expect(!schedule.isDue(at: makeDate(hour: 10, minute: 0)))
-    }
-
-    @Test func weekdaysIsDueOnTuesday() {
-        // 2026-03-10 is a Tuesday (weekday index 2 in 0=Sunday system)
-        let schedule = TaskSchedule.weekdays(hour: 9, minute: 0)
-        #expect(schedule.isDue(at: makeDate(year: 2026, month: 3, day: 10, hour: 9, minute: 0)))
-    }
-
-    @Test func weekdaysIsNotDueOnSunday() {
-        // 2026-03-08 is a Sunday
-        let schedule = TaskSchedule.weekdays(hour: 9, minute: 0)
-        #expect(!schedule.isDue(at: makeDate(year: 2026, month: 3, day: 8, hour: 9, minute: 0)))
-    }
-
-    @Test func weekendsIsDueOnSunday() {
-        // 2026-03-08 is a Sunday
-        let schedule = TaskSchedule.weekends(hour: 10, minute: 0)
-        #expect(schedule.isDue(at: makeDate(year: 2026, month: 3, day: 8, hour: 10, minute: 0)))
-    }
-
-    @Test func weekendsIsNotDueOnMonday() {
-        // 2026-03-09 is a Monday
-        let schedule = TaskSchedule.weekends(hour: 10, minute: 0)
-        #expect(!schedule.isDue(at: makeDate(year: 2026, month: 3, day: 9, hour: 10, minute: 0)))
-    }
-
-    @Test func weeklyIsDueOnCorrectDay() {
-        // 2026-03-10 is Tuesday = weekday 2 (0=Sun)
-        let schedule = TaskSchedule.weekly(weekday: 2, hour: 15, minute: 0)
-        #expect(schedule.isDue(at: makeDate(year: 2026, month: 3, day: 10, hour: 15, minute: 0)))
-    }
-
-    @Test func weeklyIsNotDueOnWrongDay() {
-        // 2026-03-10 is Tuesday = weekday 2
-        let schedule = TaskSchedule.weekly(weekday: 5, hour: 15, minute: 0)
-        #expect(!schedule.isDue(at: makeDate(year: 2026, month: 3, day: 10, hour: 15, minute: 0)))
-    }
-
-    @Test func monthlyIsDueOnCorrectDay() {
-        let schedule = TaskSchedule.monthly(day: 10, hour: 9, minute: 0)
-        #expect(schedule.isDue(at: makeDate(day: 10, hour: 9, minute: 0)))
-    }
-
-    @Test func monthlyIsNotDueOnWrongDay() {
-        let schedule = TaskSchedule.monthly(day: 15, hour: 9, minute: 0)
-        #expect(!schedule.isDue(at: makeDate(day: 10, hour: 9, minute: 0)))
-    }
-
-    @Test func minuteToleranceWrapsAroundHour() {
-        // Minute 59, schedule says Minute 0 — diff is 59, should match (wrap tolerance)
-        let schedule = TaskSchedule.hourly
-        #expect(schedule.isDue(at: makeDate(minute: 59)))
+    @Test("isDue returns false when schedule does not match", arguments: [
+        // manual is never due
+        (TaskSchedule.manual, makeDate()),
+        // hourly not due at minute 30
+        (.hourly, makeDate(minute: 30)),
+        // daily at wrong hour
+        (.daily(hour: 9, minute: 0), makeDate(hour: 10, minute: 0)),
+        // weekdays not due on Sunday (2026-03-08)
+        (.weekdays(hour: 9, minute: 0), makeDate(year: 2026, month: 3, day: 8, hour: 9, minute: 0)),
+        // weekends not due on Monday (2026-03-09)
+        (.weekends(hour: 10, minute: 0), makeDate(year: 2026, month: 3, day: 9, hour: 10, minute: 0)),
+        // weekly on wrong day (Friday = weekday 5, but date is Tuesday)
+        (.weekly(weekday: 5, hour: 15, minute: 0), makeDate(year: 2026, month: 3, day: 10, hour: 15, minute: 0)),
+        // monthly on wrong day
+        (.monthly(day: 15, hour: 9, minute: 0), makeDate(day: 10, hour: 9, minute: 0)),
+    ])
+    func isNotDue(schedule: TaskSchedule, date: Date) {
+        #expect(!schedule.isDue(at: date))
     }
 
     // MARK: - logURL

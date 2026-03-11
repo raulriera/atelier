@@ -178,6 +178,7 @@ struct ConversationWindow: View {
         }
         .task {
             await controller.start()
+            guard !Task.isCancelled else { return }
 
             // Inject last run results for this project's tasks when resuming
             // a previous session. Skipped for empty sessions (fresh start).

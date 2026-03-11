@@ -116,7 +116,10 @@ public final class ScheduleStore {
 
         let processSucceeded = await Self.executeProcess(for: task, enabledCapabilities: enabledCapabilities)
 
-        let result = TaskRunResult.parse(logURL: task.logURL)
+        let logURL = task.logURL
+        let result = await Task.detached(priority: .utility) {
+            TaskRunResult.parse(logURL: logURL)
+        }.value
 
         tasks[index].lastRunResult = result
         persist()

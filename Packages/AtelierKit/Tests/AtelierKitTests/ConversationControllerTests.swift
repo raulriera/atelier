@@ -140,8 +140,11 @@ struct ConversationControllerTests {
             let controller = await makeController(engine: engine)
             controller.sendMessage("Hi")
 
-            // Allow the streaming task to complete
-            try await Task.sleep(for: .milliseconds(50))
+            // Poll until streaming completes
+            for _ in 0..<40 {
+                if !controller.session.isStreaming { break }
+                try await Task.sleep(for: .milliseconds(25))
+            }
 
             #expect(controller.session.sessionId == "test-session")
             #expect(!controller.session.isStreaming)
@@ -162,7 +165,10 @@ struct ConversationControllerTests {
             let controller = await makeController(engine: engine)
             controller.sendMessage("Read a file")
 
-            try await Task.sleep(for: .milliseconds(50))
+            for _ in 0..<40 {
+                if !controller.session.isStreaming { break }
+                try await Task.sleep(for: .milliseconds(25))
+            }
 
             let toolItem = try #require(controller.session.items.first(where: {
                 if case .toolUse = $0.content { return true }
@@ -181,7 +187,10 @@ struct ConversationControllerTests {
             let controller = await makeController(engine: engine)
             controller.sendMessage("Fail")
 
-            try await Task.sleep(for: .milliseconds(50))
+            for _ in 0..<40 {
+                if !controller.session.isStreaming { break }
+                try await Task.sleep(for: .milliseconds(25))
+            }
 
             let systemItem = try #require(controller.session.items.last(where: {
                 if case .system = $0.content { return true }
@@ -326,7 +335,11 @@ struct ConversationControllerTests {
             controller.selectedModel = .opus
 
             controller.sendMessage("Test")
-            try await Task.sleep(for: .milliseconds(50))
+
+            for _ in 0..<40 {
+                if !spy.sentModels.isEmpty { break }
+                try await Task.sleep(for: .milliseconds(25))
+            }
 
             let sentModel = try #require(spy.sentModels.first)
             #expect(sentModel.modelId == ModelConfiguration.opus.modelId)
@@ -345,7 +358,10 @@ struct ConversationControllerTests {
             let attachment = FileAttachment(url: URL(fileURLWithPath: "/Users/someone/Documents/report.pdf"))
             controller.sendMessage("Check this", attachments: [attachment])
 
-            try await Task.sleep(for: .milliseconds(50))
+            for _ in 0..<40 {
+                if !spy.sentAllowedReadPaths.isEmpty { break }
+                try await Task.sleep(for: .milliseconds(25))
+            }
 
             let paths = try #require(spy.sentAllowedReadPaths.first)
             let expected = URL(fileURLWithPath: "/Users/someone/Documents/report.pdf").standardizedFileURL.path
@@ -360,11 +376,19 @@ struct ConversationControllerTests {
 
             let first = FileAttachment(url: URL(fileURLWithPath: "/tmp/a.txt"))
             controller.sendMessage("First", attachments: [first])
-            try await Task.sleep(for: .milliseconds(50))
+
+            for _ in 0..<40 {
+                if !controller.session.isStreaming { break }
+                try await Task.sleep(for: .milliseconds(25))
+            }
 
             let second = FileAttachment(url: URL(fileURLWithPath: "/tmp/b.txt"))
             controller.sendMessage("Second", attachments: [second])
-            try await Task.sleep(for: .milliseconds(50))
+
+            for _ in 0..<40 {
+                if spy.sentAllowedReadPaths.count >= 2 { break }
+                try await Task.sleep(for: .milliseconds(25))
+            }
 
             // Second call should contain both paths
             let paths = try #require(spy.sentAllowedReadPaths.last)
@@ -381,7 +405,11 @@ struct ConversationControllerTests {
             let controller = await makeController(engine: spy)
 
             controller.sendMessage("Just text")
-            try await Task.sleep(for: .milliseconds(50))
+
+            for _ in 0..<40 {
+                if !spy.sentAllowedReadPaths.isEmpty { break }
+                try await Task.sleep(for: .milliseconds(25))
+            }
 
             let paths = try #require(spy.sentAllowedReadPaths.first)
             #expect(paths.isEmpty)
@@ -436,7 +464,7 @@ struct ConversationControllerTests {
                 try await Task.sleep(for: .milliseconds(100))
             }
 
-            #expect(FileManager.default.fileExists(atPath: contextPath.path))
+            #expect(FileManager.default.fileExists(atPath: contextPath.path), "context.md should be created by fingerprinting within 5 seconds")
 
             let content = try String(contentsOf: contextPath, encoding: .utf8)
             #expect(content.contains("# Project Context"))
@@ -493,7 +521,10 @@ struct ConversationControllerTests {
             let controller = await makeController(engine: engine)
             controller.sendMessage("Send email")
 
-            try await Task.sleep(for: .milliseconds(50))
+            for _ in 0..<40 {
+                if !controller.session.isStreaming { break }
+                try await Task.sleep(for: .milliseconds(25))
+            }
 
             // MCPToolMetadata extracts "mail" from "mcp__mail__send"
             #expect(controller.capabilityHealthMonitor.health["mail"] == .unavailable)
