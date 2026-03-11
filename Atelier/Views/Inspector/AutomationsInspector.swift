@@ -191,7 +191,7 @@ private struct AutomationCard: View {
                 RoundedRectangle(cornerRadius: Radii.md, style: .continuous)
                     .fill(cardColor.gradient)
             )
-            .opacity(task.isPaused ? 0.6 : 1)
+            .opacity(task.isPaused ? 0.3 : 1)
         }
         .buttonStyle(.plain)
         .onAppear { optionKeyHeld = NSEvent.modifierFlags.contains(.option) }
