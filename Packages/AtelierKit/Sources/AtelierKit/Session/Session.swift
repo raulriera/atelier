@@ -3,7 +3,9 @@ import Foundation
 @MainActor
 @Observable
 public final class Session {
-    public private(set) var items: [TimelineItem] = []
+    public private(set) var items: [TimelineItem] = [] {
+        didSet { visibleTimelineCacheVersion &+= 1 }
+    }
     public private(set) var activeAssistantText: String = ""
     public private(set) var isStreaming: Bool = false
     public private(set) var isThinking: Bool = false
@@ -90,15 +92,28 @@ public final class Session {
         planCacheValidVersion = planCacheVersion
     }
 
-    /// Invalidates both task and plan caches so the next access rebuilds.
+    /// Invalidates all derived caches so the next access rebuilds.
     private func invalidateDerivedCaches() {
         taskCacheVersion &+= 1
         planCacheVersion &+= 1
+        visibleTimelineCacheVersion &+= 1
     }
+
+    // MARK: - Visible Timeline Cache
+
+    private var cachedVisibleTimelineItems: [TimelineItem] = []
+    private var visibleTimelineCacheVersion: UInt = 0
+    private var visibleTimelineCacheValidVersion: UInt = .max
 
     /// Visible items with internal operations filtered out, for the timeline.
     public var visibleTimelineItems: [TimelineItem] {
-        visibleItems.filter { item in
+        rebuildVisibleTimelineCacheIfNeeded()
+        return cachedVisibleTimelineItems
+    }
+
+    private func rebuildVisibleTimelineCacheIfNeeded() {
+        guard visibleTimelineCacheVersion != visibleTimelineCacheValidVersion else { return }
+        cachedVisibleTimelineItems = visibleItems.filter { item in
             switch item.content {
             case .toolUse(let event):
                 return !event.isTaskOperation && !event.isAskUserOperation && !event.isPlanOperation
@@ -109,6 +124,7 @@ public final class Session {
                 return true
             }
         }
+        visibleTimelineCacheValidVersion = visibleTimelineCacheVersion
     }
 
     // MARK: - Visible Items Window
@@ -134,6 +150,7 @@ public final class Session {
     public func loadOlderItems() {
         guard visibleStartIndex > 0 else { return }
         visibleStartIndex = max(0, visibleStartIndex - Self.loadBatchSize)
+        visibleTimelineCacheVersion &+= 1
     }
 
     /// Appends an item and trims the visible window if it has grown too large.
@@ -277,6 +294,9 @@ public final class Session {
         cachedPlanReviewEntries = []
         planCacheVersion = 0
         planCacheValidVersion = .max
+        cachedVisibleTimelineItems = []
+        visibleTimelineCacheVersion = 0
+        visibleTimelineCacheValidVersion = .max
     }
 
     @MainActor
