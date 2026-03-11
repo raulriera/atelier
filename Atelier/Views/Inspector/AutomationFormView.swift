@@ -12,6 +12,7 @@ struct AutomationFormView: View {
 
     let scheduleStore: ScheduleStore
     let projectPath: String
+    let projectId: UUID
 
     /// When editing an existing task, this is set. `nil` for create.
     let existingTask: ScheduledTask?
@@ -27,9 +28,10 @@ struct AutomationFormView: View {
     @State private var selectedModel: String?
     @State private var selectedColor: TaskColor = .blue
 
-    init(scheduleStore: ScheduleStore, projectPath: String, existingTask: ScheduledTask? = nil) {
+    init(scheduleStore: ScheduleStore, projectPath: String, projectId: UUID, existingTask: ScheduledTask? = nil) {
         self.scheduleStore = scheduleStore
         self.projectPath = projectPath
+        self.projectId = projectId
         self.existingTask = existingTask
 
         if let task = existingTask {
@@ -232,6 +234,7 @@ struct AutomationFormView: View {
                 schedule: schedule,
                 model: selectedModel,
                 projectPath: projectPath,
+                projectId: projectId,
                 colorName: colorValue
             )
             scheduleStore.add(task)
@@ -307,5 +310,5 @@ private struct PromptField: View {
 }
 
 #Preview {
-    AutomationFormView(scheduleStore: .preview, projectPath: "/tmp/project")
+    AutomationFormView(scheduleStore: .preview, projectPath: "/tmp/project", projectId: UUID())
 }

@@ -224,7 +224,8 @@ struct ScheduledTaskTests {
             name: "Test",
             prompt: "Do something",
             schedule: .hourly,
-            projectPath: "/tmp"
+            projectPath: "/tmp",
+            projectId: UUID()
         )
 
         let expected = FileManager.default.homeDirectoryForCurrentUser
@@ -234,8 +235,8 @@ struct ScheduledTaskTests {
     }
 
     @Test func logURLIsUniquePerTask() {
-        let task1 = ScheduledTask(name: "A", prompt: "a", schedule: .hourly, projectPath: "/tmp")
-        let task2 = ScheduledTask(name: "B", prompt: "b", schedule: .hourly, projectPath: "/tmp")
+        let task1 = ScheduledTask(name: "A", prompt: "a", schedule: .hourly, projectPath: "/tmp", projectId: UUID())
+        let task2 = ScheduledTask(name: "B", prompt: "b", schedule: .hourly, projectPath: "/tmp", projectId: UUID())
 
         #expect(task1.logURL != task2.logURL)
     }
@@ -244,6 +245,7 @@ struct ScheduledTaskTests {
 
     @Test func scheduledTaskCodableRoundTrip() throws {
         let fixedDate = Date(timeIntervalSince1970: 1_700_000_000)
+        let fixedProjectId = UUID()
         let task = ScheduledTask(
             name: "Test task",
             description: "A test",
@@ -251,6 +253,7 @@ struct ScheduledTaskTests {
             schedule: .daily(hour: 9, minute: 0),
             model: "sonnet",
             projectPath: "/tmp/project",
+            projectId: fixedProjectId,
             lastRunDate: fixedDate,
             lastRunSucceeded: true,
             createdAt: fixedDate
@@ -271,6 +274,7 @@ struct ScheduledTaskTests {
         #expect(decoded.schedule == task.schedule)
         #expect(decoded.model == task.model)
         #expect(decoded.projectPath == task.projectPath)
+        #expect(decoded.projectId == fixedProjectId)
         #expect(decoded.isPaused == task.isPaused)
         #expect(decoded.lastRunDate == task.lastRunDate)
         #expect(decoded.lastRunSucceeded == task.lastRunSucceeded)
@@ -278,11 +282,13 @@ struct ScheduledTaskTests {
     }
 
     @Test func scheduledTaskWithManualScheduleRoundTrips() throws {
+        let pid = UUID()
         let task = ScheduledTask(
             name: "Manual task",
             prompt: "Run manually",
             schedule: .manual,
-            projectPath: "/tmp"
+            projectPath: "/tmp",
+            projectId: pid
         )
 
         let encoder = JSONEncoder()
@@ -294,6 +300,7 @@ struct ScheduledTaskTests {
         let decoded = try decoder.decode(ScheduledTask.self, from: data)
 
         #expect(decoded.schedule == .manual)
+        #expect(decoded.projectId == pid)
         #expect(decoded.model == nil)
         #expect(decoded.lastRunDate == nil)
         #expect(decoded.lastRunSucceeded == nil)
@@ -304,7 +311,8 @@ struct ScheduledTaskTests {
             name: "Cron task",
             prompt: "Custom schedule",
             schedule: .cron(minute: 30, hour: nil, day: 1, month: nil, weekday: nil),
-            projectPath: "/tmp"
+            projectPath: "/tmp",
+            projectId: UUID()
         )
 
         let encoder = JSONEncoder()

@@ -22,6 +22,7 @@ struct ScheduledTask: Codable {
     var schedule: TaskSchedule
     var model: String?
     var projectPath: String
+    var projectId: UUID
     var isPaused: Bool
     var lastRunDate: Date?
     var lastRunSucceeded: Bool?
@@ -208,6 +209,152 @@ func xcodeDevToolsPath() -> String? {
     return output.isEmpty ? nil : "\(output)/usr/bin"
 }
 
+// MARK: - Capability Registry (mirrors CapabilityRegistry.swift)
+
+/// Minimal capability definition for the scheduler.
+/// Maps capability IDs to helper binary names, server names, and tool groups.
+struct CapabilityDefinition {
+    let id: String
+    let helperName: String
+    let serverName: String
+    /// Maps group ID → tool names.
+    let toolGroups: [String: [String]]
+}
+
+let capabilityRegistry: [CapabilityDefinition] = [
+    CapabilityDefinition(
+        id: "iwork", helperName: "atelier-iwork-mcp", serverName: "atelier-iwork",
+        toolGroups: [
+            "create": ["keynote_create_presentation", "keynote_add_slide", "keynote_set_slide_content",
+                       "keynote_set_slide_notes", "pages_create_document", "pages_insert_text",
+                       "numbers_create_spreadsheet", "numbers_set_cell", "numbers_set_formula"],
+            "export": ["keynote_export", "pages_export", "numbers_export"],
+        ]
+    ),
+    CapabilityDefinition(
+        id: "safari", helperName: "atelier-safari-mcp", serverName: "atelier-safari",
+        toolGroups: [
+            "browse": ["safari_open_url", "safari_list_tabs", "safari_get_tab_content",
+                       "safari_search", "safari_close_tab"],
+            "script": ["safari_execute_javascript"],
+        ]
+    ),
+    CapabilityDefinition(
+        id: "mail", helperName: "atelier-mail-mcp", serverName: "atelier-mail",
+        toolGroups: [
+            "read": ["mail_list_mailboxes", "mail_search_messages", "mail_get_message"],
+            "manage": ["mail_move_message", "mail_mark_read", "mail_flag_message"],
+            "send": ["mail_create_draft"],
+        ]
+    ),
+    CapabilityDefinition(
+        id: "reminders", helperName: "atelier-reminders-mcp", serverName: "atelier-reminders",
+        toolGroups: [
+            "read": ["reminders_list_lists", "reminders_list_reminders", "reminders_search"],
+            "create": ["reminders_create"],
+            "manage": ["reminders_complete"],
+        ]
+    ),
+    CapabilityDefinition(
+        id: "calendar", helperName: "atelier-calendar-mcp", serverName: "atelier-calendar",
+        toolGroups: [
+            "read": ["calendar_list_calendars", "calendar_list_events", "calendar_search_events"],
+            "create": ["calendar_create_event"],
+        ]
+    ),
+    CapabilityDefinition(
+        id: "notes", helperName: "atelier-notes-mcp", serverName: "atelier-notes",
+        toolGroups: [
+            "read": ["notes_list_folders", "notes_list_notes", "notes_get_note", "notes_search"],
+            "create": ["notes_create"],
+        ]
+    ),
+    CapabilityDefinition(
+        id: "finder", helperName: "atelier-finder-mcp", serverName: "atelier-finder",
+        toolGroups: [
+            "browse": ["finder_list", "finder_get_info", "finder_open"],
+            "organize": ["finder_create_folder", "finder_move", "finder_copy",
+                         "finder_rename", "finder_set_tags"],
+        ]
+    ),
+    CapabilityDefinition(
+        id: "preview", helperName: "atelier-preview-mcp", serverName: "atelier-preview",
+        toolGroups: [
+            "read": ["pdf_info", "pdf_extract_text"],
+            "transform": ["pdf_merge", "pdf_split"],
+        ]
+    ),
+]
+
+/// Directory containing this scheduler and sibling helper binaries.
+let helpersDir = URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent()
+
+/// Resolves helper binary path as a sibling of this scheduler binary.
+func helperPath(named name: String) -> String? {
+    let path = helpersDir.appendingPathComponent(name).path
+    return FileManager.default.isExecutableFile(atPath: path) ? path : nil
+}
+
+/// Resolved capability for a task: server config + approved tool names.
+struct ResolvedCapability {
+    let command: String
+    let serverName: String
+    let approvedTools: [String]
+}
+
+/// Reads the project's capabilities.json and resolves enabled capabilities
+/// to executable paths and approved tool names.
+func resolveCapabilities(for task: ScheduledTask) -> [ResolvedCapability] {
+    let capabilitiesURL = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/Atelier/projects/\(task.projectId.uuidString)/capabilities.json")
+
+    guard let data = try? Data(contentsOf: capabilitiesURL),
+          let enabledGroups = try? JSONDecoder().decode([String: [String]].self, from: data) else {
+        return []
+    }
+
+    var resolved: [ResolvedCapability] = []
+    for (capId, groupIds) in enabledGroups {
+        let groups = Set(groupIds)
+        guard !groups.isEmpty,
+              let def = capabilityRegistry.first(where: { $0.id == capId }),
+              let command = helperPath(named: def.helperName) else {
+            continue
+        }
+        let tools = def.toolGroups
+            .filter { groups.contains($0.key) }
+            .flatMap(\.value)
+        if !tools.isEmpty {
+            resolved.append(ResolvedCapability(command: command, serverName: def.serverName, approvedTools: tools))
+        }
+    }
+    return resolved
+}
+
+/// Writes a temporary MCP config JSON for the given capabilities.
+func writeMCPConfig(capabilities: [ResolvedCapability], workingDirectory: String) -> String? {
+    guard !capabilities.isEmpty else { return nil }
+
+    var servers: [String: Any] = [:]
+    for cap in capabilities {
+        servers[cap.serverName] = [
+            "command": cap.command,
+            "env": ["ATELIER_WORKING_DIRECTORY": workingDirectory],
+        ] as [String: Any]
+    }
+
+    let configPath = FileManager.default.temporaryDirectory
+        .appendingPathComponent("atelier-mcp-\(UUID().uuidString).json").path
+    let config: [String: Any] = ["mcpServers": servers]
+
+    guard let data = try? JSONSerialization.data(withJSONObject: config),
+          FileManager.default.createFile(atPath: configPath, contents: data) else {
+        log("Failed to write MCP config")
+        return nil
+    }
+    return configPath
+}
+
 // MARK: - Task Execution
 
 let automationSystemPrompt = """
@@ -222,15 +369,27 @@ let taskTimeout: TimeInterval = 900 // 15 minutes
 
 /// Executes a single task synchronously. Returns whether it succeeded.
 ///
-/// Shared `claudePath`, `denyRules`, and `env` are computed once at startup
-/// and passed in to avoid redundant filesystem probes per task.
-func executeTask(_ task: ScheduledTask, claudePath: String, denyRules: [String], env: [String: String]) -> Bool {
+/// Shared `claudePath`, `denyRules`, `env`, and `capabilities` are computed
+/// once at startup and passed in to avoid redundant filesystem probes per task.
+func executeTask(_ task: ScheduledTask, claudePath: String, denyRules: [String], env: [String: String], capabilities: [ResolvedCapability]) -> Bool {
     let logURL = task.logURL
     let logDirectory = logURL.deletingLastPathComponent()
     try? FileManager.default.createDirectory(at: logDirectory, withIntermediateDirectories: true)
 
     FileManager.default.createFile(atPath: logURL.path, contents: nil)
     let logHandle = try? FileHandle(forWritingTo: logURL)
+
+    // Write MCP config for pre-resolved capabilities
+    let mcpConfigPath = writeMCPConfig(capabilities: capabilities, workingDirectory: task.projectPath)
+    defer {
+        if let configPath = mcpConfigPath {
+            try? FileManager.default.removeItem(atPath: configPath)
+        }
+    }
+
+    if !capabilities.isEmpty {
+        log("Task '\(task.name)': \(capabilities.count) capability server(s) enabled")
+    }
 
     let process = Process()
     process.executableURL = URL(fileURLWithPath: claudePath)
@@ -252,6 +411,16 @@ func executeTask(_ task: ScheduledTask, claudePath: String, denyRules: [String],
     }
     arguments += ["--allowedTools", "Bash"]
     arguments += denyRules
+
+    // MCP config and auto-approved capability tools
+    if let configPath = mcpConfigPath {
+        arguments += ["--mcp-config", configPath]
+        for cap in capabilities {
+            for tool in cap.approvedTools {
+                arguments += ["--allowedTools", "mcp__\(cap.serverName)__\(tool)"]
+            }
+        }
+    }
 
     process.arguments = arguments
     process.currentDirectoryURL = URL(fileURLWithPath: task.projectPath)
@@ -362,15 +531,22 @@ let claudePath = findCLI()
 let denyRules = sensitivePathDenyRules()
 let env = augmentedEnvironment()
 
+// Pre-resolve capabilities per project to avoid redundant disk reads
+var capabilityCache: [UUID: [ResolvedCapability]] = [:]
+for task in dueTasks where capabilityCache[task.projectId] == nil {
+    capabilityCache[task.projectId] = resolveCapabilities(for: task)
+}
+
 let group = DispatchGroup()
 var results: [(UUID, Bool)] = []
 let resultsLock = NSLock()
 
 for task in dueTasks {
     group.enter()
+    let taskCapabilities = capabilityCache[task.projectId] ?? []
     DispatchQueue.global(qos: .utility).async {
         log("Starting task '\(task.name)'")
-        let succeeded = executeTask(task, claudePath: claudePath, denyRules: denyRules, env: env)
+        let succeeded = executeTask(task, claudePath: claudePath, denyRules: denyRules, env: env, capabilities: taskCapabilities)
         log("Task '\(task.name)' \(succeeded ? "succeeded" : "failed")")
 
         resultsLock.lock()

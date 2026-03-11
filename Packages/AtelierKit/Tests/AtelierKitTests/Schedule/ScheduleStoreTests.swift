@@ -9,6 +9,7 @@ private struct StubAgentManager: LaunchAgentManaging {
 }
 
 @Suite("ScheduleStore")
+@MainActor
 struct ScheduleStoreTests {
 
     private func makeStore(persistenceURL: URL? = nil) -> ScheduleStore {
@@ -28,7 +29,8 @@ struct ScheduleStoreTests {
             name: name,
             prompt: "Do something",
             schedule: schedule,
-            projectPath: "/tmp"
+            projectPath: "/tmp",
+            projectId: UUID()
         )
     }
 

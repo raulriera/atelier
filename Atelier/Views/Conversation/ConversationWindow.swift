@@ -13,16 +13,19 @@ struct ConversationWindow: View {
     @State private var showSessionMenu = false
 
     let projectName: String
+    let projectId: UUID
     let scheduleStore: ScheduleStore
 
     init(
         projectName: String,
+        projectId: UUID,
         capabilityStore: CapabilityStore,
         sessionPersistence: SessionPersistence,
         workingDirectory: URL?,
         scheduleStore: ScheduleStore
     ) {
         self.projectName = projectName
+        self.projectId = projectId
         self._controller = State(initialValue: ConversationController(
             capabilityStore: capabilityStore,
             sessionPersistence: sessionPersistence,
@@ -121,6 +124,7 @@ struct ConversationWindow: View {
                     capabilityStore: controller.capabilityStore,
                     scheduleStore: scheduleStore,
                     projectPath: controller.workingDirectory?.path,
+                    projectId: projectId,
                     selectedTool: controller.selectedToolEvent
                 )
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 480)

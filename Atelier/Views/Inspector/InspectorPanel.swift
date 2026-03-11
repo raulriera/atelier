@@ -9,6 +9,7 @@ struct InspectorPanel: View {
     @Bindable var capabilityStore: CapabilityStore
     let scheduleStore: ScheduleStore
     let projectPath: String?
+    let projectId: UUID
     let selectedTool: ToolUseEvent?
 
     var body: some View {
@@ -23,7 +24,7 @@ struct InspectorPanel: View {
         case .capabilities:
             CapabilitiesInspector(capabilityStore: capabilityStore)
         case .automations:
-            AutomationsInspector(scheduleStore: scheduleStore, projectPath: projectPath)
+            AutomationsInspector(scheduleStore: scheduleStore, capabilityStore: capabilityStore, projectPath: projectPath, projectId: projectId)
         case .detail:
             InspectorSidebar(selectedTool: selectedTool)
         }
@@ -36,6 +37,7 @@ struct InspectorPanel: View {
         capabilityStore: .preview,
         scheduleStore: .preview,
         projectPath: "/Users/demo/Projects/research",
+        projectId: UUID(),
         selectedTool: nil
     )
     .frame(width: 320, height: 600)

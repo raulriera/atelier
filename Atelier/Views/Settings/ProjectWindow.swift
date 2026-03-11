@@ -26,6 +26,7 @@ struct ProjectWindow: View {
                 if project.rootURL != nil {
                     ConversationWindow(
                         projectName: project.displayName,
+                        projectId: project.id,
                         capabilityStore: project.capabilityStore,
                         sessionPersistence: project.sessionPersistence,
                         workingDirectory: project.rootURL,

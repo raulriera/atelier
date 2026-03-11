@@ -8,7 +8,9 @@ import AtelierKit
 /// Tap a card to edit, right-click for pause/resume/run/delete.
 struct AutomationsInspector: View {
     let scheduleStore: ScheduleStore
+    let capabilityStore: CapabilityStore
     let projectPath: String?
+    let projectId: UUID
 
     @State private var showingForm = false
     @State private var editingTask: ScheduledTask?
@@ -70,7 +72,10 @@ struct AutomationsInspector: View {
                             showingForm = true
                         },
                         onTogglePause: { scheduleStore.togglePause(task.id) },
-                        onRunNow: { Task { await scheduleStore.runNow(task.id) } },
+                        onRunNow: {
+                            let caps = capabilityStore.enabledCapabilityConfigs()
+                            Task { await scheduleStore.runNow(task.id, enabledCapabilities: caps) }
+                        },
                         onDelete: { scheduleStore.remove(task.id) }
                     )
                 }
@@ -109,6 +114,7 @@ struct AutomationsInspector: View {
             AutomationFormView(
                 scheduleStore: scheduleStore,
                 projectPath: path,
+                projectId: projectId,
                 existingTask: editingTask
             )
         }
@@ -225,11 +231,11 @@ private struct AutomationCard: View {
 }
 
 #Preview("With tasks") {
-    AutomationsInspector(scheduleStore: .preview, projectPath: "/Users/demo/Projects/research")
+    AutomationsInspector(scheduleStore: .preview, capabilityStore: .preview, projectPath: "/Users/demo/Projects/research", projectId: UUID())
         .frame(width: 320, height: 500)
 }
 
 #Preview("Empty") {
-    AutomationsInspector(scheduleStore: ScheduleStore(), projectPath: "/tmp")
+    AutomationsInspector(scheduleStore: ScheduleStore(), capabilityStore: .preview, projectPath: "/tmp", projectId: UUID())
         .frame(width: 320, height: 500)
 }

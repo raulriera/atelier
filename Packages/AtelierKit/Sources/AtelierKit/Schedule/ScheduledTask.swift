@@ -19,6 +19,8 @@ public struct ScheduledTask: Sendable, Codable, Identifiable {
     public var model: String?
     /// Absolute path to the project folder where the task runs.
     public var projectPath: String
+    /// The project's UUID in the registry, used to locate its capabilities.json.
+    public var projectId: UUID
     /// Whether the task is paused (skipped during scheduled runs).
     public var isPaused: Bool
     /// When the task last ran, if ever.
@@ -49,6 +51,7 @@ public struct ScheduledTask: Sendable, Codable, Identifiable {
         schedule: TaskSchedule,
         model: String? = nil,
         projectPath: String,
+        projectId: UUID,
         isPaused: Bool = false,
         lastRunDate: Date? = nil,
         lastRunSucceeded: Bool? = nil,
@@ -62,6 +65,7 @@ public struct ScheduledTask: Sendable, Codable, Identifiable {
         self.schedule = schedule
         self.model = model
         self.projectPath = projectPath
+        self.projectId = projectId
         self.isPaused = isPaused
         self.lastRunDate = lastRunDate
         self.lastRunSucceeded = lastRunSucceeded
