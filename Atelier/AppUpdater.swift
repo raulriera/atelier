@@ -6,7 +6,7 @@ import SwiftUI
 /// Create once at the app level and pass the `updater` to a "Check for Updates" button.
 /// The feed URL is configured via the delegate to avoid requiring a manual Info.plist.
 final class AppUpdater {
-    static let feedURL = "https://raulriera.github.io/atelier/appcast.xml"
+    nonisolated static let feedURL = "https://raulriera.github.io/atelier/appcast.xml"
 
     private let delegate = UpdaterDelegate()
     let controller: SPUStandardUpdaterController

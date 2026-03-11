@@ -5,6 +5,8 @@ import AtelierKit
 
 @main
 struct AtelierApp: App {
+    @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
+
     private let appUpdater = AppUpdater()
 
     // Each project is its own window — disable macOS tab merging.
@@ -50,6 +52,10 @@ struct AtelierApp: App {
                 projectStore: projectStore,
                 scheduleStore: scheduleStore
             )
+            .task {
+                appDelegate.projectStore = projectStore
+                appDelegate.openWindow = openWindow
+            }
         } defaultValue: {
             // macOS restores window count and geometry, but SwiftUI may not
             // persist the UUID binding (e.g. after Xcode rebuilds). Fall back
@@ -118,6 +124,19 @@ struct AtelierApp: App {
                     }
                 }
                 .keyboardShortcut("o")
+
+                let recentProjects = projectStore.allProjects()
+                    .filter { $0.rootURL != nil }
+                    .prefix(10)
+
+                Menu("Open Recent") {
+                    ForEach(Array(recentProjects)) { project in
+                        Button(project.displayName) {
+                            openWindow(value: project.id)
+                        }
+                    }
+                }
+                .disabled(recentProjects.isEmpty)
             }
         }
     }

@@ -46,6 +46,11 @@ struct ProjectWindow: View {
             }
         }
         .navigationTitle(project?.rootURL != nil ? "" : (project?.displayName ?? ""))
+        .onAppear {
+            if let project {
+                try? projectStore.touch(project.id)
+            }
+        }
         .task(id: project?.rootURL) {
             guard let project, project.rootURL != nil else { return }
             await project.fileAccessStore.load()
