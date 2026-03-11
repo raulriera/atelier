@@ -5,6 +5,7 @@ import AtelierKit
 struct TimelineView: View {
     let session: Session
     let capabilityStore: CapabilityStore
+    let isLoaded: Bool
     @Binding var draft: String
     var selectedToolID: String?
     var onSelectTool: ((ToolUseEvent) -> Void)?
@@ -25,7 +26,7 @@ struct TimelineView: View {
                         .onAppear { session.loadOlderItems() }
                 }
 
-                if items.isEmpty && !session.hasOlderItems {
+                if isLoaded && items.isEmpty && !session.hasOlderItems {
                     WelcomeView(draft: $draft, enabledCapabilityIDs: capabilityStore.enabledIDs)
                 }
 

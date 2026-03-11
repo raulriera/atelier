@@ -13,6 +13,10 @@ public final class ConversationController {
 
     public private(set) var session = Session()
     public private(set) var capabilityHealthMonitor = CapabilityHealthMonitor()
+    /// Whether session restoration has completed. Views should gate empty-state
+    /// UI (e.g. WelcomeView) on this flag to prevent a flash of the empty state
+    /// while a previous session is being loaded from disk.
+    public private(set) var isLoaded = false
     public private(set) var cliAvailable = true
     public private(set) var activeContextFiles: [ContextFile] = []
     public internal(set) var toolPayloads: [String: ToolPayload] = [:]
@@ -73,6 +77,8 @@ public final class ConversationController {
                 toolPayloads = (try? await sessionPersistence.loadToolPayloads(sessionId: id)) ?? [:]
             }
         }
+
+        isLoaded = true
 
         await refreshSessionList()
 
