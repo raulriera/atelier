@@ -37,6 +37,26 @@ public struct FileAttachment: Identifiable, Sendable, Codable, Hashable {
         self.kind = Self.classify(url)
     }
 
+    /// Creates an attachment by writing image data to a temporary file.
+    ///
+    /// Used when receiving drops that provide raw image data (e.g. in-flight
+    /// screenshots) rather than a file URL.
+    public static func fromImageData(_ data: Data) throws -> FileAttachment {
+        let timestamp = Self.screenshotDateFormatter.string(from: Date())
+        let unique = UUID().uuidString.prefix(8)
+        let filename = "Screenshot \(timestamp) \(unique).png"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try data.write(to: url)
+        return FileAttachment(url: url)
+    }
+
+    private static let screenshotDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd 'at' h.mm.ss a"
+        return formatter
+    }()
+
     private static func classify(_ url: URL) -> Kind {
         let ext = url.pathExtension.lowercased()
         guard !ext.isEmpty,

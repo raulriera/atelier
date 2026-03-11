@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import AtelierDesign
 import AtelierKit
 
@@ -11,6 +12,7 @@ struct ConversationWindow: View {
     @State private var inspectorTab: InspectorTab = .capabilities
     @State private var showComposeField = false
     @State private var showSessionMenu = false
+    @State private var showAttachmentPicker = false
 
     let projectName: String
     let projectId: UUID
@@ -130,27 +132,9 @@ struct ConversationWindow: View {
                 .inspectorColumnWidth(min: 260, ideal: 320, max: 480)
             }
         }
-        .dropDestination(for: URL.self) { urls, _ in
-            let valid = DropPathValidator.validated(urls, workingDirectory: controller.workingDirectory)
-            let remaining = FileAttachment.maxAttachments - pendingAttachments.count
-            let attachments = valid.prefix(remaining).map { FileAttachment(url: $0) }
-            guard !attachments.isEmpty else { return }
-            withAnimation(Motion.morph) {
-                pendingAttachments.append(contentsOf: attachments)
-            }
+        .onDrop(of: [.fileURL, .image], isTargeted: $isDropTargeted) { providers in
+            handleDrop(providers)
         }
-        .dropConfiguration { _ in
-            DropConfiguration(operation: .copy)
-        }
-        .onDropSessionUpdated { session in
-            switch session.phase {
-            case .entering, .active:
-                isDropTargeted = true
-            default:
-                isDropTargeted = false
-            }
-        }
-        .dropPreviewsFormation(.pile)
         .overlay {
             if isDropTargeted {
                 RoundedRectangle(cornerRadius: Radii.lg, style: .continuous)
@@ -198,12 +182,63 @@ struct ConversationWindow: View {
         .onChange(of: controller.selectedToolEvent?.id) { _, newID in
             controller.loadToolPayloadIfNeeded(for: newID)
         }
+        .fileImporter(
+            isPresented: $showAttachmentPicker,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: true
+        ) { result in
+            guard case .success(let urls) = result else { return }
+            let valid = DropPathValidator.validated(urls, workingDirectory: controller.workingDirectory)
+            appendAttachments(valid.map { FileAttachment(url: $0) })
+        }
+        .focusedSceneValue(\.newConversation) { [controller] in
+            controller.startNewConversation()
+        }
+        .focusedSceneValue(\.showAttachmentPicker, $showAttachmentPicker)
         .focusedSceneValue(\.inspectorVisibility, $showInspector)
         .onAppear {
             controller.checkAvailability()
         }
         .onDisappear {
             controller.shutdown()
+        }
+    }
+
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        var handled = false
+        let workingDirectory = controller.workingDirectory
+
+        for provider in providers {
+            // Prefer file URLs — most drops (Finder, saved screenshots) provide one.
+            if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                handled = true
+                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
+                    guard let data = item as? Data,
+                          let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                    let valid = DropPathValidator.validated([url], workingDirectory: workingDirectory)
+                    guard let attachment = valid.first.map({ FileAttachment(url: $0) }) else { return }
+                    Task { @MainActor in self.appendAttachments([attachment]) }
+                }
+            } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                // In-flight screenshots and image data without a file URL.
+                handled = true
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.png.identifier) { data, _ in
+                    guard let data,
+                          let attachment = try? FileAttachment.fromImageData(data) else { return }
+                    Task { @MainActor in self.appendAttachments([attachment]) }
+                }
+            }
+        }
+
+        return handled
+    }
+
+    private func appendAttachments(_ attachments: [FileAttachment]) {
+        let remaining = FileAttachment.maxAttachments - pendingAttachments.count
+        let capped = Array(attachments.prefix(remaining))
+        guard !capped.isEmpty else { return }
+        withAnimation(Motion.morph) {
+            pendingAttachments.append(contentsOf: capped)
         }
     }
 

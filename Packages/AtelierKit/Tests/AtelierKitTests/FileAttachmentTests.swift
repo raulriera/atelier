@@ -68,6 +68,60 @@ struct FileAttachmentTests {
         #expect(attachment.kind == .other)
     }
 
+    // MARK: - fromImageData
+
+    @Test("creates attachment from PNG image data")
+    func fromImageDataCreatesPNG() throws {
+        let pngData = createMinimalPNG()
+        let attachment = try FileAttachment.fromImageData(pngData)
+        #expect(attachment.kind == .image)
+        #expect(attachment.filename.hasPrefix("Screenshot "))
+        #expect(attachment.filename.hasSuffix(".png"))
+        #expect(FileManager.default.fileExists(atPath: attachment.url.path))
+        // Written data matches
+        let readBack = try Data(contentsOf: attachment.url)
+        #expect(readBack == pngData)
+        // Cleanup
+        try? FileManager.default.removeItem(at: attachment.url)
+    }
+
+    @Test("fromImageData writes to temp directory")
+    func fromImageDataWritesToTemp() throws {
+        let pngData = createMinimalPNG()
+        let attachment = try FileAttachment.fromImageData(pngData)
+        #expect(attachment.url.path.contains(FileManager.default.temporaryDirectory.path))
+        try? FileManager.default.removeItem(at: attachment.url)
+    }
+
+    @Test("fromImageData generates unique files even in the same second")
+    func fromImageDataUniqueNames() throws {
+        let pngData = createMinimalPNG()
+        let a = try FileAttachment.fromImageData(pngData)
+        let b = try FileAttachment.fromImageData(pngData)
+        #expect(a.id != b.id)
+        #expect(a.url != b.url)
+        // Both files exist independently
+        #expect(FileManager.default.fileExists(atPath: a.url.path))
+        #expect(FileManager.default.fileExists(atPath: b.url.path))
+        try? FileManager.default.removeItem(at: a.url)
+        try? FileManager.default.removeItem(at: b.url)
+    }
+
+    /// A valid 1×1 white PNG (67 bytes).
+    private func createMinimalPNG() -> Data {
+        Data([
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+            0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
+            0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, // IDAT chunk
+            0x54, 0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00,
+            0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC,
+            0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, // IEND chunk
+            0x44, 0xAE, 0x42, 0x60, 0x82,
+        ])
+    }
+
     // MARK: - Codable Round-Trip
 
     @Test("round-trips through JSON encoding")

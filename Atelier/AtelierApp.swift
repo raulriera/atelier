@@ -38,6 +38,8 @@ struct AtelierApp: App {
     }()
 
     @FocusedValue(\.inspectorVisibility) private var inspectorVisibility
+    @FocusedValue(\.newConversation) private var newConversation
+    @FocusedValue(\.showAttachmentPicker) private var showAttachmentPicker
     @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
 
@@ -72,6 +74,22 @@ struct AtelierApp: App {
                 }
                 .keyboardShortcut("i", modifiers: [.command, .option])
                 .disabled(inspectorVisibility == nil)
+            }
+
+            CommandMenu("Conversation") {
+                Button("New Conversation") {
+                    newConversation?()
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+                .disabled(newConversation == nil)
+
+                Divider()
+
+                Button("Attach Files...") {
+                    showAttachmentPicker?.wrappedValue = true
+                }
+                .keyboardShortcut("a", modifiers: [.command, .shift])
+                .disabled(showAttachmentPicker == nil)
             }
 
             CommandGroup(replacing: .newItem) {
