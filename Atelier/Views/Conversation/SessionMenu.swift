@@ -22,6 +22,7 @@ struct SessionMenuToolbarItem: ToolbarContent {
             } label: {
                 HStack(spacing: Spacing.xxs) {
                     Text(projectName)
+                        .font(.sectionTitle)
                         .fontWeight(.semibold)
                     Image(systemName: "chevron.down")
                         .font(.caption2)
