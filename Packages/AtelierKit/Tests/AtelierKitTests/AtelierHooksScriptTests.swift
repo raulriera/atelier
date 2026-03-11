@@ -336,6 +336,132 @@ struct AtelierHooksScriptTests {
         // That's acceptable — the snapshot save happens after transcript summarization
     }
 
+    @Test func compactionSnapshotPrunesOldFiles() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let compactsDir = root.appendingPathComponent(".atelier/memory/compacts")
+        try FileManager.default.createDirectory(at: compactsDir, withIntermediateDirectories: true)
+
+        // Create 4 snapshots — pruning should keep only the most recent 2
+        let timestamps = [
+            "2026-03-08T10-00-00Z",
+            "2026-03-08T11-00-00Z",
+            "2026-03-08T12-00-00Z",
+            "2026-03-08T13-00-00Z",
+        ]
+        for ts in timestamps {
+            try "Snapshot \(ts)".write(
+                to: compactsDir.appendingPathComponent("\(ts).md"),
+                atomically: true, encoding: .utf8
+            )
+        }
+
+        // Trigger distill — it saves a new snapshot and prunes
+        let transcriptURL = root.appendingPathComponent("transcript.jsonl")
+        try """
+        {"type":"message","message":{"role":"user","content":"Hello"}}
+        """.write(to: transcriptURL, atomically: true, encoding: .utf8)
+
+        _ = try run(
+            subcommand: "distill",
+            input: [
+                "transcript_path": transcriptURL.path,
+                "cwd": root.path,
+            ]
+        )
+
+        let remaining = try FileManager.default.contentsOfDirectory(atPath: compactsDir.path)
+            .filter { $0.hasSuffix(".md") }
+            .sorted()
+
+        // 4 existing + 1 new = 5, pruned to 2
+        #expect(remaining.count <= 2, "Expected at most 2 snapshots after pruning, got \(remaining.count)")
+        // Oldest files should be gone
+        #expect(!remaining.contains("2026-03-08T10-00-00Z.md"))
+        #expect(!remaining.contains("2026-03-08T11-00-00Z.md"))
+    }
+
+    @Test func compactionSnapshotTruncatesLongMessages() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // Create a transcript with one very long assistant message (1000+ chars)
+        let longContent = String(repeating: "x", count: 1000)
+        let transcriptURL = root.appendingPathComponent("transcript.jsonl")
+        try """
+        {"type":"message","message":{"role":"user","content":"Tell me something"}}
+        {"type":"message","message":{"role":"assistant","content":"\(longContent)"}}
+        """.write(to: transcriptURL, atomically: true, encoding: .utf8)
+
+        _ = try run(
+            subcommand: "distill",
+            input: [
+                "transcript_path": transcriptURL.path,
+                "cwd": root.path,
+            ]
+        )
+
+        let compactsDir = root.appendingPathComponent(".atelier/memory/compacts")
+        try #require(FileManager.default.fileExists(atPath: compactsDir.path), "Compacts directory should exist after distill")
+
+        let files = try FileManager.default.contentsOfDirectory(atPath: compactsDir.path)
+            .filter { $0.hasSuffix(".md") }
+            .sorted()
+        let latest = try #require(files.last, "Expected at least one compaction snapshot")
+
+        let snapshot = try String(
+            contentsOfFile: compactsDir.appendingPathComponent(latest).path,
+            encoding: .utf8
+        )
+
+        // The 1000-char message should be truncated to ~500 + "..."
+        #expect(!snapshot.contains(longContent), "Full 1000-char message should be truncated")
+        #expect(snapshot.contains("..."), "Truncated message should end with ellipsis")
+    }
+
+    @Test func compactionSnapshotRespectsMaxMessages() throws {
+        let root = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // Create a transcript with 40 user messages — only the last 30 should appear
+        let transcriptURL = root.appendingPathComponent("transcript.jsonl")
+        let lines = (1...40).map {
+            """
+            {"type":"message","message":{"role":"user","content":"Message number \($0)"}}
+            """
+        }
+        try lines.joined(separator: "\n").write(to: transcriptURL, atomically: true, encoding: .utf8)
+
+        _ = try run(
+            subcommand: "distill",
+            input: [
+                "transcript_path": transcriptURL.path,
+                "cwd": root.path,
+            ]
+        )
+
+        let compactsDir = root.appendingPathComponent(".atelier/memory/compacts")
+        try #require(FileManager.default.fileExists(atPath: compactsDir.path), "Compacts directory should exist after distill")
+
+        let files = try FileManager.default.contentsOfDirectory(atPath: compactsDir.path)
+            .filter { $0.hasSuffix(".md") }
+            .sorted()
+        let latest = try #require(files.last, "Expected at least one compaction snapshot")
+
+        let snapshot = try String(
+            contentsOfFile: compactsDir.appendingPathComponent(latest).path,
+            encoding: .utf8
+        )
+
+        // Early messages should be dropped (only last 30 kept)
+        #expect(!snapshot.contains("Message number 1\n"), "Message 1 should be outside the 30-message window")
+        #expect(!snapshot.contains("Message number 10\n"), "Message 10 should be outside the 30-message window")
+        // Recent messages should be present
+        #expect(snapshot.contains("Message number 40"), "Message 40 should be in the snapshot")
+        #expect(snapshot.contains("Message number 11"), "Message 11 should be in the snapshot")
+    }
+
     // MARK: - Distill (without CLI)
 
     @Test func distillExitsSilentlyForEmptyTranscript() throws {

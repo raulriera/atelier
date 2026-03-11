@@ -96,13 +96,13 @@ struct TranscriptBlock: Decodable {
 }
 
 /// Extracts a conversation summary from the transcript NDJSON file.
-func summarizeTranscript(at path: String, maxMessages: Int = 50) -> String? {
+func summarizeTranscript(at path: String, maxMessages: Int = 30) -> String? {
     guard let data = FileManager.default.contents(atPath: path),
           let content = String(data: data, encoding: .utf8)
     else { return nil }
 
     var lines: [String] = []
-    let maxMessageLength = 2000
+    let maxMessageLength = 500
 
     for rawLine in content.components(separatedBy: .newlines) {
         guard !rawLine.isEmpty,
@@ -403,7 +403,7 @@ func readAllMemoryFiles(memoryDir: String) -> String? {
 }
 
 /// Maximum number of compaction snapshots to keep. Older ones are pruned.
-let maxCompactionSnapshots = 5
+let maxCompactionSnapshots = 2
 
 /// Saves the conversation summary as a compaction snapshot.
 ///
