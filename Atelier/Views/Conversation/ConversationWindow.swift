@@ -42,6 +42,7 @@ struct ConversationWindow: View {
             TimelineView(session: controller.session, capabilityStore: controller.capabilityStore, draft: $draft, selectedToolID: controller.selectedToolEvent?.id, onSelectTool: { event in
                     if controller.selectedToolEvent?.id == event.id {
                         controller.selectedToolEvent = nil
+                        showInspector = false
                     } else {
                         controller.selectedToolEvent = event
                         controller.selectedTaskCompletion = nil
@@ -201,6 +202,12 @@ struct ConversationWindow: View {
         }
         .onChange(of: controller.selectedToolEvent?.id) { _, newID in
             controller.loadToolPayloadIfNeeded(for: newID)
+        }
+        .onChange(of: showInspector) { _, isVisible in
+            if !isVisible {
+                controller.selectedToolEvent = nil
+                controller.selectedTaskCompletion = nil
+            }
         }
         .fileImporter(
             isPresented: $showAttachmentPicker,
