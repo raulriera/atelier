@@ -452,11 +452,12 @@ func handleToolsCall(id: AnyCodableValue?, params: AnyCodableValue?) {
             "isError": .bool(true)
         ]))
     } else {
+        let wrapped = "<untrusted_document source=\"preview:\(toolName)\">\n\(output)\n</untrusted_document>"
         respond(id: id, result: .dict([
             "content": .array([
                 .dict([
                     "type": .string("text"),
-                    "text": .string(output)
+                    "text": .string(wrapped)
                 ])
             ])
         ]))

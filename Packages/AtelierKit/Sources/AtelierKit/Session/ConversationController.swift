@@ -210,7 +210,11 @@ public final class ConversationController {
         }
         session.beginAssistantMessage()
 
-        var promptParts: [String] = [SystemPrompt.coreInstructions, SystemPrompt.currentDate]
+        var promptParts: [String] = [
+            SystemPrompt.coreInstructions,
+            SystemPrompt.untrustedContentPolicy,
+            SystemPrompt.currentDate
+        ]
         if let cwd = workingDirectory {
             let discovered = ContextFileLoader.discover(from: cwd)
             activeContextFiles = discovered
@@ -230,13 +234,23 @@ public final class ConversationController {
     }
 
     /// Builds the message string sent to the CLI, appending file paths if attachments are present.
+    ///
+    /// File paths are wrapped in `<untrusted_document>` tags so Claude treats
+    /// their content as data to analyze, not instructions to follow. Text-based
+    /// attachments are also sanitized to strip invisible Unicode characters.
     private static func buildCLIMessage(text: String, attachments: [FileAttachment]) -> String {
         guard !attachments.isEmpty else { return text }
-        let paths = attachments.map(\.url.path).joined(separator: "\n")
-        if text.isEmpty {
-            return "[Attached files]\n\(paths)"
+        let wrappedPaths = attachments.map { attachment in
+            "<untrusted_document source=\"\(attachment.filename)\">\n\(attachment.url.path)\n</untrusted_document>"
+        }.joined(separator: "\n")
+        // Sanitize text-based attachments in place (strips invisible Unicode).
+        for attachment in attachments where attachment.kind != .image {
+            ContentSanitizer.sanitizeFileInPlace(at: attachment.url)
         }
-        return "\(text)\n\n[Attached files]\n\(paths)"
+        if text.isEmpty {
+            return "[Attached files]\n\(wrappedPaths)"
+        }
+        return "\(text)\n\n[Attached files]\n\(wrappedPaths)"
     }
 
     // MARK: - Stop
