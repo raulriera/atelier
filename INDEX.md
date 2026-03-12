@@ -113,5 +113,5 @@ All done: Project Workspace, Context Files, Session Persistence, Conversational 
 | Opportunity | Status | Link |
 |-------------|--------|------|
 | Async File I/O on Hot Paths | 🔲 Not started | [→](opportunities/architecture/07-async-file-io.md) |
-| Task Tracking (TodoWrite) | 🔴 Broken | [→](opportunities/hub/07-task-tracking.md) |
+| Task Tracking (TodoWrite) | ✅ Done | [→](opportunities/hub/07-task-tracking.md) |
 | Multi-Window Session Isolation | ✅ Done | [→](opportunities/architecture/10-multi-window-isolation.md) |

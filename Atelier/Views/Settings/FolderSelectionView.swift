@@ -1,6 +1,9 @@
 import SwiftUI
 import AtelierDesign
 
+/// Shown when a project has no folder assigned yet.
+///
+/// The user can drag a folder onto the view or pick one with the file dialog.
 struct FolderSelectionView: View {
     var onSelect: (URL) -> Void
 
@@ -11,18 +14,21 @@ struct FolderSelectionView: View {
             Image(systemName: "folder.badge.plus")
                 .font(.system(size: 48))
                 .foregroundStyle(.contentSecondary)
+                .accessibilityHidden(true)
 
-            VStack {
-                Text("Drop a folder to start")
+            VStack(spacing: Spacing.xs) {
+                Text("Open a project")
                     .font(.sectionTitle)
                     .foregroundStyle(.contentPrimary)
 
-                Text("or choose one from your Mac")
+                Text("Drag a folder here, or choose one from your Mac.")
                     .font(.cardBody)
-                    .foregroundStyle(.contentPrimary)
+                    .foregroundStyle(.contentSecondary)
+                    .multilineTextAlignment(.center)
             }
+            .accessibilityElement(children: .combine)
 
-            Button("Choose Folder...") {
+            Button("Choose Folder…") {
                 Task {
                     guard let url = await FolderPicker.chooseFolder(
                         message: "Choose a folder to open as a project",
@@ -46,4 +52,8 @@ struct FolderSelectionView: View {
             isTargeted = targeted
         }
     }
+}
+
+#Preview("Folder Selection") {
+    FolderSelectionView(onSelect: { _ in })
 }

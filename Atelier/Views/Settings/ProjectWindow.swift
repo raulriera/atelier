@@ -8,6 +8,7 @@ struct ProjectWindow: View {
 
     @State private var project: Project?
     @State private var loadError: String?
+    @State private var cliAvailable = CLIEngine.isAvailable
 
     init(projectID: UUID, projectStore: ProjectStore, scheduleStore: ScheduleStore) {
         self.projectStore = projectStore
@@ -22,7 +23,11 @@ struct ProjectWindow: View {
 
     var body: some View {
         Group {
-            if let project {
+            if !cliAvailable {
+                CLISetupView {
+                    cliAvailable = true
+                }
+            } else if let project {
                 if project.rootURL != nil {
                     ConversationWindow(
                         projectName: project.displayName,

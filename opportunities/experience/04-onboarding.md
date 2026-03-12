@@ -8,16 +8,18 @@
 
 ## Problem
 
-Getting started with Claude's tools today requires multiple disconnected setup steps: create an account, install Cowork, install Claude Code separately, configure MCP servers via JSON files, grant folder permissions one at a time. Each tool has its own auth flow. Power users tolerate this; everyone else bounces.
+Getting started with Atelier requires the Claude CLI to be installed and authenticated. Today there's no guidance — if the CLI isn't found, the app shows an error message and stops. Users who haven't installed Claude Code yet have no idea what to do.
 
 ## Solution
 
-The fastest onboarding possible: sign in and start talking.
+The fastest onboarding possible: ensure the CLI is ready and start talking.
 
 ### First Launch
 
-1. **Enter your API key** — paste it, done. One step.
-2. **Done.** A window opens with a greeting and a text field. Start talking.
+1. **Check for Claude CLI** — if found and authenticated, skip straight to conversation.
+2. **CLI not found** — show a setup screen with install instructions and a "Check Again" button.
+3. **CLI found but not authenticated** — guide the user to run `claude` in Terminal once to complete auth.
+4. **Done.** A window opens with a greeting and a text field. Start talking.
 
 That's it. No folder picker, no security wizard, no feature tour. You're in a conversation.
 
@@ -39,10 +41,11 @@ Migration is offered once, on first launch, and never mentioned again.
 
 ## Implementation
 
-### Phase 1 — Auth
+### Phase 1 — CLI Setup
 
-- API key entry with inline validation and a link to console.anthropic.com
-- Keychain storage for credentials from the start
+- Check `CLIDiscovery.isAvailable` on launch
+- If missing: show a setup screen with install link (claude.ai/download) and "Check Again" button
+- If found but not authenticated: guide user to run `claude` in Terminal to complete sign-in
 - On success: open a blank conversation window. No further setup.
 
 ### Phase 2 — Project Discovery (On Demand)
@@ -69,11 +72,10 @@ Migration is offered once, on first launch, and never mentioned again.
 ## Dependencies
 
 - experience/02-project-workspace.md (project model, triggered later)
-- security/04-credential-storage.md (Keychain for auth)
 
 ## Notes
 
-Onboarding is the first impression. The bar is: sign in, see a window, start talking. Every additional step before that first conversation is a failure. Everything else — projects, permissions, features — arrives when the user is ready for it, not when we think they should learn it.
+Onboarding is the first impression. The bar is: ensure the CLI works, see a window, start talking. Every additional step before that first conversation is a failure. Everything else — projects, permissions, features — arrives when the user is ready for it, not when we think they should learn it.
 
 ---
 
