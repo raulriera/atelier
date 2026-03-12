@@ -28,6 +28,14 @@ public final class ConversationController {
     /// Tools the user approved for the lifetime of this conversation.
     public private(set) var sessionApprovedTools: Set<String> = []
 
+    /// Tool+file pairs the user implicitly approved by allowing a file tool once.
+    /// Keys are `"ToolName:/absolute/path"`, e.g. `"Edit:/Users/raul/project/file.swift"`.
+    /// When a subsequent request matches the same tool and file, it is auto-approved.
+    public private(set) var approvedToolFilePairs: Set<String> = []
+
+    /// File tools whose approvals are scoped by file path.
+    private static let fileToolNames: Set<String> = ["Edit", "Write", "MultiEdit", "NotebookEdit"]
+
     /// File paths the user dropped into the conversation, auto-approved for Read.
     private var allowedAttachmentPaths: Set<String> = []
 
@@ -90,6 +98,11 @@ public final class ConversationController {
         approvalObserverTask = Task {
             for await request in await server.requests {
                 if sessionApprovedTools.contains(request.toolName) {
+                    await server.respond(requestId: request.id, decision: .allow)
+                    continue
+                }
+                if let key = Self.toolFileKey(toolName: request.toolName, inputJSON: request.inputJSON),
+                   approvedToolFilePairs.contains(key) {
                     await server.respond(requestId: request.id, decision: .allow)
                     continue
                 }
@@ -273,6 +286,15 @@ public final class ConversationController {
         if case .allowForSession = decision {
             sessionApprovedTools.insert(toolName)
         }
+
+        // For file tools, remember the tool+path so subsequent edits to the
+        // same file are auto-approved without prompting again.
+        if decision.isAllowed,
+           let event = session.approvalEvent(for: id),
+           let key = Self.toolFileKey(toolName: event.toolName, inputJSON: event.inputJSON) {
+            approvedToolFilePairs.insert(key)
+        }
+
         session.resolveApproval(id: id, decision: decision)
         if let server = approvalServer {
             Task { await server.respond(requestId: id, decision: decision) }
@@ -372,6 +394,7 @@ public final class ConversationController {
         saveTask = nil
         let captured = session.snapshot()
         sessionApprovedTools.removeAll()
+        approvedToolFilePairs.removeAll()
         allowedAttachmentPaths.removeAll()
         session.reset()
         capabilityHealthMonitor.reset()
@@ -387,6 +410,17 @@ public final class ConversationController {
     }
 
     // MARK: - Private
+
+    /// Builds a `"ToolName:/path"` key for file-scoped auto-approval, or `nil`
+    /// if the tool isn't a file tool or the input doesn't contain a file path.
+    private static func toolFileKey(toolName: String, inputJSON: String) -> String? {
+        guard fileToolNames.contains(toolName),
+              let data = inputJSON.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let path = json["file_path"] as? String,
+              !path.isEmpty else { return nil }
+        return "\(toolName):\(path)"
+    }
 
     /// Cancels any in-flight save and schedules a new one from the current session state.
     private func scheduleSave() {

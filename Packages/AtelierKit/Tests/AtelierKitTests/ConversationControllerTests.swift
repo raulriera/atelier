@@ -81,6 +81,17 @@ private func makeController(
     )
 }
 
+/// Polls until `condition` returns `true`, checking every 25 ms for up to 1 second.
+@MainActor
+private func pollUntil(
+    _ condition: @escaping @MainActor () -> Bool
+) async throws {
+    for _ in 0..<40 {
+        if condition() { return }
+        try await Task.sleep(for: .milliseconds(25))
+    }
+}
+
 // MARK: - Tests
 
 @Suite("ConversationController")
@@ -139,12 +150,7 @@ struct ConversationControllerTests {
             ])
             let controller = await makeController(engine: engine)
             controller.sendMessage("Hi")
-
-            // Poll until streaming completes
-            for _ in 0..<40 {
-                if !controller.session.isStreaming { break }
-                try await Task.sleep(for: .milliseconds(25))
-            }
+            try await pollUntil { !controller.session.isStreaming }
 
             #expect(controller.session.sessionId == "test-session")
             #expect(!controller.session.isStreaming)
@@ -164,11 +170,7 @@ struct ConversationControllerTests {
             ])
             let controller = await makeController(engine: engine)
             controller.sendMessage("Read a file")
-
-            for _ in 0..<40 {
-                if !controller.session.isStreaming { break }
-                try await Task.sleep(for: .milliseconds(25))
-            }
+            try await pollUntil { !controller.session.isStreaming }
 
             let toolItem = try #require(controller.session.items.first(where: {
                 if case .toolUse = $0.content { return true }
@@ -186,11 +188,7 @@ struct ConversationControllerTests {
             ])
             let controller = await makeController(engine: engine)
             controller.sendMessage("Fail")
-
-            for _ in 0..<40 {
-                if !controller.session.isStreaming { break }
-                try await Task.sleep(for: .milliseconds(25))
-            }
+            try await pollUntil { !controller.session.isStreaming }
 
             let systemItem = try #require(controller.session.items.last(where: {
                 if case .system = $0.content { return true }
@@ -245,6 +243,90 @@ struct ConversationControllerTests {
 
             #expect(controller.sessionApprovedTools.contains("Bash"))
         }
+
+        @Test("Approving a file tool records tool+path for auto-approval")
+        @MainActor func recordsToolFilePair() async {
+            let controller = await makeController()
+            let inputJSON = #"{"file_path":"/Users/dev/project/index.astro","old_string":"a","new_string":"b"}"#
+            controller.session.beginApproval(id: "e1", toolName: "Edit", inputJSON: inputJSON)
+
+            controller.handleApprovalDecision(id: "e1", toolName: "Edit", decision: .allow)
+
+            #expect(controller.approvedToolFilePairs.contains("Edit:/Users/dev/project/index.astro"))
+        }
+
+        @Test("File-scoped approval does not apply to different tools on the same file")
+        @MainActor func differentToolNotAutoApproved() async {
+            let controller = await makeController()
+            let inputJSON = #"{"file_path":"/Users/dev/project/index.astro"}"#
+            controller.session.beginApproval(id: "e1", toolName: "Edit", inputJSON: inputJSON)
+            controller.handleApprovalDecision(id: "e1", toolName: "Edit", decision: .allow)
+
+            #expect(!controller.approvedToolFilePairs.contains("Write:/Users/dev/project/index.astro"))
+        }
+
+        @Test("Non-file tools do not record tool+path pairs")
+        @MainActor func nonFileToolSkipped() async {
+            let controller = await makeController()
+            controller.session.beginApproval(id: "b1", toolName: "Bash", inputJSON: #"{"command":"ls"}"#)
+
+            controller.handleApprovalDecision(id: "b1", toolName: "Bash", decision: .allow)
+
+            #expect(controller.approvedToolFilePairs.isEmpty)
+        }
+
+        @Test("Denying a file tool does not record the pair")
+        @MainActor func denyDoesNotRecord() async {
+            let controller = await makeController()
+            let inputJSON = #"{"file_path":"/Users/dev/project/index.astro"}"#
+            controller.session.beginApproval(id: "e1", toolName: "Edit", inputJSON: inputJSON)
+
+            controller.handleApprovalDecision(id: "e1", toolName: "Edit", decision: .deny(reason: "No"))
+
+            #expect(controller.approvedToolFilePairs.isEmpty)
+        }
+
+        @Test("Second Edit to the same file would be auto-approved")
+        @MainActor func secondEditSameFileAutoApproved() async throws {
+            let controller = await makeController()
+            let inputJSON = #"{"file_path":"/Users/dev/project/index.astro","old_string":"a","new_string":"b"}"#
+            controller.session.beginApproval(id: "e1", toolName: "Edit", inputJSON: inputJSON)
+            controller.handleApprovalDecision(id: "e1", toolName: "Edit", decision: .allow)
+
+            // A second Edit with different content but same file should match
+            let secondJSON = #"{"file_path":"/Users/dev/project/index.astro","old_string":"x","new_string":"y"}"#
+            controller.session.beginApproval(id: "e2", toolName: "Edit", inputJSON: secondJSON)
+
+            // The pair is already recorded, so the observer would auto-approve e2
+            #expect(controller.approvedToolFilePairs.contains("Edit:/Users/dev/project/index.astro"))
+            // And the second approval is still pending (not yet resolved by the user)
+            let event = try #require(controller.session.approvalEvent(for: "e2"))
+            #expect(event.status == .pending)
+        }
+
+        @Test("Edit on a different file is not auto-approved")
+        @MainActor func editDifferentFileNotAutoApproved() async {
+            let controller = await makeController()
+            let inputJSON = #"{"file_path":"/Users/dev/project/index.astro"}"#
+            controller.session.beginApproval(id: "e1", toolName: "Edit", inputJSON: inputJSON)
+            controller.handleApprovalDecision(id: "e1", toolName: "Edit", decision: .allow)
+
+            // A different file should not be covered
+            #expect(!controller.approvedToolFilePairs.contains("Edit:/Users/dev/project/other.astro"))
+        }
+
+        @Test("allowForSession also records file pair")
+        @MainActor func allowForSessionRecordsFilePair() async {
+            let controller = await makeController()
+            let inputJSON = #"{"file_path":"/Users/dev/project/style.css"}"#
+            controller.session.beginApproval(id: "e1", toolName: "Edit", inputJSON: inputJSON)
+
+            controller.handleApprovalDecision(id: "e1", toolName: "Edit", decision: .allowForSession)
+
+            #expect(controller.approvedToolFilePairs.contains("Edit:/Users/dev/project/style.css"))
+            // Also records session-wide approval
+            #expect(controller.sessionApprovedTools.contains("Edit"))
+        }
     }
 
     @Suite("Ask user handling")
@@ -283,11 +365,15 @@ struct ConversationControllerTests {
             controller.session.appendUserMessage("Old message")
             controller.session.beginApproval(id: "a1", toolName: "Bash", inputJSON: "{}")
             controller.handleApprovalDecision(id: "a1", toolName: "Bash", decision: .allowForSession)
+            let editJSON = #"{"file_path":"/Users/dev/file.swift"}"#
+            controller.session.beginApproval(id: "e1", toolName: "Edit", inputJSON: editJSON)
+            controller.handleApprovalDecision(id: "e1", toolName: "Edit", decision: .allow)
 
             controller.startNewConversation()
 
             #expect(controller.session.items.isEmpty)
             #expect(controller.sessionApprovedTools.isEmpty)
+            #expect(controller.approvedToolFilePairs.isEmpty)
         }
     }
 
@@ -335,11 +421,7 @@ struct ConversationControllerTests {
             controller.selectedModel = .opus
 
             controller.sendMessage("Test")
-
-            for _ in 0..<40 {
-                if !spy.sentModels.isEmpty { break }
-                try await Task.sleep(for: .milliseconds(25))
-            }
+            try await pollUntil { !spy.sentModels.isEmpty }
 
             let sentModel = try #require(spy.sentModels.first)
             #expect(sentModel.modelId == ModelConfiguration.opus.modelId)
@@ -357,11 +439,7 @@ struct ConversationControllerTests {
 
             let attachment = FileAttachment(url: URL(fileURLWithPath: "/Users/someone/Documents/report.pdf"))
             controller.sendMessage("Check this", attachments: [attachment])
-
-            for _ in 0..<40 {
-                if !spy.sentAllowedReadPaths.isEmpty { break }
-                try await Task.sleep(for: .milliseconds(25))
-            }
+            try await pollUntil { !spy.sentAllowedReadPaths.isEmpty }
 
             let paths = try #require(spy.sentAllowedReadPaths.first)
             let expected = URL(fileURLWithPath: "/Users/someone/Documents/report.pdf").standardizedFileURL.path
@@ -376,19 +454,11 @@ struct ConversationControllerTests {
 
             let first = FileAttachment(url: URL(fileURLWithPath: "/tmp/a.txt"))
             controller.sendMessage("First", attachments: [first])
-
-            for _ in 0..<40 {
-                if !controller.session.isStreaming { break }
-                try await Task.sleep(for: .milliseconds(25))
-            }
+            try await pollUntil { !controller.session.isStreaming }
 
             let second = FileAttachment(url: URL(fileURLWithPath: "/tmp/b.txt"))
             controller.sendMessage("Second", attachments: [second])
-
-            for _ in 0..<40 {
-                if spy.sentAllowedReadPaths.count >= 2 { break }
-                try await Task.sleep(for: .milliseconds(25))
-            }
+            try await pollUntil { spy.sentAllowedReadPaths.count >= 2 }
 
             // Second call should contain both paths
             let paths = try #require(spy.sentAllowedReadPaths.last)
@@ -405,11 +475,7 @@ struct ConversationControllerTests {
             let controller = await makeController(engine: spy)
 
             controller.sendMessage("Just text")
-
-            for _ in 0..<40 {
-                if !spy.sentAllowedReadPaths.isEmpty { break }
-                try await Task.sleep(for: .milliseconds(25))
-            }
+            try await pollUntil { !spy.sentAllowedReadPaths.isEmpty }
 
             let paths = try #require(spy.sentAllowedReadPaths.first)
             #expect(paths.isEmpty)
@@ -520,11 +586,7 @@ struct ConversationControllerTests {
             ])
             let controller = await makeController(engine: engine)
             controller.sendMessage("Send email")
-
-            for _ in 0..<40 {
-                if !controller.session.isStreaming { break }
-                try await Task.sleep(for: .milliseconds(25))
-            }
+            try await pollUntil { !controller.session.isStreaming }
 
             // MCPToolMetadata extracts "mail" from "mcp__mail__send"
             #expect(controller.capabilityHealthMonitor.health["mail"] == .unavailable)

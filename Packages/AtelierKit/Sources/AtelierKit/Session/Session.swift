@@ -487,6 +487,17 @@ public final class Session {
         appendItem(item)
     }
 
+    /// Returns the approval event with the given ID, regardless of status.
+    @MainActor
+    public func approvalEvent(for id: String) -> ApprovalEvent? {
+        for item in items.reversed() {
+            if case .approval(let event) = item.content, event.id == id {
+                return event
+            }
+        }
+        return nil
+    }
+
     /// Returns the first pending approval event matching the given tool name.
     @MainActor
     public func pendingApproval(toolName: String) -> ApprovalEvent? {
