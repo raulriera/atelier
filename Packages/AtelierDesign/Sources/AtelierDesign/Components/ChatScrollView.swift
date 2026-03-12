@@ -22,6 +22,7 @@ public struct ChatScrollView<Content: View>: View {
 
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
     @State private var isAtBottom = true
+    @State private var hasNudged = false
 
     public init(@ViewBuilder content: () -> Content) {
         self.content = content()
@@ -45,12 +46,22 @@ public struct ChatScrollView<Content: View>: View {
             if isAtBottom, newHeight > oldHeight {
                 scrollPosition.scrollTo(edge: .bottom)
             }
+            // Workaround: LazyVStack does not render cells when combined with
+            // .defaultScrollAnchor(.bottom). The anchor positions the viewport
+            // at the bottom, but LazyVStack calculates visible cells top-down
+            // and never realises content exists. A single programmatic
+            // scroll-to-bottom after the first content load forces a layout
+            // pass that fixes it.
+            // https://developer.apple.com/forums/thread/741406
+            if !hasNudged, newHeight > 0 {
+                hasNudged = true
+                scrollPosition.scrollTo(edge: .bottom)
+            }
         }
         .overlay(alignment: .bottom) {
             Group {
                 if !isAtBottom {
                     scrollToBottomButton
-                        .padding(.bottom, Spacing.sm)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
