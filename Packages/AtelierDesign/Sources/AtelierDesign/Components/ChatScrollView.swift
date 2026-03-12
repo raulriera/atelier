@@ -62,6 +62,7 @@ public struct ChatScrollView<Content: View>: View {
             Group {
                 if !isAtBottom {
                     scrollToBottomButton
+                        .padding(.bottom, Spacing.sm)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
