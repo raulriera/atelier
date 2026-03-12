@@ -72,7 +72,7 @@ All done: Project Workspace, Context Files, Session Persistence, Conversational 
 | Capabilities | ✅ Done | [→](opportunities/hub/03-plugin-management.md) |
 | Cloud Connectors | 🔲 Not started | [→](opportunities/hub/06-cloud-connectors.md) |
 | Prompt Injection Defense | ✅ Done | [→](opportunities/security/03-prompt-injection-defense.md) |
-| MCP Helper Kit | 🔲 Not started | [→](opportunities/architecture/08-mcp-helper-kit.md) |
+| MCP Helper Kit | ✅ Done | [→](opportunities/architecture/08-mcp-helper-kit.md) |
 
 ---
 

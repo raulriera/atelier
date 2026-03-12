@@ -292,7 +292,7 @@ public struct ToolUseEvent: Sendable, Codable, Identifiable {
         guard name == "TodoWrite" else { return nil }
         guard let dict = parsedInput,
               let todos = dict["todos"] as? [[String: Any]] else { return nil }
-        return todos.compactMap { TodoItem(dict: $0) }
+        return todos.enumerated().compactMap { TodoItem(dict: $1, index: $0) }
     }
 
     // MARK: - Plan operations

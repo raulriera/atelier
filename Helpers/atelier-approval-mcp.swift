@@ -329,7 +329,6 @@ func handleApproveCall(id: AnyCodableValue?, args: [String: AnyCodableValue], so
         return
     }
 
-    // Preserve the raw input value for updatedInput in the allow response
     let rawInput = args["input"] ?? .dict([:])
     let inputForIPC = jsonString(from: rawInput)
 
@@ -349,7 +348,8 @@ func handleApproveCall(id: AnyCodableValue?, args: [String: AnyCodableValue], so
     // Build result as AnyCodableValue to avoid JSON escaping issues
     let resultValue: AnyCodableValue
     if ipcResponse.behavior == "allow" {
-        // The CLI requires updatedInput to know what parameters to pass to the tool
+        // The CLI requires updatedInput as a record. Pass through the original
+        // input unchanged since we never modify it.
         resultValue = .dict([
             "behavior": .string("allow"),
             "updatedInput": rawInput

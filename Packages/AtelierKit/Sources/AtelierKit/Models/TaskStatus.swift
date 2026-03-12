@@ -22,10 +22,10 @@ public struct TodoItem: Sendable {
     public let content: String
     public let status: TaskStatus
 
-    init?(dict: [String: Any]) {
-        guard let id = dict["id"] as? String,
-              let content = dict["content"] as? String else { return nil }
-        self.id = id
+    init?(dict: [String: Any], index: Int) {
+        guard let content = dict["content"] as? String else { return nil }
+        // The CLI doesn't always include an id — fall back to the array index.
+        self.id = dict["id"] as? String ?? String(index)
         self.content = content
         self.status = (dict["status"] as? String).flatMap(TaskStatus.init(rawValue:)) ?? .pending
     }

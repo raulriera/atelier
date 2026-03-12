@@ -36,6 +36,7 @@ The system learns from user behavior. If a user always approves "create file in 
 | Inline approval cards in timeline | ✅ Shipped |
 | Plain-English tool descriptions (MCPToolMetadata) | ✅ Shipped |
 | Destructive tool gating | ✅ Shipped |
+| File-scoped auto-approve | ✅ Shipped |
 | Biometric gate (LAContext) | 🔲 Not started |
 | Background notifications (UNNotificationAction) | 🔲 Not started |
 | Adaptive tier learning | 🔲 Not started |

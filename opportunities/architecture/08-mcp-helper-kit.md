@@ -2,7 +2,7 @@
 
 > **Category:** Architecture
 > **Type:** Improvement · **Priority:** Medium
-> **Milestone:** M3 · **Status:** 🔲 Not started
+> **Milestone:** M3 · **Status:** ✅ Done
 
 ---
 
