@@ -136,6 +136,10 @@ Examples:
 - **NEVER add features, tools, or capabilities beyond what was explicitly discussed and approved.** If you think something extra would be useful, propose it — don't just build it.
 - **Discussion first, action second.** When the user raises an issue, analyze it, present options, and wait for direction. Do not jump straight into implementation.
 
+### Performance rules
+
+- **NEVER use `VStack` or non-lazy containers for unbounded or paginated lists.** Always use `LazyVStack` (or `List` when appropriate). Eager rendering of 100+ complex cells kills scroll performance. This applies to the conversation timeline and any other list that can grow large.
+
 ### Problem-solving approach
 
 - **NEVER reimplement system components.** `SplitView`, `NavigationStack`, `.inspector()`, `.sheet()`, `.popover()`, `.alert()`, `.confirmationDialog()`, and other built-in SwiftUI containers are ALWAYS the right choice — no custom HStack/VStack replacements, no manual reimplementations. If a system component has a bug, work around the bug with clear comments (including radar/FB numbers when available) so the workaround can be removed when Apple fixes it.
