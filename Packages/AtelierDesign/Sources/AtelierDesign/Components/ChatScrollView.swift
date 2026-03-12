@@ -22,7 +22,6 @@ public struct ChatScrollView<Content: View>: View {
 
     @State private var scrollPosition = ScrollPosition(edge: .bottom)
     @State private var isAtBottom = true
-    @State private var hasNudged = false
 
     public init(@ViewBuilder content: () -> Content) {
         self.content = content()
@@ -46,15 +45,18 @@ public struct ChatScrollView<Content: View>: View {
             if isAtBottom, newHeight > oldHeight {
                 scrollPosition.scrollTo(edge: .bottom)
             }
-            // Workaround: LazyVStack does not render cells when combined with
-            // .defaultScrollAnchor(.bottom). The anchor positions the viewport
-            // at the bottom, but LazyVStack calculates visible cells top-down
-            // and never realises content exists. A single programmatic
-            // scroll-to-bottom after the first content load forces a layout
-            // pass that fixes it.
-            // https://developer.apple.com/forums/thread/741406
-            if !hasNudged, newHeight > 0 {
-                hasNudged = true
+        }
+        // Workaround: LazyVStack does not render cells when combined with
+        // .defaultScrollAnchor(.bottom). The anchor positions the viewport
+        // at the bottom, but LazyVStack calculates visible cells top-down
+        // and never realises content exists. When the container size changes
+        // (e.g. overlay appears/dismisses, window resizes), a programmatic
+        // scroll-to-bottom forces a layout pass that fixes it.
+        // https://developer.apple.com/forums/thread/741406
+        .onScrollGeometryChange(for: CGSize.self) { geometry in
+            geometry.containerSize
+        } action: { _, _ in
+            if isAtBottom {
                 scrollPosition.scrollTo(edge: .bottom)
             }
         }
