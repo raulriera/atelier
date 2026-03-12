@@ -1,105 +1,13 @@
-#!/usr/bin/env swift
 //
 // atelier-preview-mcp — MCP server for PDF operations
 // using PDFKit (no JXA needed).
 //
-// Speaks JSON-RPC 2.0 over stdio. The Claude CLI launches this as a child
-// process and discovers the tools via `tools/list`.
+// Compiled alongside MCPHelperKit sources via multi-file swiftc.
+// Boilerplate (JSON-RPC, transport, main loop) lives in MCPHelperKit.
 //
 
 import Foundation
 import Quartz
-
-// MARK: - JSON-RPC types
-
-struct JSONRPCRequest: Codable {
-    let jsonrpc: String
-    let id: AnyCodableValue?
-    let method: String
-    let params: AnyCodableValue?
-}
-
-struct JSONRPCResponse: Codable {
-    let jsonrpc: String
-    let id: AnyCodableValue?
-    let result: AnyCodableValue?
-    let error: JSONRPCError?
-}
-
-struct JSONRPCError: Codable {
-    let code: Int
-    let message: String
-}
-
-/// A type-erased Codable value for JSON-RPC params/results.
-enum AnyCodableValue: Codable {
-    case string(String)
-    case int(Int)
-    case double(Double)
-    case bool(Bool)
-    case dict([String: AnyCodableValue])
-    case array([AnyCodableValue])
-    case null
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if container.decodeNil() {
-            self = .null
-        } else if let v = try? container.decode(Bool.self) {
-            self = .bool(v)
-        } else if let v = try? container.decode(Int.self) {
-            self = .int(v)
-        } else if let v = try? container.decode(Double.self) {
-            self = .double(v)
-        } else if let v = try? container.decode(String.self) {
-            self = .string(v)
-        } else if let v = try? container.decode([String: AnyCodableValue].self) {
-            self = .dict(v)
-        } else if let v = try? container.decode([AnyCodableValue].self) {
-            self = .array(v)
-        } else {
-            self = .null
-        }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .string(let v): try container.encode(v)
-        case .int(let v): try container.encode(v)
-        case .double(let v): try container.encode(v)
-        case .bool(let v): try container.encode(v)
-        case .dict(let v): try container.encode(v)
-        case .array(let v): try container.encode(v)
-        case .null: try container.encodeNil()
-        }
-    }
-
-    var stringValue: String? {
-        if case .string(let v) = self { return v }
-        return nil
-    }
-
-    var intValue: Int? {
-        if case .int(let v) = self { return v }
-        return nil
-    }
-
-    var boolValue: Bool? {
-        if case .bool(let v) = self { return v }
-        return nil
-    }
-
-    var dictValue: [String: AnyCodableValue]? {
-        if case .dict(let v) = self { return v }
-        return nil
-    }
-
-    var arrayValue: [AnyCodableValue]? {
-        if case .array(let v) = self { return v }
-        return nil
-    }
-}
 
 // MARK: - Path Resolution
 
@@ -116,12 +24,6 @@ func resolvePath(_ path: String) -> String {
 }
 
 // MARK: - Tool Definitions
-
-struct ToolDefinition {
-    let name: String
-    let description: String
-    let inputSchema: AnyCodableValue
-}
 
 func allTools() -> [ToolDefinition] {
     [
@@ -379,113 +281,6 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
     }
 }
 
-// MARK: - MCP request handling
+// MARK: - Entry Point
 
-func respond(id: AnyCodableValue?, result: AnyCodableValue) {
-    let response = JSONRPCResponse(jsonrpc: "2.0", id: id, result: result, error: nil)
-    guard let data = try? JSONEncoder().encode(response) else { return }
-    var output = data
-    output.append(contentsOf: "\n".utf8)
-    FileHandle.standardOutput.write(output)
-}
-
-func respondError(id: AnyCodableValue?, code: Int, message: String) {
-    let response = JSONRPCResponse(
-        jsonrpc: "2.0", id: id, result: nil,
-        error: JSONRPCError(code: code, message: message)
-    )
-    guard let data = try? JSONEncoder().encode(response) else { return }
-    var output = data
-    output.append(contentsOf: "\n".utf8)
-    FileHandle.standardOutput.write(output)
-}
-
-func handleInitialize(id: AnyCodableValue?) {
-    respond(id: id, result: .dict([
-        "protocolVersion": .string("2024-11-05"),
-        "capabilities": .dict([
-            "tools": .dict([:])
-        ]),
-        "serverInfo": .dict([
-            "name": .string("atelier-preview"),
-            "version": .string("1.0.0")
-        ])
-    ]))
-}
-
-func handleToolsList(id: AnyCodableValue?) {
-    let tools = allTools().map { tool -> AnyCodableValue in
-        .dict([
-            "name": .string(tool.name),
-            "description": .string(tool.description),
-            "inputSchema": tool.inputSchema
-        ])
-    }
-    respond(id: id, result: .dict([
-        "tools": .array(tools)
-    ]))
-}
-
-func handleToolsCall(id: AnyCodableValue?, params: AnyCodableValue?) {
-    guard let dict = params?.dictValue,
-          let toolName = dict["name"]?.stringValue else {
-        respondError(id: id, code: -32602, message: "Invalid parameters: missing tool name")
-        return
-    }
-
-    let args = dict["arguments"]?.dictValue ?? [:]
-
-    FileHandle.standardError.write(Data("preview: calling \(toolName)\n".utf8))
-
-    let (output, isError) = handleToolCall(name: toolName, args: args)
-
-    FileHandle.standardError.write(Data("preview: \(toolName) -> \(isError ? "error" : "ok")\n".utf8))
-
-    if isError {
-        respond(id: id, result: .dict([
-            "content": .array([
-                .dict([
-                    "type": .string("text"),
-                    "text": .string(output)
-                ])
-            ]),
-            "isError": .bool(true)
-        ]))
-    } else {
-        let wrapped = "<untrusted_document source=\"preview:\(toolName)\">\n\(output)\n</untrusted_document>"
-        respond(id: id, result: .dict([
-            "content": .array([
-                .dict([
-                    "type": .string("text"),
-                    "text": .string(wrapped)
-                ])
-            ])
-        ]))
-    }
-}
-
-// MARK: - Main loop
-
-while let line = readLine(strippingNewline: true) {
-    guard let data = line.data(using: .utf8),
-          let request = try? JSONDecoder().decode(JSONRPCRequest.self, from: data) else {
-        continue
-    }
-
-    switch request.method {
-    case "initialize":
-        handleInitialize(id: request.id)
-
-    case "notifications/initialized":
-        break
-
-    case "tools/list":
-        handleToolsList(id: request.id)
-
-    case "tools/call":
-        handleToolsCall(id: request.id, params: request.params)
-
-    default:
-        respondError(id: request.id, code: -32601, message: "Method not found: \(request.method)")
-    }
-}
+@main enum PreviewHelper { static func main() { MCPServer.run(name: "preview", tools: allTools(), handler: handleToolCall) } }

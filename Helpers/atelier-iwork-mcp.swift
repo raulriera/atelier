@@ -1,120 +1,13 @@
-#!/usr/bin/env swift
 //
 // atelier-iwork-mcp — MCP server that controls Keynote, Pages, and Numbers
 // via JXA (JavaScript for Automation) through osascript.
 //
-// Speaks JSON-RPC 2.0 over stdio. The Claude CLI launches this as a child
-// process and discovers the tools via `tools/list`.
+// Built on MCPHelperKit — compiled alongside its sources via multi-file swiftc.
 //
 
 import Foundation
 
-// MARK: - JSON-RPC types
-
-struct JSONRPCRequest: Codable {
-    let jsonrpc: String
-    let id: AnyCodableValue?
-    let method: String
-    let params: AnyCodableValue?
-}
-
-struct JSONRPCResponse: Codable {
-    let jsonrpc: String
-    let id: AnyCodableValue?
-    let result: AnyCodableValue?
-    let error: JSONRPCError?
-}
-
-struct JSONRPCError: Codable {
-    let code: Int
-    let message: String
-}
-
-/// A type-erased Codable value for JSON-RPC params/results.
-enum AnyCodableValue: Codable {
-    case string(String)
-    case int(Int)
-    case double(Double)
-    case bool(Bool)
-    case dict([String: AnyCodableValue])
-    case array([AnyCodableValue])
-    case null
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if container.decodeNil() {
-            self = .null
-        } else if let v = try? container.decode(Bool.self) {
-            self = .bool(v)
-        } else if let v = try? container.decode(Int.self) {
-            self = .int(v)
-        } else if let v = try? container.decode(Double.self) {
-            self = .double(v)
-        } else if let v = try? container.decode(String.self) {
-            self = .string(v)
-        } else if let v = try? container.decode([String: AnyCodableValue].self) {
-            self = .dict(v)
-        } else if let v = try? container.decode([AnyCodableValue].self) {
-            self = .array(v)
-        } else {
-            self = .null
-        }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .string(let v): try container.encode(v)
-        case .int(let v): try container.encode(v)
-        case .double(let v): try container.encode(v)
-        case .bool(let v): try container.encode(v)
-        case .dict(let v): try container.encode(v)
-        case .array(let v): try container.encode(v)
-        case .null: try container.encodeNil()
-        }
-    }
-
-    var stringValue: String? {
-        if case .string(let v) = self { return v }
-        return nil
-    }
-
-    var intValue: Int? {
-        if case .int(let v) = self { return v }
-        return nil
-    }
-
-    var dictValue: [String: AnyCodableValue]? {
-        if case .dict(let v) = self { return v }
-        return nil
-    }
-}
-
-// MARK: - JXA Execution
-
-func executeJXA(_ script: String) -> (output: String, error: String, exitCode: Int32) {
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-    process.arguments = ["-l", "JavaScript", "-e", script]
-
-    let stdoutPipe = Pipe()
-    let stderrPipe = Pipe()
-    process.standardOutput = stdoutPipe
-    process.standardError = stderrPipe
-
-    do {
-        try process.run()
-        process.waitUntilExit()
-    } catch {
-        return ("", "Failed to launch osascript: \(error.localizedDescription)", 1)
-    }
-
-    let output = String(data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    let errOutput = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-    return (output.trimmingCharacters(in: .whitespacesAndNewlines),
-            errOutput.trimmingCharacters(in: .whitespacesAndNewlines),
-            process.terminationStatus)
-}
+// MARK: - Helpers
 
 /// The project working directory, passed by Atelier via environment.
 let workingDirectory = ProcessInfo.processInfo.environment["ATELIER_WORKING_DIRECTORY"]
@@ -149,13 +42,32 @@ func defaultExportPath(appName: String, format: String) -> String {
     return (workingDirectory as NSString).appendingPathComponent("\(docName).\(ext)")
 }
 
-// MARK: - Tool Definitions
-
-struct ToolDefinition {
-    let name: String
-    let description: String
-    let inputSchema: AnyCodableValue
+/// JXA snippet that launches an app and waits until it's ready to receive commands.
+func jxaLaunchAndWait(_ appName: String) -> String {
+    """
+    var app = Application("\(jxaEscape(appName))");
+    app.includeStandardAdditions = true;
+    app.activate();
+    // Wait for the app to be running and responsive
+    var tries = 0;
+    while (!app.running() && tries < 50) { delay(0.1); tries++; }
+    delay(0.3);
+    """
 }
+
+/// Converts a 1-based column number to a letter (1=A, 2=B, ..., 26=Z, 27=AA).
+func columnLetter(_ column: Int) -> String {
+    var result = ""
+    var n = column
+    while n > 0 {
+        n -= 1
+        result = String(Character(UnicodeScalar(65 + (n % 26))!)) + result
+        n /= 26
+    }
+    return result
+}
+
+// MARK: - Tool Definitions
 
 func allTools() -> [ToolDefinition] {
     [
@@ -389,28 +301,6 @@ func allTools() -> [ToolDefinition] {
 }
 
 // MARK: - Tool Handlers
-
-/// JXA snippet that launches an app and waits until it's ready to receive commands.
-func jxaLaunchAndWait(_ appName: String) -> String {
-    """
-    var app = Application("\(jxaEscape(appName))");
-    app.includeStandardAdditions = true;
-    app.activate();
-    // Wait for the app to be running and responsive
-    var tries = 0;
-    while (!app.running() && tries < 50) { delay(0.1); tries++; }
-    delay(0.3);
-    """
-}
-
-/// Escapes a Swift string for safe embedding inside a JXA string literal.
-func jxaEscape(_ s: String) -> String {
-    s.replacingOccurrences(of: "\\", with: "\\\\")
-     .replacingOccurrences(of: "\"", with: "\\\"")
-     .replacingOccurrences(of: "\n", with: "\\n")
-     .replacingOccurrences(of: "\r", with: "\\r")
-     .replacingOccurrences(of: "\t", with: "\\t")
-}
 
 func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, Bool) {
     switch name {
@@ -687,125 +577,6 @@ func handleToolCall(name: String, args: [String: AnyCodableValue]) -> (String, B
     }
 }
 
-/// Converts a 1-based column number to a letter (1=A, 2=B, ..., 26=Z, 27=AA).
-func columnLetter(_ column: Int) -> String {
-    var result = ""
-    var n = column
-    while n > 0 {
-        n -= 1
-        result = String(Character(UnicodeScalar(65 + (n % 26))!)) + result
-        n /= 26
-    }
-    return result
-}
+// MARK: - Entry Point
 
-// MARK: - MCP request handling
-
-func respond(id: AnyCodableValue?, result: AnyCodableValue) {
-    let response = JSONRPCResponse(jsonrpc: "2.0", id: id, result: result, error: nil)
-    guard let data = try? JSONEncoder().encode(response) else { return }
-    var output = data
-    output.append(contentsOf: "\n".utf8)
-    FileHandle.standardOutput.write(output)
-}
-
-func respondError(id: AnyCodableValue?, code: Int, message: String) {
-    let response = JSONRPCResponse(
-        jsonrpc: "2.0", id: id, result: nil,
-        error: JSONRPCError(code: code, message: message)
-    )
-    guard let data = try? JSONEncoder().encode(response) else { return }
-    var output = data
-    output.append(contentsOf: "\n".utf8)
-    FileHandle.standardOutput.write(output)
-}
-
-func handleInitialize(id: AnyCodableValue?) {
-    respond(id: id, result: .dict([
-        "protocolVersion": .string("2024-11-05"),
-        "capabilities": .dict([
-            "tools": .dict([:])
-        ]),
-        "serverInfo": .dict([
-            "name": .string("atelier-iwork"),
-            "version": .string("1.0.0")
-        ])
-    ]))
-}
-
-func handleToolsList(id: AnyCodableValue?) {
-    let tools = allTools().map { tool -> AnyCodableValue in
-        .dict([
-            "name": .string(tool.name),
-            "description": .string(tool.description),
-            "inputSchema": tool.inputSchema
-        ])
-    }
-    respond(id: id, result: .dict([
-        "tools": .array(tools)
-    ]))
-}
-
-func handleToolsCall(id: AnyCodableValue?, params: AnyCodableValue?) {
-    guard let dict = params?.dictValue,
-          let toolName = dict["name"]?.stringValue else {
-        respondError(id: id, code: -32602, message: "Invalid parameters: missing tool name")
-        return
-    }
-
-    let args = dict["arguments"]?.dictValue ?? [:]
-
-    FileHandle.standardError.write(Data("iwork: calling \(toolName)\n".utf8))
-
-    let (output, isError) = handleToolCall(name: toolName, args: args)
-
-    FileHandle.standardError.write(Data("iwork: \(toolName) -> \(isError ? "error" : "ok")\n".utf8))
-
-    if isError {
-        respond(id: id, result: .dict([
-            "content": .array([
-                .dict([
-                    "type": .string("text"),
-                    "text": .string(output)
-                ])
-            ]),
-            "isError": .bool(true)
-        ]))
-    } else {
-        let wrapped = "<untrusted_document source=\"iwork:\(toolName)\">\n\(output)\n</untrusted_document>"
-        respond(id: id, result: .dict([
-            "content": .array([
-                .dict([
-                    "type": .string("text"),
-                    "text": .string(wrapped)
-                ])
-            ])
-        ]))
-    }
-}
-
-// MARK: - Main loop
-
-while let line = readLine(strippingNewline: true) {
-    guard let data = line.data(using: .utf8),
-          let request = try? JSONDecoder().decode(JSONRPCRequest.self, from: data) else {
-        continue
-    }
-
-    switch request.method {
-    case "initialize":
-        handleInitialize(id: request.id)
-
-    case "notifications/initialized":
-        break
-
-    case "tools/list":
-        handleToolsList(id: request.id)
-
-    case "tools/call":
-        handleToolsCall(id: request.id, params: request.params)
-
-    default:
-        respondError(id: request.id, code: -32601, message: "Method not found: \(request.method)")
-    }
-}
+@main enum IWorkHelper { static func main() { MCPServer.run(name: "iwork", tools: allTools(), handler: handleToolCall) } }

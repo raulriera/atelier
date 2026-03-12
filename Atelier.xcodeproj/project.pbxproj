@@ -371,6 +371,11 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/Helpers/atelier-iwork-mcp.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/AnyCodableValue.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JSONRPCTypes.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JXA.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/MCPServer.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/ToolDefinition.swift",
 			);
 			name = "Compile iWork MCP Helper";
 			outputPaths = (
@@ -378,7 +383,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-iwork-mcp\" \"$SRCROOT/Helpers/atelier-iwork-mcp.swift\"\n";
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-iwork-mcp\" \"$SRCROOT/Helpers/atelier-iwork-mcp.swift\" \"$SRCROOT/Packages/MCPHelperKit/Sources/MCPHelperKit/\"*.swift\n";
 		};
 		4CA1B0022F70000000000002 /* Compile Safari MCP Helper */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -387,6 +392,11 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/Helpers/atelier-safari-mcp.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/AnyCodableValue.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JSONRPCTypes.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JXA.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/MCPServer.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/ToolDefinition.swift",
 			);
 			name = "Compile Safari MCP Helper";
 			outputPaths = (
@@ -394,7 +404,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-safari-mcp\" \"$SRCROOT/Helpers/atelier-safari-mcp.swift\"\n";
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-safari-mcp\" \"$SRCROOT/Helpers/atelier-safari-mcp.swift\" \"$SRCROOT/Packages/MCPHelperKit/Sources/MCPHelperKit/\"*.swift\n";
 		};
 		4CA1B0032F70000000000003 /* Compile Mail MCP Helper */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -403,6 +413,11 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/Helpers/atelier-mail-mcp.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/AnyCodableValue.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JSONRPCTypes.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JXA.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/MCPServer.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/ToolDefinition.swift",
 			);
 			name = "Compile Mail MCP Helper";
 			outputPaths = (
@@ -410,7 +425,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-mail-mcp\" \"$SRCROOT/Helpers/atelier-mail-mcp.swift\"\n";
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-mail-mcp\" \"$SRCROOT/Helpers/atelier-mail-mcp.swift\" \"$SRCROOT/Packages/MCPHelperKit/Sources/MCPHelperKit/\"*.swift\n";
 		};
 		4CA1B0042F70000000000004 /* Compile Reminders MCP Helper */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -419,6 +434,11 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/Helpers/atelier-reminders-mcp.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/AnyCodableValue.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JSONRPCTypes.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JXA.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/MCPServer.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/ToolDefinition.swift",
 			);
 			name = "Compile Reminders MCP Helper";
 			outputPaths = (
@@ -426,7 +446,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-reminders-mcp\" \"$SRCROOT/Helpers/atelier-reminders-mcp.swift\"\n";
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-reminders-mcp\" \"$SRCROOT/Helpers/atelier-reminders-mcp.swift\" \"$SRCROOT/Packages/MCPHelperKit/Sources/MCPHelperKit/\"*.swift\n";
 		};
 		4CA1B0052F70000000000005 /* Compile Calendar MCP Helper */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -435,6 +455,11 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/Helpers/atelier-calendar-mcp.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/AnyCodableValue.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JSONRPCTypes.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JXA.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/MCPServer.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/ToolDefinition.swift",
 			);
 			name = "Compile Calendar MCP Helper";
 			outputPaths = (
@@ -442,7 +467,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-calendar-mcp\" \"$SRCROOT/Helpers/atelier-calendar-mcp.swift\"\n";
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-calendar-mcp\" \"$SRCROOT/Helpers/atelier-calendar-mcp.swift\" \"$SRCROOT/Packages/MCPHelperKit/Sources/MCPHelperKit/\"*.swift\n";
 		};
 		4CA1B0062F70000000000006 /* Compile Notes MCP Helper */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -451,6 +476,11 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/Helpers/atelier-notes-mcp.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/AnyCodableValue.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JSONRPCTypes.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JXA.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/MCPServer.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/ToolDefinition.swift",
 			);
 			name = "Compile Notes MCP Helper";
 			outputPaths = (
@@ -458,7 +488,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-notes-mcp\" \"$SRCROOT/Helpers/atelier-notes-mcp.swift\"\n";
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-notes-mcp\" \"$SRCROOT/Helpers/atelier-notes-mcp.swift\" \"$SRCROOT/Packages/MCPHelperKit/Sources/MCPHelperKit/\"*.swift\n";
 		};
 		4CA1B0072F70000000000007 /* Compile Finder MCP Helper */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -467,6 +497,11 @@
 			);
 			inputPaths = (
 				"$(SRCROOT)/Helpers/atelier-finder-mcp.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/AnyCodableValue.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JSONRPCTypes.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/JXA.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/MCPServer.swift",
+				"$(SRCROOT)/Packages/MCPHelperKit/Sources/MCPHelperKit/ToolDefinition.swift",
 			);
 			name = "Compile Finder MCP Helper";
 			outputPaths = (
@@ -474,7 +509,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-finder-mcp\" \"$SRCROOT/Helpers/atelier-finder-mcp.swift\"\n";
+			shellScript = "mkdir -p \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers\"\nswiftc -O -o \"$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Helpers/atelier-finder-mcp\" \"$SRCROOT/Helpers/atelier-finder-mcp.swift\" \"$SRCROOT/Packages/MCPHelperKit/Sources/MCPHelperKit/\"*.swift\n";
 		};
 		4CA1B0082F70000000000008 /* Compile Hooks Helper */ = {
 			isa = PBXShellScriptBuildPhase;
