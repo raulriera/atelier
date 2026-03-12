@@ -2,7 +2,7 @@
 
 > **Category:** Security & Privacy
 > **Type:** New Capability · **Priority:** Critical
-> **Milestone:** M3 · **Status:** 🔲 Not started
+> **Milestone:** M3 · **Status:** ✅ Done
 
 ---
 
@@ -14,16 +14,13 @@ Combined with silent file access and WebFetch, this creates a complete attack ch
 
 ## Solution
 
-### Multi-stage sanitization pipeline
-
-1. **Format-specific stripping** — remove hidden text layers, invisible characters, suspicious metadata from each file type before Claude sees the content
-2. **Structured wrapping** — sanitized content wrapped in `<untrusted_document>` tags so Claude knows to treat it as user data, not instructions
-3. **Visual verification** — for high-risk documents, OCR the rendered output and compare against extracted text to detect hidden content
-4. **Heuristic detection** — flag patterns that look like prompt injection ("ignore previous instructions," "you are now...")
+1. **Structured wrapping** — file attachments and all capability tool output wrapped in `<untrusted_document>` tags so Claude treats external content as data, not instructions
+2. **System prompt policy** — explicit instructions forbidding compliance with embedded directives found in untrusted content
+3. **Invisible Unicode stripping** — `ContentSanitizer` strips zero-width characters, bidirectional overrides, tag characters, and BOM from text attachments before sending
 
 ### Defense-in-depth
 
-Sanitization is layer 1. Even if it fails:
+Sanitization is one layer. Even if it fails:
 - **Path boundary** (07) prevents reading sensitive files
 - **Network isolation** (01) prevents exfiltration
 - **Audit logging** (05) records everything for analysis

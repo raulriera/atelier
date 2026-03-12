@@ -71,7 +71,7 @@ All done: Project Workspace, Context Files, Session Persistence, Conversational 
 | Token Usage Visibility | ✅ Done | [→](opportunities/hub/05-token-usage-visibility.md) |
 | Capabilities | ✅ Done | [→](opportunities/hub/03-plugin-management.md) |
 | Cloud Connectors | 🔲 Not started | [→](opportunities/hub/06-cloud-connectors.md) |
-| Prompt Injection Defense | 🔲 Not started | [→](opportunities/security/03-prompt-injection-defense.md) |
+| Prompt Injection Defense | ✅ Done | [→](opportunities/security/03-prompt-injection-defense.md) |
 | MCP Helper Kit | 🔲 Not started | [→](opportunities/architecture/08-mcp-helper-kit.md) |
 
 ---
