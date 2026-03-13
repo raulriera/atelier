@@ -93,20 +93,7 @@ xcodebuild -exportArchive \
     -exportOptionsPlist "$EXPORT_PLIST" \
     | tail -5
 
-# ── Step 4: Notarize ──
-if $DRY_RUN; then
-    echo "==> Skipping notarization (dry run)"
-else
-    echo "==> Notarizing..."
-    xcrun notarytool submit "$BUILD_DIR/$SCHEME.app" \
-        --keychain-profile "$NOTARIZE_PROFILE" \
-        --wait
-
-    echo "==> Stapling notarization ticket..."
-    xcrun stapler staple "$BUILD_DIR/$SCHEME.app"
-fi
-
-# ── Step 5: Create DMG ──
+# ── Step 4: Create DMG ──
 echo "==> Creating DMG..."
 create-dmg \
     --volname "$SCHEME" \
@@ -118,6 +105,19 @@ create-dmg \
     --codesign "Developer ID Application: Raul Riera ($TEAM_ID)" \
     "$DMG_PATH" \
     "$BUILD_DIR/$SCHEME.app"
+
+# ── Step 5: Notarize the DMG ──
+if $DRY_RUN; then
+    echo "==> Skipping notarization (dry run)"
+else
+    echo "==> Notarizing DMG..."
+    xcrun notarytool submit "$DMG_PATH" \
+        --keychain-profile "$NOTARIZE_PROFILE" \
+        --wait
+
+    echo "==> Stapling notarization ticket..."
+    xcrun stapler staple "$DMG_PATH"
+fi
 
 # ── Step 6: Sparkle EdDSA signature ──
 echo "==> Signing DMG with Sparkle EdDSA key..."
