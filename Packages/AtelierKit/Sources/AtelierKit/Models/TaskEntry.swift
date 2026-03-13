@@ -35,13 +35,15 @@ extension TaskEntry {
     ///   — only the last TodoWrite matters.
     /// - **TaskCreate/TaskUpdate**: incremental — creates add rows, updates modify status.
     public static func buildList(from events: [ToolUseEvent]) -> [TaskEntry] {
-        // Use the last TodoWrite that has parseable items (skip in-flight events
-        // whose JSON hasn't streamed yet — their todoItems is nil).
-        if let lastTodoWrite = events.last(where: { $0.name == "TodoWrite" && $0.todoItems != nil }),
-           let items = lastTodoWrite.todoItems {
-            return items
-                .filter { $0.status != .deleted }
-                .map { TaskEntry(id: $0.id, subject: $0.content, status: $0.status) }
+        // Use the last TodoWrite that has parseable items. Scan backward manually
+        // so we parse each event's JSON only once (todoItems calls JSONSerialization).
+        // In-flight events whose JSON hasn't streamed yet return nil and are skipped.
+        for event in events.reversed() where event.name == "TodoWrite" {
+            if let items = event.todoItems {
+                return items
+                    .filter { $0.status != .deleted }
+                    .map { TaskEntry(id: $0.id, subject: $0.content, status: $0.status) }
+            }
         }
 
         // Fall back to TaskCreate/TaskUpdate accumulation.

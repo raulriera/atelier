@@ -11,10 +11,6 @@ struct TaskCard: View {
     let entries: [TaskEntry]
     var onDismiss: (() -> Void)?
 
-    private var completedCount: Int {
-        entries.filter { $0.status == .completed }.count
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             // Header
