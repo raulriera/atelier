@@ -8,56 +8,17 @@ public struct CodeBlockView: View {
     @State private var isHovering = false
     @State private var copied = false
 
+    /// Pre-computed diff lines. Empty when the block is not a diff.
+    private let diffLines: [DiffLine]
+
     public init(language: String?, code: String) {
         self.language = language
         self.code = code
+        self.diffLines = Self.parseDiffLines(language: language, code: code)
     }
 
     /// Whether this code block should render with diff coloring.
-    private var isDiff: Bool {
-        guard let language else { return false }
-        if language.lowercased() == "diff" { return true }
-        // Heuristic: any block where most lines start with +/- is a diff
-        let lines = code.split(separator: "\n", omittingEmptySubsequences: false)
-        let diffLines = lines.filter { $0.hasPrefix("+ ") || $0.hasPrefix("- ") || $0.hasPrefix("+\t") || $0.hasPrefix("-\t") }
-        return lines.count >= 2 && diffLines.count * 2 >= lines.count
-    }
-
-    private var diffContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            let lines = code.split(separator: "\n", omittingEmptySubsequences: false)
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                let lineStr = String(line)
-                Text(lineStr)
-                    .font(.conversationCode)
-                    .foregroundStyle(diffForeground(for: lineStr))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, 1)
-                    .background(diffBackground(for: lineStr), in: .rect)
-            }
-        }
-        .textSelection(.enabled)
-        .padding(.vertical, Spacing.sm)
-    }
-
-    private func diffForeground(for line: String) -> some ShapeStyle {
-        if line.hasPrefix("+") {
-            return AnyShapeStyle(.statusSuccess)
-        } else if line.hasPrefix("-") {
-            return AnyShapeStyle(.statusError)
-        }
-        return AnyShapeStyle(.contentPrimary)
-    }
-
-    private func diffBackground(for line: String) -> some ShapeStyle {
-        if line.hasPrefix("+") {
-            return AnyShapeStyle(.statusSuccess.opacity(0.1))
-        } else if line.hasPrefix("-") {
-            return AnyShapeStyle(.statusError.opacity(0.1))
-        }
-        return AnyShapeStyle(.clear)
-    }
+    private var isDiff: Bool { !diffLines.isEmpty }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -70,7 +31,7 @@ public struct CodeBlockView: View {
             }
 
             if isDiff {
-                diffContent
+                DiffContentView(lines: diffLines)
             } else {
                 Text(code)
                     .font(.conversationCode)
@@ -88,10 +49,6 @@ public struct CodeBlockView: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(code, forType: .string)
                     copied = true
-                    Task {
-                        try? await Task.sleep(for: .seconds(2))
-                        copied = false
-                    }
                 } label: {
                     Image(systemName: copied ? "checkmark" : "doc.on.doc")
                         .font(.caption)
@@ -103,7 +60,13 @@ public struct CodeBlockView: View {
                 .buttonStyle(.plain)
                 .padding(Spacing.xs)
                 .transition(.opacity)
+                .accessibilityLabel(copied ? "Copied" : "Copy code")
             }
+        }
+        .task(id: copied) {
+            guard copied else { return }
+            try? await Task.sleep(for: .seconds(2))
+            copied = false
         }
         .onHover { hovering in
             withAnimation(Motion.settle) {
@@ -111,4 +74,60 @@ public struct CodeBlockView: View {
             }
         }
     }
+
+    // MARK: - Diff Parsing
+
+    /// Parses code into colored diff lines, or returns empty if not a diff.
+    private static func parseDiffLines(language: String?, code: String) -> [DiffLine] {
+        let lines = code.split(separator: "\n", omittingEmptySubsequences: false)
+
+        let explicitDiff = language?.lowercased() == "diff"
+        if !explicitDiff {
+            guard let language, !language.isEmpty else { return [] }
+            // Heuristic: most lines start with +/-
+            let diffCount = lines.filter { $0.hasPrefix("+") || $0.hasPrefix("-") }.count
+            guard lines.count >= 2, diffCount * 2 >= lines.count else { return [] }
+        }
+
+        return lines.enumerated().map { index, line in
+            let text = String(line)
+            if text.hasPrefix("+") {
+                return DiffLine(id: index, text: text, foreground: AnyShapeStyle(.statusSuccess), background: AnyShapeStyle(.statusSuccess.opacity(0.12)))
+            } else if text.hasPrefix("-") {
+                return DiffLine(id: index, text: text, foreground: AnyShapeStyle(.statusError), background: AnyShapeStyle(.statusError.opacity(0.12)))
+            }
+            return DiffLine(id: index, text: text, foreground: AnyShapeStyle(.contentPrimary), background: AnyShapeStyle(.clear))
+        }
+    }
+}
+
+// MARK: - Diff Subviews
+
+/// Extracted subview so hover/copy state changes in `CodeBlockView` don't
+/// re-evaluate the diff line layout (inputs are stable `let` values).
+private struct DiffContentView: View {
+    let lines: [DiffLine]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(lines) { line in
+                Text(line.text)
+                    .font(.conversationCode)
+                    .foregroundStyle(line.foreground)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, 1)
+                    .background(line.background, in: .rect)
+            }
+        }
+        .textSelection(.enabled)
+        .padding(.vertical, Spacing.sm)
+    }
+}
+
+private struct DiffLine: Identifiable {
+    let id: Int
+    let text: String
+    let foreground: AnyShapeStyle
+    let background: AnyShapeStyle
 }
