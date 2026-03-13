@@ -31,7 +31,6 @@ public struct ChatScrollView<Content: View>: View {
         ScrollView {
             content
         }
-        .defaultScrollAnchor(.bottom)
         .scrollPosition($scrollPosition)
         .onScrollGeometryChange(for: Bool.self) { geometry in
             let bottomEdge = geometry.contentOffset.y + geometry.containerSize.height
@@ -45,6 +44,9 @@ public struct ChatScrollView<Content: View>: View {
             if isAtBottom, newHeight > oldHeight {
                 scrollPosition.scrollTo(edge: .bottom)
             }
+        }
+        .onAppear {
+            scrollPosition.scrollTo(edge: .bottom)
         }
         .overlay(alignment: .bottom) {
             Group {
@@ -69,8 +71,8 @@ public struct ChatScrollView<Content: View>: View {
                 .frame(width: 32, height: 32)
                 .contentShape(.interaction, Circle())
         }
-        .glassEffect(.regular.interactive(), in: .circle)
         .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
     }
 }
 
