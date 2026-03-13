@@ -2,7 +2,7 @@
 
 > **Category:** Security & Privacy
 > **Type:** Improvement · **Priority:** Critical
-> **Milestone:** M1 · **Status:** 🔨 In progress
+> **Milestone:** M1
 
 ---
 
@@ -17,17 +17,6 @@ The bookmark system restricts the app process, but the Claude CLI runs as the us
 **App side:** Security-Scoped Bookmarks for persistent folder access. User picks a folder once via `NSOpenPanel`, bookmark is saved, access persists across launches.
 
 **CLI side:** `--allowedTools` patterns scope file tools to the project directory. `--disallowedTools` blocks sensitive paths. `PreToolUse` hook validates as defense-in-depth. See `security/07-cli-filesystem-boundary.md`.
-
-## Status
-
-| Feature | Status |
-|---------|--------|
-| Security-Scoped Bookmarks (BookmarkStore) | ✅ Shipped |
-| CLI path scoping via --allowedTools | ✅ Shipped |
-| Sensitive path denylist | ✅ Shipped |
-| PreToolUse path guard hook | ✅ Shipped |
-| NSFileCoordinator for concurrent file ops | 🔲 Not started |
-| Audit logging to encrypted SQLite | 🔲 Not started |
 
 ---
 

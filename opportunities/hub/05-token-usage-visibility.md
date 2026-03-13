@@ -2,7 +2,7 @@
 
 > **Category:** Hub / Unified Experience
 > **Type:** New Capability · **Priority:** Critical
-> **Milestone:** M3 · **Status:** 🔲 Not started
+> **Milestone:** M3
 
 ---
 

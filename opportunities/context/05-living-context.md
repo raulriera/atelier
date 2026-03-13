@@ -2,7 +2,7 @@
 
 > **Category:** Context Control & Agent Intelligence
 > **Type:** New Capability · **Priority:** Critical
-> **Milestone:** M2 · **Status:** ✅ Done
+> **Milestone:** M2
 
 ---
 
@@ -71,21 +71,6 @@ On the first session, Claude silently scans the project structure to set an init
 ### The user is always in control
 
 Context files are plain markdown — inspectable, editable, shareable, version-controllable. Corrections are immediate. Any file can be deleted to start fresh on that topic.
-
-## Status
-
-| Feature | Status |
-|---------|--------|
-| Hook-based distillation (Stop, PreCompact, SessionStart) | ✅ Shipped |
-| Multi-file memory (5 categories) | ✅ Shipped |
-| Smart loading (always-inject + manifest) | ✅ Shipped |
-| Compaction snapshots (infinite session) | ✅ Shipped |
-| Project fingerprinting (Haiku-powered) | ✅ Shipped |
-| Proactive suggestions (pattern tracking) | ✅ Shipped |
-| Vocabulary learning | ✅ Shipped |
-| Progressive decay (entry age tracking) | ✅ Shipped |
-| Stale context detection | ✅ Shipped |
-| Pattern conflict detection ([corrected] markers) | ✅ Shipped |
 
 ## Why This Is the Moat
 

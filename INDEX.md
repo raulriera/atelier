@@ -37,12 +37,11 @@ All done: Application Shell, Conversation Model, Window & Conversation, polish (
 
 All done: File Access Permissions, File Deletion Safety, CLI Filesystem Boundary.
 
-| Opportunity | Status | Link |
-|-------------|--------|------|
-| File Access Permissions | ✅ Done | [→](opportunities/security/02-file-access-permissions.md) |
-| File Deletion Safety | ✅ Done | [→](opportunities/security/06-file-deletion-safety.md) |
-| CLI Filesystem Boundary | ✅ Done | [→](opportunities/security/07-cli-filesystem-boundary.md) |
-| Credential Storage | 🔲 Not started | [→](opportunities/security/04-credential-storage.md) |
+| Opportunity | Link |
+|-------------|------|
+| File Access Permissions | [→](opportunities/security/02-file-access-permissions.md) |
+| File Deletion Safety | [→](opportunities/security/06-file-deletion-safety.md) |
+| CLI Filesystem Boundary | [→](opportunities/security/07-cli-filesystem-boundary.md) |
 
 ---
 
@@ -62,56 +61,54 @@ All done: Project Workspace, Context Files, Session Persistence, Conversational 
 
 ---
 
-## M3 — Intelligence
+## M3 — Intelligence ✅
 
-| Opportunity | Status | Link |
-|-------------|--------|------|
-| Claude Code Integration | ✅ Done | [→](opportunities/hub/01-claude-code-integration.md) |
-| Approval & Review Flow | ✅ Done | [→](opportunities/context/04-approval-review-flow.md) |
-| Token Usage Visibility | ✅ Done | [→](opportunities/hub/05-token-usage-visibility.md) |
-| Capabilities | ✅ Done | [→](opportunities/hub/03-plugin-management.md) |
-| Cloud Connectors | 🔲 Not started | [→](opportunities/hub/06-cloud-connectors.md) |
-| Prompt Injection Defense | ✅ Done | [→](opportunities/security/03-prompt-injection-defense.md) |
-| MCP Helper Kit | ✅ Done | [→](opportunities/architecture/08-mcp-helper-kit.md) |
+| Opportunity | Link |
+|-------------|------|
+| Claude Code Integration | [→](opportunities/hub/01-claude-code-integration.md) |
+| Approval & Review Flow | [→](opportunities/context/04-approval-review-flow.md) |
+| Token Usage Visibility | [→](opportunities/hub/05-token-usage-visibility.md) |
+| Capabilities | [→](opportunities/hub/03-plugin-management.md) |
+| Cloud Connectors | [→](opportunities/hub/06-cloud-connectors.md) |
+| Prompt Injection Defense | [→](opportunities/security/03-prompt-injection-defense.md) |
+| MCP Helper Kit | [→](opportunities/architecture/08-mcp-helper-kit.md) |
 
 ---
 
 ## M4 — Native Power
 
-| Opportunity | Status | Link |
-|-------------|--------|------|
-| System Services | 🔲 Not started | [→](opportunities/macos/01-system-services.md) |
-| Menu Bar Agent | 🔲 Not started | [→](opportunities/macos/05-menu-bar-agent.md) |
-| Rich Notifications | 🔲 Not started | [→](opportunities/macos/07-notifications.md) |
-| Shortcuts & Automation | 🔲 Not started | [→](opportunities/macos/06-shortcuts-automation.md) |
-| Memory Management | 🔲 Not started | [→](opportunities/architecture/05-memory-management.md) |
-| Scheduled Tasks & Templates | 🔨 In progress (data+UI+scheduler helper done, blocked on template save UI + Shortcuts) | [→](opportunities/context/02-task-templates-workflows.md) |
+| Opportunity | Link |
+|-------------|------|
+| System Services | [→](opportunities/macos/01-system-services.md) |
+| Menu Bar Agent | [→](opportunities/macos/05-menu-bar-agent.md) |
+| Rich Notifications | [→](opportunities/macos/07-notifications.md) |
+| Shortcuts & Automation | [→](opportunities/macos/06-shortcuts-automation.md) |
+| Memory Management | [→](opportunities/architecture/05-memory-management.md) |
+| Scheduled Tasks & Templates | [→](opportunities/context/02-task-templates-workflows.md) |
 
 ---
 
 ## M5 — Growth & Polish
 
-| Opportunity | Status | Link |
-|-------------|--------|------|
-| Onboarding & Setup | 🔲 Not started | [→](opportunities/experience/04-onboarding.md) |
-| File System Events | 🔲 Not started | [→](opportunities/macos/08-file-system-events.md) |
-| Capability Health | 🔲 Not started | [→](opportunities/hub/04-mcp-connector-health.md) |
-| Multi-Agent Orchestration | 🔲 Not started | [→](opportunities/context/03-multi-agent-orchestration.md) |
-| Spotlight & System Search | 🔲 Not started | [→](opportunities/macos/02-spotlight-search.md) |
-| Drag & Drop | 🔨 In progress | [→](opportunities/macos/03-drag-and-drop.md) |
-| Clipboard Integration | 🔲 Not started | [→](opportunities/macos/09-clipboard-integration.md) |
-| Document Generation | 🔲 Not started | [→](opportunities/macos/10-document-generation.md) |
-| Quick Look Previews | 🔲 Not started | [→](opportunities/macos/04-quick-look-previews.md) |
-| Audit & Compliance | 🔲 Not started | [→](opportunities/security/05-audit-compliance.md) |
-| Desktop Widgets | 🔲 Not started | [→](opportunities/macos/11-widgets.md) |
-| Focus Filters | 🔲 Not started | [→](opportunities/macos/12-focus-filters.md) |
+| Opportunity | Link |
+|-------------|------|
+| Onboarding & Setup | [→](opportunities/experience/04-onboarding.md) |
+| File System Events | [→](opportunities/macos/08-file-system-events.md) |
+| Capability Health | [→](opportunities/hub/04-mcp-connector-health.md) |
+| Multi-Agent Orchestration | [→](opportunities/context/03-multi-agent-orchestration.md) |
+| Spotlight & System Search | [→](opportunities/macos/02-spotlight-search.md) |
+| Drag & Drop | [→](opportunities/macos/03-drag-and-drop.md) |
+| Clipboard Integration | [→](opportunities/macos/09-clipboard-integration.md) |
+| Document Generation | [→](opportunities/macos/10-document-generation.md) |
+| Quick Look Previews | [→](opportunities/macos/04-quick-look-previews.md) |
+| Audit & Compliance | [→](opportunities/security/05-audit-compliance.md) |
+| Desktop Widgets | [→](opportunities/macos/11-widgets.md) |
+| Focus Filters | [→](opportunities/macos/12-focus-filters.md) |
 
 ---
 
 ## Unscheduled
 
-| Opportunity | Status | Link |
-|-------------|--------|------|
-| Async File I/O on Hot Paths | 🔲 Not started | [→](opportunities/architecture/07-async-file-io.md) |
-| Task Tracking (TodoWrite) | ✅ Done | [→](opportunities/hub/07-task-tracking.md) |
-| Multi-Window Session Isolation | ✅ Done | [→](opportunities/architecture/10-multi-window-isolation.md) |
+| Opportunity | Link |
+|-------------|------|
+| Async File I/O on Hot Paths | [→](opportunities/architecture/07-async-file-io.md) |

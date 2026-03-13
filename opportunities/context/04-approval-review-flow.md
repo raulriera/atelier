@@ -2,7 +2,7 @@
 
 > **Category:** Context Control & Agent Intelligence
 > **Type:** New Capability · **Priority:** Critical
-> **Milestone:** M3 · **Status:** 🔨 In progress
+> **Milestone:** M3
 
 ---
 
@@ -28,18 +28,6 @@ Approval requests appear inline in the conversation timeline — not in a modal 
 ### Adaptive tiers
 
 The system learns from user behavior. If a user always approves "create file in project folder," that action can migrate from Confirm to Silent for this project. If a user denies web fetches, those stay at Confirm. Adaptation is per-project — a developer project and a personal project have different trust profiles.
-
-## Status
-
-| Feature | Status |
-|---------|--------|
-| Inline approval cards in timeline | ✅ Shipped |
-| Plain-English tool descriptions (MCPToolMetadata) | ✅ Shipped |
-| Destructive tool gating | ✅ Shipped |
-| File-scoped auto-approve | ✅ Shipped |
-| Biometric gate (LAContext) | 🔲 Not started |
-| Background notifications (UNNotificationAction) | 🔲 Not started |
-| Adaptive tier learning | 🔲 Not started |
 
 ---
 

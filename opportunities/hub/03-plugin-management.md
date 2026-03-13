@@ -2,7 +2,7 @@
 
 > **Category:** Hub / Unified Experience
 > **Type:** Improvement · **Priority:** High
-> **Milestone:** M3 · **Status:** ✅ Done (Phase 1-3)
+> **Milestone:** M3
 
 ---
 
@@ -28,28 +28,6 @@ The user never sees "MCP," "plugin," or "connector." They see capability names a
 | Regular users | Claude asks to enable things when needed, one-tap approval |
 | Power users | Capabilities section in project settings to browse and configure |
 | Developers | Custom MCP server URLs in the context file |
-
-## Status
-
-| Feature | Status |
-|---------|--------|
-| Capability registry, store, tool groups | ✅ Shipped |
-| iWork (Keynote, Pages, Numbers) | ✅ Shipped |
-| Mail (Read, Manage, Send) | ✅ Shipped |
-| Reminders (Read, Create, Manage) | ✅ Shipped |
-| Calendar (Read, Create, Manage) | ✅ Shipped |
-| Notes (Read, Create, Manage) | ✅ Shipped |
-| Safari (Browse, Script) | ✅ Shipped |
-| Finder (Browse, Organize) | ✅ Shipped |
-| Preview/PDF (info, extract, merge, split) | ✅ Shipped |
-| System prompt injection for capability suggestions | ✅ Shipped |
-| Inline suggestion bar for one-click enable | ✅ Shipped |
-| Health monitoring (CapabilityHealthMonitor) | ✅ Shipped |
-| Destructive tool gating | ✅ Shipped |
-| Plain-English tool names (MCPToolMetadata) | ✅ Shipped |
-| Shortcuts capability | 🔲 Not started |
-| Music, Maps | 🔲 Not started |
-| Custom MCP servers (power users) | 🔲 Not started |
 
 ## Notes
 

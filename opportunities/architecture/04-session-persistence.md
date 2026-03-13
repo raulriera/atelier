@@ -2,7 +2,7 @@
 
 > **Category:** Architecture & Performance
 > **Type:** New Capability · **Priority:** Critical
-> **Milestone:** M2 · **Status:** ✅ Done (basic persistence)
+> **Milestone:** M2
 
 ---
 
@@ -26,18 +26,6 @@ Use macOS background execution primitives to keep sessions alive during sleep, a
 ### Architecture
 
 A `launchd` Launch Agent manages the CLI lifecycle independently of the GUI app. `NSProcessInfo` activity assertions prevent system suspension during active tasks. `DistributedNotificationCenter` communicates status between the agent and the GUI.
-
-## Status
-
-| Feature | Status |
-|---------|--------|
-| Per-project session persistence to disk | ✅ Shipped |
-| Two-file storage (lightweight main + heavy sidecar) | ✅ Shipped |
-| Auto-restore most recent session per project | ✅ Shipped |
-| Lossy decoding (corrupted items skipped) | ✅ Shipped |
-| Interrupted session flagging | ✅ Shipped |
-| Launch Agent for background execution | 🔲 Not started |
-| Container pause/resume across sleep | 🔲 Not started (containers deferred) |
 
 ---
 

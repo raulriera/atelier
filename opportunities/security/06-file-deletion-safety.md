@@ -2,7 +2,7 @@
 
 > **Category:** Security & Privacy
 > **Type:** New Capability · **Priority:** Critical
-> **Milestone:** M1 · **Status:** 🔨 In progress
+> **Milestone:** M1
 
 ---
 
@@ -23,19 +23,6 @@ Multi-layer protection so file deletion is always recoverable and always visible
 | **Bash visibility** | `rm` commands visible | `Bash` not in `silentTools` — user sees full command before approving |
 | **Filesystem boundary** | Limited blast radius | File tools scoped to project directory, sensitive paths denied entirely |
 | **System prompt** | Behavioral steering | Claude instructed to always prefer `finder_trash` over `rm` |
-
-## Status
-
-| Feature | Status |
-|---------|--------|
-| `finder_trash` via `NSFileManager.trashItemAtURL` | ✅ Shipped |
-| `finder_trash` requires approval card | ✅ Shipped |
-| `Bash` requires approval (user sees `rm`) | ✅ Shipped |
-| System prompt steers to `finder_trash` | ✅ Shipped |
-| Filesystem boundary limits scope | ✅ Shipped |
-| `PreToolUse` hook to intercept `rm` in Bash | 🔲 Not started |
-| Batch operation manifest / aggregate approval | 🔲 Not started |
-| Operation undo beyond Trash | 🔲 Not started |
 
 ---
 

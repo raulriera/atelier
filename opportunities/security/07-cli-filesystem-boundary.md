@@ -2,7 +2,7 @@
 
 > **Category:** Security & Privacy
 > **Type:** New Capability · **Priority:** Critical
-> **Milestone:** M1 · **Status:** ✅ Done (Phase 1-2)
+> **Milestone:** M1
 
 ---
 
@@ -24,17 +24,6 @@ Enforce the project folder as a filesystem boundary at the CLI level. Reads insi
 4. **ApprovalServer guard** — `SensitivePathPolicy` auto-denies sensitive paths before they reach the UI
 
 No single layer is sufficient. All together make exfiltration require bypassing multiple independent controls.
-
-## Status
-
-| Feature | Status |
-|---------|--------|
-| Path-scoped CLI flags | ✅ Shipped |
-| Sensitive path denylist | ✅ Shipped |
-| PreToolUse path guard hook | ✅ Shipped |
-| SensitivePathPolicy in ApprovalServer | ✅ Shipped |
-| Security profiles (restricted/standard/developer) | 🔲 Phase 3 |
-| Biometric gate for sensitive paths | 🔲 Phase 4 |
 
 ---
 

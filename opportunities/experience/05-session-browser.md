@@ -2,7 +2,7 @@
 
 > **Category:** Experience
 > **Type:** New Capability · **Priority:** High
-> **Milestone:** M2 · **Status:** 🔲 Not started
+> **Milestone:** M2
 
 ---
 

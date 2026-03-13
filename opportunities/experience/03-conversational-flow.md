@@ -33,40 +33,40 @@ There are no modes. There's one conversation that adapts to what's happening.
 
 ## Implementation
 
-### Phase 1 — Unified Conversation Model ✅
+### Phase 1 — Unified Conversation Model
 
-- ✅ `TimelineItem` holds heterogeneous `TimelineContent` (user, assistant, system)
-- ✅ No mode state — `Session` is the single model, UI responds to content types
-- ✅ `TimelineView` renders all content types with consistent styling via `@ViewBuilder` switch
-- ✅ All models are `Sendable` + `Codable` for persistence and thread safety
+- `TimelineItem` holds heterogeneous `TimelineContent` (user, assistant, system)
+- No mode state — `Session` is the single model, UI responds to content types
+- `TimelineView` renders all content types with consistent styling via `@ViewBuilder` switch
+- All models are `Sendable` + `Codable` for persistence and thread safety
 
-### Phase 2 — Inline Content Types 🔨
+### Phase 2 — Inline Content Types
 
-- ✅ **Text message** — user (tinted bubble) and assistant (plain bubble), real-time streaming with `activeAssistantText`
-- ✅ **Markdown rendering** — paragraphs, headings, code blocks (with copy button), lists, tables, blockquotes, thematic breaks, inline markup (bold, italic, code, links, strikethrough)
-- ✅ **Streaming indicator** — animated dots while waiting for text
-- ✅ **Thinking indicator** — brain icon + pulsing animation during extended thinking
-- ✅ **Token usage** — displayed below completed assistant messages
-- ✅ **System events** — error and session-started events rendered inline
-- ✅ **Tool use cards** — inline cards for each tool invocation with plain-English descriptions (e.g. "Searching the web for 'flights to Tokyo'", not "Web Search"). Technical tool names and raw commands never appear as the primary label — descriptions must be human-readable for non-technical users.
-- ✅ **Inspector sidebar** — right-side panel (`.inspector()`) showing full tool output, togglable via toolbar, compresses content in-place
-- ✅ **Scrolling performance** — visible items window + cached properties for efficient timeline rendering
-- ✅ **File card** — compact representation of a file read/write, expandable to show content
-- ✅ **Diff view** — track-changes view in inspector for Edit operations (strikethrough removed, highlighted added)
-- ✅ **Todo list** — `TaskCreate`/`TaskUpdate` tool events rendered as a persistent overlay (`TaskListOverlay`) with status icons (pending, in-progress, completed). Cards display task subject, description, and active spinner text.
-- ✅ **Ask user card** — `AskUserQuestion` tool calls rendered as interactive cards with question, options as clickable buttons, and custom text input. Responses sent back via MCP approval server.
-- ✅ **Plan review** — `ExitPlanMode` renders as a compact `PlanReviewCard` with Approve and Review Plan buttons. Review Plan opens a sheet with the full plan markdown (loaded asynchronously from `~/.claude/plans/`). Approve routes through the MCP approval server to unblock the CLI. `EnterPlanMode` is hidden from the timeline. Pending interactions are dismissed on stop.
-- 🔲 **Progress indicator** — shows what Claude is doing, estimated time, cancellation
-- ✅ **Approval gate** — inline approval cards with approve/deny, compact resolved state, wired through MCP
-- 🔲 **Result card** — summary of completed work with expandable details (blocked on M3 — hub/01-claude-code-integration.md)
+- **Text message** — user (tinted bubble) and assistant (plain bubble), real-time streaming with `activeAssistantText`
+- **Markdown rendering** — paragraphs, headings, code blocks (with copy button), lists, tables, blockquotes, thematic breaks, inline markup (bold, italic, code, links, strikethrough)
+- **Streaming indicator** — animated dots while waiting for text
+- **Thinking indicator** — brain icon + pulsing animation during extended thinking
+- **Token usage** — displayed below completed assistant messages
+- **System events** — error and session-started events rendered inline
+- **Tool use cards** — inline cards for each tool invocation with plain-English descriptions (e.g. "Searching the web for 'flights to Tokyo'", not "Web Search"). Technical tool names and raw commands never appear as the primary label — descriptions must be human-readable for non-technical users.
+- **Inspector sidebar** — right-side panel (`.inspector()`) showing full tool output, togglable via toolbar, compresses content in-place
+- **Scrolling performance** — visible items window + cached properties for efficient timeline rendering
+- **File card** — compact representation of a file read/write, expandable to show content
+- **Diff view** — track-changes view in inspector for Edit operations (strikethrough removed, highlighted added)
+- **Todo list** — `TaskCreate`/`TaskUpdate` tool events rendered as a persistent overlay (`TaskListOverlay`) with status icons (pending, in-progress, completed). Cards display task subject, description, and active spinner text.
+- **Ask user card** — `AskUserQuestion` tool calls rendered as interactive cards with question, options as clickable buttons, and custom text input. Responses sent back via MCP approval server.
+- **Plan review** — `ExitPlanMode` renders as a compact `PlanReviewCard` with Approve and Review Plan buttons. Review Plan opens a sheet with the full plan markdown (loaded asynchronously from `~/.claude/plans/`). Approve routes through the MCP approval server to unblock the CLI. `EnterPlanMode` is hidden from the timeline. Pending interactions are dismissed on stop.
+- **Progress indicator** — shows what Claude is doing, estimated time, cancellation
+- **Approval gate** — inline approval cards with approve/deny, compact resolved state, wired through MCP
+- **Result card** — summary of completed work with expandable details
 - Each type must render fast — pre-computed layouts, minimal view recomputation
 
-### Phase 3 — Background Work 🔨
+### Phase 3 — Background Work
 
-- ✅ Non-blocking compose: user can type and queue messages while Claude streams
-- ✅ Queued messages appear as normal user bubbles immediately, dispatched after current response completes
-- ✅ Dock icon bounce + red badge when response completes while app is not focused; badge clears on window focus
-- 🔲 Multiple concurrent background tasks (deferred to M3 — requires multi-subprocess support)
+- Non-blocking compose: user can type and queue messages while Claude streams
+- Queued messages appear as normal user bubbles immediately, dispatched after current response completes
+- Dock icon bounce + red badge when response completes while app is not focused; badge clears on window focus
+- Multiple concurrent background tasks (requires multi-subprocess support)
 
 ## Why there's no "Chat Integration"
 

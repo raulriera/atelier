@@ -2,7 +2,7 @@
 
 > **Category:** Context Control & Agent Intelligence
 > **Type:** New Capability · **Priority:** Critical
-> **Milestone:** M4 · **Status:** 🔨 In progress
+> **Milestone:** M4
 
 ---
 
@@ -37,22 +37,6 @@ For developer projects, templates are interoperable with Claude Code's skill for
 ### Workflows: chaining templates with the OS
 
 Atelier exposes App Intents (`RunTemplate`, `ScheduleTask`, `AskClaude`, `OpenProject`). Shortcuts.app provides triggers (time, folder events, Wi-Fi, Focus mode, calendar). Users chain Atelier intents with any other Shortcuts action — Atelier becomes one step in a larger automation, not a walled garden.
-
-## Status
-
-| Feature | Status |
-|---------|--------|
-| Schedule model and persistence | ✅ Shipped |
-| launchd Launch Agent lifecycle | ✅ Shipped |
-| Headless execution via `claude -p` | ✅ Shipped |
-| Save as template | 🔲 Not started |
-| Shortcuts integration (App Intents) | 🔲 Not started |
-| Folder triggers (FSEvents) | 🔲 Not started |
-
-## Gaps
-
-- **~~Scheduler helper binary~~** — Shipped. `atelier-scheduler` matches due tasks by calendar components and executes them concurrently.
-- **Relocated toolbar items:** Inspector redesign removed new session button, context files popover, and model picker. Need new homes.
 
 ## Notes
 

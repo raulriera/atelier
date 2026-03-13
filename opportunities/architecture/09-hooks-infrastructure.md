@@ -2,7 +2,7 @@
 
 > **Category:** Architecture
 > **Type:** New Capability · **Priority:** Critical
-> **Milestone:** M2 · **Status:** ✅ Done (Phase 1-3)
+> **Milestone:** M2
 
 ---
 

@@ -2,7 +2,7 @@
 
 > **Category:** Hub / Unified Experience
 > **Type:** Improvement · **Priority:** High
-> **Milestone:** M5 · **Status:** ✅ Done (basic monitoring)
+> **Milestone:** M5
 
 ---
 
@@ -23,17 +23,6 @@ Background health monitoring with automatic recovery. Zero-maintenance capabilit
 ### Health states
 
 Healthy → Degraded (intermittent failures) → Unavailable (3+ consecutive failures). Automatically resets on new conversation (CLI spawns fresh MCP servers).
-
-## Status
-
-| Feature | Status |
-|---------|--------|
-| Tool call success/failure tracking (CapabilityHealthMonitor) | ✅ Shipped |
-| Health state machine (healthy/degraded/unavailable) | ✅ Shipped |
-| System event alerts for broken capabilities | ✅ Shipped |
-| Auto-reset on new conversation | ✅ Shipped |
-| Background health pings with exponential backoff | 🔲 Not started |
-| Silent OAuth token refresh | 🔲 Not started |
 
 ---
 
