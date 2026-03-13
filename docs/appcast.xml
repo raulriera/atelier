@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Atelier</title>
+        <item>
+            <title>0.1.0</title>
+            <pubDate>Tue, 10 Mar 2026 16:46:31 -0400</pubDate>
+            <sparkle:version>20260312</sparkle:version>
+            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.2</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/raulriera/atelier/releases/download/v0.1.0/Atelier-0.1.0.dmg" length="6135588" type="application/octet-stream"/>
+        </item>
+    </channel>
+</rss>
