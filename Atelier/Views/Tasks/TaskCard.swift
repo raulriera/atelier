@@ -9,7 +9,6 @@ import AtelierKit
 /// spacing give it visual weight above the compose field.
 struct TaskCard: View {
     let entries: [TaskEntry]
-    var isRunning: Bool = false
     var onDismiss: (() -> Void)?
 
     private var completedCount: Int {
@@ -43,16 +42,6 @@ struct TaskCard: View {
             ForEach(entries) { entry in
                 TaskEntryRow(entry: entry)
             }
-
-            if isRunning {
-                // WORKAROUND: ProgressView at .mini/.small size floods the console
-                // with AppKit constraint warnings. Use a rotating symbol instead.
-                Image(systemName: "progress.indicator")
-                    .symbolEffect(.rotate, options: .repeating)
-                    .foregroundStyle(.contentSecondary)
-                    .frame(width: 20, height: 20)
-                    .accessibilityLabel("Loading tasks")
-            }
         }
         .padding(Spacing.md)
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Radii.lg, style: .continuous))
@@ -68,6 +57,7 @@ private struct TaskEntryRow: View {
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: entry.iconName)
+                .symbolEffect(.rotate, options: .repeating, isActive: entry.isActive)
                 .font(.body)
                 .foregroundStyle(iconStyle)
                 .frame(width: 20)
@@ -124,13 +114,6 @@ private struct TaskEntryRow: View {
 
 #Preview("All completed") {
     TaskCard(entries: TaskPreviewFixtures.entries(step: 4), onDismiss: {})
-        .padding()
-        .frame(width: 500)
-        .background(.surfaceDefault)
-}
-
-#Preview("Running") {
-    TaskCard(entries: TaskPreviewFixtures.entries(step: 1), isRunning: true, onDismiss: {})
         .padding()
         .frame(width: 500)
         .background(.surfaceDefault)

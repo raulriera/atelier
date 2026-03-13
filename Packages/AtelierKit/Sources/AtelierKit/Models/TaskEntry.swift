@@ -35,8 +35,9 @@ extension TaskEntry {
     ///   — only the last TodoWrite matters.
     /// - **TaskCreate/TaskUpdate**: incremental — creates add rows, updates modify status.
     public static func buildList(from events: [ToolUseEvent]) -> [TaskEntry] {
-        // If there are any TodoWrite events, use the last one (it has complete state).
-        if let lastTodoWrite = events.last(where: { $0.name == "TodoWrite" }),
+        // Use the last TodoWrite that has parseable items (skip in-flight events
+        // whose JSON hasn't streamed yet — their todoItems is nil).
+        if let lastTodoWrite = events.last(where: { $0.name == "TodoWrite" && $0.todoItems != nil }),
            let items = lastTodoWrite.todoItems {
             return items
                 .filter { $0.status != .deleted }

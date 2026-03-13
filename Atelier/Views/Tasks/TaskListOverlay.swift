@@ -20,7 +20,6 @@ struct TaskListOverlay: View {
         if isVisible {
             TaskCard(
                 entries: entries,
-                isRunning: session.hasActiveTasks,
                 onDismiss: {
                     withAnimation(Motion.settle) {
                         isDismissed = true
