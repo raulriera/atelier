@@ -41,7 +41,7 @@ PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$PROJECT_DIR/Build/Release"
 ARCHIVE_PATH="$BUILD_DIR/$SCHEME.xcarchive"
 APP_PATH="$BUILD_DIR/$SCHEME.app"
-DMG_PATH="$BUILD_DIR/$SCHEME-$VERSION.dmg"
+DMG_PATH="$BUILD_DIR/$SCHEME.dmg"
 APPCAST_DIR="$PROJECT_DIR/docs"
 
 if $DRY_RUN; then
