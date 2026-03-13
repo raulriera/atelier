@@ -40,7 +40,7 @@ struct TaskCard: View {
             }
         }
         .padding(Spacing.md)
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Radii.lg, style: .continuous))
+        .glassEffect(.regular, in: .rect(cornerRadius: Radii.lg, style: .continuous))
         .transition(Motion.cardReveal)
     }
 }
