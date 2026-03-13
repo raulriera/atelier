@@ -21,21 +21,20 @@ struct TimelineView: View {
         ChatScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 if session.hasOlderItems {
-                    Color.clear
-                        .frame(height: 1)
-                        .onAppear { session.loadOlderItems() }
+                    Button { session.loadOlderItems() } label: {
+                        Label("Load earlier messages", systemImage: "arrow.up")
+                            .systemContainer()
+                    }
+                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, Spacing.sm)
                 }
 
                 if isLoaded && items.isEmpty && !session.hasOlderItems {
                     WelcomeView(draft: $draft, enabledCapabilityIDs: capabilityStore.enabledIDs)
                 }
 
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    let currentSender = item.content.groupableSender
-                    let nextSender = items.indices.contains(index + 1) ? items[index + 1].content.groupableSender : nil
-                    let showsTail = currentSender == nil || nextSender != currentSender
-                    let bottomPadding: CGFloat = if let currentSender, currentSender == nextSender { Spacing.xxs } else { index < items.count - 1 ? Spacing.sm : 0 }
-
+                ForEach(items) { item in
                     TimelineItemView(
                         item: item,
                         session: session,
@@ -46,10 +45,9 @@ struct TimelineView: View {
                         onApprovalDecision: onApprovalDecision,
                         onAskUserResponse: onAskUserResponse,
                         onPlanApprove: onPlanApprove,
-                        onEnableCapability: onEnableCapability,
-                        showsTail: showsTail
+                        onEnableCapability: onEnableCapability
                     )
-                    .padding(.bottom, bottomPadding)
+                    .padding(.bottom, Spacing.sm)
                 }
             }
             .frame(maxWidth: Layout.readingWidth)
@@ -58,18 +56,7 @@ struct TimelineView: View {
             .padding(.bottom, Spacing.md)
         }
     }
-}
 
-// MARK: - Groupable Sender
-
-private extension TimelineContent {
-    var groupableSender: String? {
-        switch self {
-        case .userMessage: "user"
-        case .assistantMessage: "assistant"
-        case .system, .toolUse, .approval, .askUser, .taskCompletion: nil
-        }
-    }
 }
 
 /// Separate view per timeline item so @Observable tracking is scoped:
@@ -87,16 +74,15 @@ private struct TimelineItemView: View {
     var onAskUserResponse: ((String, Int, String?) -> Void)?
     var onPlanApprove: (() -> Void)?
     var onEnableCapability: ((String) -> Void)?
-    var showsTail: Bool = true
 
     var body: some View {
         switch item.content {
         case .userMessage(let msg):
-            UserMessageCell(message: msg, isCancelled: session.cancelledItemIDs.contains(item.id), showsTail: showsTail)
+            UserMessageCell(message: msg, isCancelled: session.cancelledItemIDs.contains(item.id))
         case .assistantMessage(let msg):
             if msg.isComplete {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    AssistantMessageCell(message: msg, streamingText: nil, showsTail: showsTail)
+                    AssistantMessageCell(message: msg, streamingText: nil)
 
                     let suggested = capabilityStore.disabledCapabilities(mentionedIn: msg.text)
                     if !suggested.isEmpty {
@@ -108,8 +94,7 @@ private struct TimelineItemView: View {
                 AssistantMessageCell(
                     message: msg,
                     streamingText: session.isStreaming ? session.activeAssistantText : nil,
-                    isThinking: session.isStreaming && session.isThinking,
-                    showsTail: showsTail
+                    isThinking: session.isStreaming && session.isThinking
                 )
             }
         case .system(let event):
