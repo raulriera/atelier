@@ -13,26 +13,73 @@ public struct CodeBlockView: View {
         self.code = code
     }
 
+    /// Whether this code block should render with diff coloring.
+    private var isDiff: Bool {
+        guard let language else { return false }
+        if language.lowercased() == "diff" { return true }
+        // Heuristic: any block where most lines start with +/- is a diff
+        let lines = code.split(separator: "\n", omittingEmptySubsequences: false)
+        let diffLines = lines.filter { $0.hasPrefix("+ ") || $0.hasPrefix("- ") || $0.hasPrefix("+\t") || $0.hasPrefix("-\t") }
+        return lines.count >= 2 && diffLines.count * 2 >= lines.count
+    }
+
+    private var diffContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            let lines = code.split(separator: "\n", omittingEmptySubsequences: false)
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                let lineStr = String(line)
+                Text(lineStr)
+                    .font(.conversationCode)
+                    .foregroundStyle(diffForeground(for: lineStr))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, 1)
+                    .background(diffBackground(for: lineStr), in: .rect)
+            }
+        }
+        .textSelection(.enabled)
+        .padding(.vertical, Spacing.sm)
+    }
+
+    private func diffForeground(for line: String) -> some ShapeStyle {
+        if line.hasPrefix("+") {
+            return AnyShapeStyle(.statusSuccess)
+        } else if line.hasPrefix("-") {
+            return AnyShapeStyle(.statusError)
+        }
+        return AnyShapeStyle(.contentPrimary)
+    }
+
+    private func diffBackground(for line: String) -> some ShapeStyle {
+        if line.hasPrefix("+") {
+            return AnyShapeStyle(.statusSuccess.opacity(0.1))
+        } else if line.hasPrefix("-") {
+            return AnyShapeStyle(.statusError.opacity(0.1))
+        }
+        return AnyShapeStyle(.clear)
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let language, !language.isEmpty {
-                HStack {
-                    Spacer()
-                    Text(language)
-                        .font(.metadata)
-                        .foregroundStyle(.contentSecondary)
-                        .padding(.trailing, Spacing.sm)
-                        .padding(.top, Spacing.xs)
-                }
+                Text(language)
+                    .font(.metadata)
+                    .foregroundStyle(.contentSecondary)
+                    .padding(.leading, Spacing.md)
+                    .padding(.top, Spacing.xs)
             }
 
-            Text(code)
-                .font(.conversationCode)
-                .foregroundStyle(.contentPrimary)
-                .textSelection(.enabled)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if isDiff {
+                diffContent
+            } else {
+                Text(code)
+                    .font(.conversationCode)
+                    .foregroundStyle(.contentPrimary)
+                    .textSelection(.enabled)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, Spacing.sm)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .background(.surfaceCode, in: .rect(cornerRadius: Radii.md, style: .continuous))
         .overlay(alignment: .topTrailing) {
