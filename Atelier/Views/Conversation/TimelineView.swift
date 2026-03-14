@@ -20,17 +20,7 @@ struct TimelineView: View {
 
         ChatScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                if session.hasOlderItems {
-                    Button { session.loadOlderItems() } label: {
-                        Label("Load earlier messages", systemImage: "arrow.trianglehead.2.counterclockwise.rotate.90")
-                            .systemContainer()
-                    }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity)
-                    .padding(.bottom, Spacing.sm)
-                }
-
-                if isLoaded && items.isEmpty && !session.hasOlderItems {
+                if isLoaded && items.isEmpty {
                     WelcomeView(draft: $draft, enabledCapabilityIDs: capabilityStore.enabledIDs)
                 }
 

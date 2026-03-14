@@ -129,7 +129,7 @@ public final class Session {
 
     private func rebuildVisibleTimelineCacheIfNeeded() {
         guard visibleTimelineCacheVersion != visibleTimelineCacheValidVersion else { return }
-        cachedVisibleTimelineItems = visibleItems.filter { item in
+        cachedVisibleTimelineItems = items.filter { item in
             switch item.content {
             case .toolUse(let event):
                 return !event.isTaskOperation && !event.isAskUserOperation && !event.isPlanOperation
@@ -143,40 +143,9 @@ public final class Session {
         visibleTimelineCacheValidVersion = visibleTimelineCacheVersion
     }
 
-    // MARK: - Visible Items Window
-
-    private static let visibleWindowSize = 200
-    private static let loadBatchSize = 50
-
-    /// Index into `items` where the visible window starts.
-    public private(set) var visibleStartIndex: Int = 0
-
-    /// The tail of `items` visible in the timeline. Bounded to the last ~200 items.
-    public var visibleItems: [TimelineItem] {
-        Array(items[visibleStartIndex...])
-    }
-
-    /// Whether there are older items beyond the visible window.
-    public var hasOlderItems: Bool {
-        visibleStartIndex > 0
-    }
-
-    /// Loads an older batch of items into the visible window.
-    @MainActor
-    public func loadOlderItems() {
-        guard visibleStartIndex > 0 else { return }
-        visibleStartIndex = max(0, visibleStartIndex - Self.loadBatchSize)
-        visibleTimelineCacheVersion &+= 1
-    }
-
-    /// Appends an item and trims the visible window if it has grown too large.
     private func appendItem(_ item: TimelineItem) {
         items.append(item)
         invalidateDerivedCaches()
-        let visibleCount = items.count - visibleStartIndex
-        if visibleCount > Self.visibleWindowSize + Self.loadBatchSize {
-            visibleStartIndex = items.count - Self.visibleWindowSize
-        }
     }
 
     public init() {}
@@ -243,10 +212,6 @@ public final class Session {
             }
             return item
         }
-        // Set the visible window for large restored sessions
-        if session.items.count > visibleWindowSize {
-            session.visibleStartIndex = session.items.count - visibleWindowSize
-        }
         // pendingMessages are not restored — the corresponding pendingItemIDs
         // aren't persisted, so dequeuePendingMessage() would crash. Pending
         // messages are transient state; the wasInterrupted flag handles the UX.
@@ -302,7 +267,7 @@ public final class Session {
         cancelledItemIDs = []
         activeToolIndices = [:]
         hasToolUseSinceLastText = false
-        visibleStartIndex = 0
+
         cachedTaskEntries = []
         cachedHasActiveTasks = false
         taskCacheVersion = 0
