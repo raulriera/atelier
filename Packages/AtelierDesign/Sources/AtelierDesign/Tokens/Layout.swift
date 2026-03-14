@@ -22,4 +22,24 @@ public enum Layout {
     public static let folderPickerWidth: CGFloat = 420
     /// 340pt — setup/folder picker panel height.
     public static let folderPickerHeight: CGFloat = 340
+    /// 320pt — inspector overlay width.
+    public static let inspectorWidth: CGFloat = 320
+}
+
+// MARK: - Inspector Inset Environment
+
+extension EnvironmentValues {
+    /// Trailing inset reserved for the inspector overlay.
+    ///
+    /// Set once at the window level; child views read it to adjust their
+    /// trailing padding or offset without prop drilling.
+    ///
+    /// ```swift
+    /// // Set at window level:
+    /// .environment(\.inspectorInset, showInspector ? Layout.inspectorWidth : 0)
+    ///
+    /// // Read in any child:
+    /// @Environment(\.inspectorInset) private var inspectorInset
+    /// ```
+    @Entry public var inspectorInset: CGFloat = 0
 }

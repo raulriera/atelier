@@ -102,6 +102,7 @@ struct ConversationWindow: View {
                     .disabled(!controller.cliAvailable)
                     .frame(maxWidth: Layout.readingWidth)
                     .padding(Spacing.md)
+                    .padding(.trailing, showInspector ? Layout.inspectorWidth : 0)
                     .background {
                         Rectangle()
                             .fill(.bar)
@@ -118,19 +119,30 @@ struct ConversationWindow: View {
                     .opacity(showComposeField ? 1 : 0)
                     .animation(Motion.appear, value: showComposeField)
                 }
-            .inspector(isPresented: $showInspector) {
-                InspectorPanel(
-                    selectedTab: $inspectorTab,
-                    capabilityStore: controller.capabilityStore,
-                    scheduleStore: scheduleStore,
-                    projectPath: controller.workingDirectory?.path,
-                    projectId: projectId,
-                    selectedTool: controller.selectedToolEvent,
-                    selectedTaskCompletion: controller.selectedTaskCompletion
-                )
-                .inspectorColumnWidth(min: 260, ideal: 320, max: 480)
+            .overlay(alignment: .trailing) {
+                if showInspector {
+                    GlassEffectContainer {
+                        InspectorPanel(
+                            selectedTab: $inspectorTab,
+                            capabilityStore: controller.capabilityStore,
+                            scheduleStore: scheduleStore,
+                            projectPath: controller.workingDirectory?.path,
+                            projectId: projectId,
+                            selectedTool: controller.selectedToolEvent,
+                            selectedTaskCompletion: controller.selectedTaskCompletion
+                        )
+                        .padding(.top, Spacing.xxl)
+                        .frame(width: Layout.inspectorWidth)
+                        .frame(maxHeight: .infinity)
+                        .glassEffect(.regular, in: .rect)
+                    }
+                    .ignoresSafeArea()
+                    .transition(Motion.inspectorSlide)
+                }
             }
+            .animation(Motion.appear, value: showInspector)
         }
+        .environment(\.inspectorInset, showInspector ? Layout.inspectorWidth : 0)
         .onDrop(of: [.fileURL, .image], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers)
         }

@@ -9,6 +9,7 @@ import AtelierKit
 struct TaskListOverlay: View {
     let session: Session
     @State private var isDismissed = false
+    @Environment(\.inspectorInset) private var inspectorInset
 
     private var isVisible: Bool {
         !session.taskEntries.isEmpty && !isDismissed
@@ -28,6 +29,7 @@ struct TaskListOverlay: View {
             )
             .frame(maxWidth: Layout.readingWidth)
             .padding(.horizontal, Spacing.md)
+            .padding(.trailing, inspectorInset)
             .transition(Motion.cardReveal)
             .onChange(of: entries.count) { old, new in
                 if new > old {

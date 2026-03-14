@@ -45,4 +45,7 @@ public enum Motion {
         insertion: .push(from: .bottom),
         removal: .opacity
     )
+
+    /// Inspector panel — slides in from trailing edge, slides out.
+    public static let inspectorSlide: AnyTransition = .move(edge: .trailing)
 }
