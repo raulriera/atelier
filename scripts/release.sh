@@ -5,6 +5,8 @@
 # Usage: ./scripts/release.sh <version>
 # Example: ./scripts/release.sh 1.0.0
 #
+# One run = one tagged commit with everything (appcast, release notes, DMG upload).
+#
 # Prerequisites (one-time setup):
 #   1. Developer ID certificate installed in Keychain
 #   2. Notarytool credentials stored:
@@ -46,19 +48,26 @@ DMG_PATH="$BUILD_DIR/$SCHEME.dmg"
 APPCAST_DIR="$PROJECT_DIR/docs"
 RELEASE_NOTES_URL="https://raulriera.github.io/atelier/release-notes/$VERSION.html"
 
+# ── Step 1: Abort if working tree is dirty ──
+if [ -n "$(git -C "$PROJECT_DIR" status --porcelain)" ]; then
+    echo "Error: Working tree is dirty. Commit or stash these changes first:" >&2
+    git -C "$PROJECT_DIR" status --short >&2
+    exit 1
+fi
+
 if $DRY_RUN; then
-    echo "==> DRY RUN: Releasing Atelier v$VERSION (skipping notarization, GitHub release)"
+    echo "==> DRY RUN: Releasing Atelier v$VERSION (skipping notarization, commit, push, GitHub release)"
 else
     echo "==> Releasing Atelier v$VERSION"
 fi
 echo ""
 
-# ── Step 1: Clean build directory ──
+# ── Step 2: Clean build directory ──
 echo "==> Cleaning build directory..."
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
-# ── Step 2: Archive ──
+# ── Step 3: Archive ──
 echo "==> Archiving..."
 xcodebuild archive \
     -project "$PROJECT_DIR/Atelier.xcodeproj" \
@@ -71,7 +80,7 @@ xcodebuild archive \
     ENABLE_USER_SCRIPT_SANDBOXING=NO \
     | tail -5
 
-# ── Step 3: Export the app from the archive ──
+# ── Step 4: Export the app from the archive ──
 echo "==> Exporting app from archive..."
 EXPORT_PLIST="$BUILD_DIR/export-options.plist"
 cat > "$EXPORT_PLIST" <<PLIST
@@ -95,7 +104,7 @@ xcodebuild -exportArchive \
     -exportOptionsPlist "$EXPORT_PLIST" \
     | tail -5
 
-# ── Step 4: Create DMG ──
+# ── Step 5: Create DMG ──
 echo "==> Creating DMG..."
 create-dmg \
     --volname "$SCHEME" \
@@ -108,7 +117,7 @@ create-dmg \
     "$DMG_PATH" \
     "$BUILD_DIR/$SCHEME.app"
 
-# ── Step 5: Notarize the DMG ──
+# ── Step 6: Notarize the DMG ──
 if $DRY_RUN; then
     echo "==> Skipping notarization (dry run)"
 else
@@ -121,21 +130,24 @@ else
     xcrun stapler staple "$DMG_PATH"
 fi
 
-# ── Step 6: Sparkle EdDSA signature ──
+# ── Step 7: Sparkle EdDSA signature ──
 echo "==> Signing DMG with Sparkle EdDSA key..."
 "$SPARKLE_BIN/sign_update" "$DMG_PATH"
 
-# ── Step 7: Generate release notes ──
+# ── Step 8: Generate release notes ──
 echo "==> Generating release notes..."
 "$PROJECT_DIR/scripts/generate-release-notes.sh" "$VERSION"
 
-# ── Step 8: Generate / update appcast ──
+# ── Step 9: Generate / update appcast ──
 echo "==> Updating appcast..."
 mkdir -p "$APPCAST_DIR"
 cp "$DMG_PATH" "$APPCAST_DIR/"
 "$SPARKLE_BIN/generate_appcast" \
     --download-url-prefix "$DOWNLOAD_URL_PREFIX" \
     "$APPCAST_DIR"
+
+# Remove the DMG copy from docs/ — it's only needed for generate_appcast
+rm -f "$APPCAST_DIR/$SCHEME.dmg"
 
 # Inject releaseNotesLink into the appcast for this version
 if grep -q "<sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>" "$APPCAST_DIR/appcast.xml"; then
@@ -145,26 +157,33 @@ if grep -q "<sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>" "
 fi
 echo "Appcast updated at $APPCAST_DIR/appcast.xml"
 
-# ── Step 9: Create GitHub Release ──
+# ── Step 10: Commit, tag, push, and create GitHub release ──
 if $DRY_RUN; then
-    echo "==> Skipping GitHub release (dry run)"
     echo ""
     echo "==> Dry run complete! Build artifacts in $BUILD_DIR"
     echo "    DMG: $DMG_PATH"
     echo "    Appcast: $APPCAST_DIR/appcast.xml"
     echo "    Release notes: $APPCAST_DIR/release-notes/$VERSION.html"
+    echo ""
+    echo "    Run without --dry-run to commit, tag, push, and create the GitHub release."
 else
+    echo "==> Committing release artifacts..."
+    git -C "$PROJECT_DIR" add docs/appcast.xml docs/release-notes/
+    git -C "$PROJECT_DIR" commit -m "release: v$VERSION"
+    git -C "$PROJECT_DIR" tag "v$VERSION"
+
+    echo "==> Pushing to origin..."
+    git -C "$PROJECT_DIR" push
+    git -C "$PROJECT_DIR" push origin "v$VERSION"
+
     echo "==> Creating GitHub release..."
     gh release create "v$VERSION" \
         "$DMG_PATH" \
         --title "Atelier v$VERSION" \
-        --generate-notes
+        --notes-file "$APPCAST_DIR/release-notes/$VERSION.html"
 
     echo ""
     echo "==> Done! Atelier v$VERSION released."
-    echo ""
-    echo "Next steps:"
-    echo "  1. Commit and push the updated appcast in docs/"
-    echo "  2. Verify the appcast URL is accessible: $APPCAST_URL"
-    echo "  3. Share the download link from the GitHub release"
+    echo "    GitHub release: https://github.com/raulriera/atelier/releases/tag/v$VERSION"
+    echo "    Appcast: $APPCAST_URL"
 fi
