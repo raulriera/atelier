@@ -138,6 +138,27 @@ struct SessionTaskTests {
         #expect(toolNames.contains("Read"))
     }
 
+    @Test("completeAssistantMessage cancels active tasks")
+    @MainActor func completeAssistantMessageCancelsActiveTasks() throws {
+        let session = Session()
+        session.beginAssistantMessage()
+
+        session.beginToolUse(id: "t1", name: "TodoWrite")
+        session.applyToolInputDelta(id: "t1", json: #"{"todos":[{"id":"1","content":"Done task","status":"completed"},{"id":"2","content":"Active task","status":"in_progress"},{"id":"3","content":"Waiting task","status":"pending"}]}"#)
+        session.completeToolUse(id: "t1")
+
+        #expect(session.hasActiveTasks)
+
+        session.completeAssistantMessage(usage: TokenUsage())
+
+        let entries = session.taskEntries
+        try #require(entries.count == 3)
+        #expect(entries[0].status == .completed)
+        #expect(entries[1].status == .cancelled)
+        #expect(entries[2].status == .cancelled)
+        #expect(!session.hasActiveTasks)
+    }
+
     @Test("reset clears task state")
     @MainActor func resetClearsTaskState() {
         let session = Session()

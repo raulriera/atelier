@@ -57,8 +57,24 @@ public final class Session {
             return event
         }
         cachedTaskEntries = TaskEntry.buildList(from: allTaskEvents)
-        cachedHasActiveTasks = cachedTaskEntries.contains { $0.status != .completed }
+        cachedHasActiveTasks = cachedTaskEntries.contains(where: \.isActive)
         taskCacheValidVersion = taskCacheVersion
+    }
+
+    /// Marks any pending or in-progress tasks as cancelled.
+    ///
+    /// Called when the assistant turn ends so stale tasks don't appear
+    /// stuck with a spinner. The cancelled status is an ephemeral overlay
+    /// on the cache — not persisted into the event stream. A future cache
+    /// rebuild (next turn) will re-derive state from the raw events, but
+    /// by then the card is either dismissed or replaced by new tasks.
+    private func cancelActiveTasks() {
+        rebuildTaskCacheIfNeeded()
+        guard cachedHasActiveTasks else { return }
+        for i in cachedTaskEntries.indices where cachedTaskEntries[i].isActive {
+            cachedTaskEntries[i].status = .cancelled
+        }
+        cachedHasActiveTasks = false
     }
 
     // MARK: - Plan Review State
@@ -384,6 +400,8 @@ public final class Session {
 
     @MainActor
     public func completeAssistantMessage(usage: TokenUsage) {
+        cancelActiveTasks()
+
         if let id = activeItemID,
            let index = items.firstIndex(where: { $0.id == id }) {
             let trimmedText = activeAssistantText.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -28,7 +28,7 @@ struct TaskListOverlay: View {
             )
             .frame(maxWidth: Layout.readingWidth)
             .padding(.horizontal, Spacing.md)
-            .transition(Motion.cardReveal)
+            .transition(Motion.approvalAppear)
             .onChange(of: entries.count) { old, new in
                 if new > old {
                     withAnimation(Motion.appear) {
@@ -73,6 +73,13 @@ private func previewSession(step: Int) -> Session {
 
 #Preview("All completed — dismissible") {
     TaskListOverlay(session: previewSession(step: 4))
+        .padding()
+        .frame(width: 500)
+        .background(.surfaceDefault)
+}
+
+#Preview("Partially cancelled") {
+    TaskListOverlay(session: previewSession(step: 5))
         .padding()
         .frame(width: 500)
         .background(.surfaceDefault)

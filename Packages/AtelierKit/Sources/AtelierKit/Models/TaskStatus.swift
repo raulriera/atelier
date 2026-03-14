@@ -4,6 +4,7 @@ public enum TaskStatus: String, Sendable {
     case inProgress = "in_progress"
     case completed
     case deleted
+    case cancelled
 
     /// Human-readable description for VoiceOver.
     public var accessibilityDescription: String {
@@ -12,6 +13,7 @@ public enum TaskStatus: String, Sendable {
         case .inProgress: "in progress"
         case .completed: "completed"
         case .deleted: "deleted"
+        case .cancelled: "cancelled"
         }
     }
 }

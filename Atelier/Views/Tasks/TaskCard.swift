@@ -11,6 +11,10 @@ struct TaskCard: View {
     let entries: [TaskEntry]
     var onDismiss: (() -> Void)?
 
+    private var isDismissable: Bool {
+        !entries.contains { $0.isActive }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             // Header
@@ -21,7 +25,7 @@ struct TaskCard: View {
 
                 Spacer()
 
-                if let onDismiss {
+                if let onDismiss, isDismissable {
                     Button {
                         onDismiss()
                     } label: {
@@ -31,6 +35,7 @@ struct TaskCard: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Dismiss tasks")
+                    .transition(.opacity)
                 }
             }
 
@@ -53,7 +58,7 @@ private struct TaskEntryRow: View {
     var body: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: entry.iconName)
-                .symbolEffect(.rotate, options: .repeating, isActive: entry.isActive)
+                .symbolEffect(.rotate, options: .repeating, isActive: entry.isAnimating)
                 .font(.body)
                 .foregroundStyle(iconStyle)
                 .frame(width: 20)
@@ -70,9 +75,8 @@ private struct TaskEntryRow: View {
 
     private var iconStyle: AnyShapeStyle {
         switch entry.status {
-        case .completed: AnyShapeStyle(.contentAccent)
-        case .inProgress: AnyShapeStyle(.contentAccent)
-        case .pending, .deleted: AnyShapeStyle(.contentTertiary)
+        case .completed, .inProgress: AnyShapeStyle(.contentAccent)
+        case .cancelled, .pending, .deleted: AnyShapeStyle(.contentTertiary)
         }
     }
 
@@ -80,6 +84,7 @@ private struct TaskEntryRow: View {
         switch entry.status {
         case .completed: AnyShapeStyle(.contentSecondary)
         case .inProgress: AnyShapeStyle(.contentPrimary)
+        case .cancelled: AnyShapeStyle(.contentTertiary)
         case .pending, .deleted: AnyShapeStyle(.contentSecondary)
         }
     }
@@ -110,6 +115,13 @@ private struct TaskEntryRow: View {
 
 #Preview("All completed") {
     TaskCard(entries: TaskPreviewFixtures.entries(step: 4), onDismiss: {})
+        .padding()
+        .frame(width: 500)
+        .background(.surfaceDefault)
+}
+
+#Preview("Partially cancelled") {
+    TaskCard(entries: TaskPreviewFixtures.entries(step: 5), onDismiss: {})
         .padding()
         .frame(width: 500)
         .background(.surfaceDefault)

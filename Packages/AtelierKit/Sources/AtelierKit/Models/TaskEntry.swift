@@ -15,13 +15,19 @@ public struct TaskEntry: Sendable, Identifiable {
         switch status {
         case .completed: "checkmark.circle.fill"
         case .inProgress: "arrow.circlepath"
+        case .cancelled: "slash.circle"
         case .pending, .deleted: "circle"
         }
     }
 
-    /// Whether the task is currently in progress.
-    public var isActive: Bool {
+    /// Whether the task is currently in progress (drives the spinner animation).
+    public var isAnimating: Bool {
         status == .inProgress
+    }
+
+    /// Whether the task has not reached a terminal state.
+    public var isActive: Bool {
+        status == .inProgress || status == .pending
     }
 }
 

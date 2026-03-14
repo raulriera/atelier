@@ -10,6 +10,7 @@ enum TaskPreviewFixtures {
         ("todo-t2", #"{"todos":[{"id":"1","content":"Research competitive landscape","status":"in_progress"},{"id":"2","content":"Draft executive summary","status":"pending"},{"id":"3","content":"Review final deliverables","status":"pending"}]}"#),
         ("todo-t3", #"{"todos":[{"id":"1","content":"Research competitive landscape","status":"completed"},{"id":"2","content":"Draft executive summary","status":"in_progress"},{"id":"3","content":"Review final deliverables","status":"pending"}]}"#),
         ("todo-t4", #"{"todos":[{"id":"1","content":"Research competitive landscape","status":"completed"},{"id":"2","content":"Draft executive summary","status":"completed"},{"id":"3","content":"Review final deliverables","status":"completed"}]}"#),
+        ("todo-t5", #"{"todos":[{"id":"1","content":"Research competitive landscape","status":"completed"},{"id":"2","content":"Draft executive summary","status":"cancelled"},{"id":"3","content":"Review final deliverables","status":"cancelled"}]}"#),
     ]
 
     /// Builds task entries by replaying the first N steps as TodoWrite events.
