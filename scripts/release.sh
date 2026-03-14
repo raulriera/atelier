@@ -16,8 +16,9 @@
 #      $SPARKLE_BIN/generate_keys
 #      (stores in ~/Library/Sparkle — back up the private key!)
 #   4. brew install create-dmg
-#   5. gh CLI authenticated: gh auth login
-#   6. Strip quarantine from Sparkle tools if needed:
+#   5. claude CLI installed and authenticated (for release notes generation)
+#   6. gh CLI authenticated: gh auth login
+#   7. Strip quarantine from Sparkle tools if needed:
 #      xattr -cr "$SPARKLE_BIN"
 
 set -euo pipefail
@@ -43,6 +44,7 @@ ARCHIVE_PATH="$BUILD_DIR/$SCHEME.xcarchive"
 APP_PATH="$BUILD_DIR/$SCHEME.app"
 DMG_PATH="$BUILD_DIR/$SCHEME.dmg"
 APPCAST_DIR="$PROJECT_DIR/docs"
+RELEASE_NOTES_URL="https://raulriera.github.io/atelier/release-notes/$VERSION.html"
 
 if $DRY_RUN; then
     echo "==> DRY RUN: Releasing Atelier v$VERSION (skipping notarization, GitHub release)"
@@ -123,22 +125,34 @@ fi
 echo "==> Signing DMG with Sparkle EdDSA key..."
 "$SPARKLE_BIN/sign_update" "$DMG_PATH"
 
-# ── Step 7: Generate / update appcast ──
+# ── Step 7: Generate release notes ──
+echo "==> Generating release notes..."
+"$PROJECT_DIR/scripts/generate-release-notes.sh" "$VERSION"
+
+# ── Step 8: Generate / update appcast ──
 echo "==> Updating appcast..."
 mkdir -p "$APPCAST_DIR"
 cp "$DMG_PATH" "$APPCAST_DIR/"
 "$SPARKLE_BIN/generate_appcast" \
     --download-url-prefix "$DOWNLOAD_URL_PREFIX" \
     "$APPCAST_DIR"
+
+# Inject releaseNotesLink into the appcast for this version
+if grep -q "<sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>" "$APPCAST_DIR/appcast.xml"; then
+    sed -i '' "/<sparkle:shortVersionString>$VERSION<\/sparkle:shortVersionString>/a\\
+\\                <sparkle:releaseNotesLink>$RELEASE_NOTES_URL</sparkle:releaseNotesLink>" "$APPCAST_DIR/appcast.xml"
+    echo "    Release notes link added to appcast"
+fi
 echo "Appcast updated at $APPCAST_DIR/appcast.xml"
 
-# ── Step 8: Create GitHub Release ──
+# ── Step 9: Create GitHub Release ──
 if $DRY_RUN; then
     echo "==> Skipping GitHub release (dry run)"
     echo ""
     echo "==> Dry run complete! Build artifacts in $BUILD_DIR"
     echo "    DMG: $DMG_PATH"
     echo "    Appcast: $APPCAST_DIR/appcast.xml"
+    echo "    Release notes: $APPCAST_DIR/release-notes/$VERSION.html"
 else
     echo "==> Creating GitHub release..."
     gh release create "v$VERSION" \
