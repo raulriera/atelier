@@ -10,14 +10,19 @@ public enum SystemPrompt {
 
     /// The current date in the user's locale, e.g. "Today is Monday, March 9, 2026."
     ///
-    /// Injected on every message so Claude can answer date-relative questions
-    /// ("what's on my calendar today?") without guessing.
+    /// Prepended to user messages so Claude can answer date-relative questions
+    /// ("what's on my calendar today?") without guessing. Kept out of the
+    /// system prompt to avoid busting the prompt cache daily.
     public static var currentDate: String {
+        "Today is \(dateFormatter.string(from: Date()))."
+    }
+
+    private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "EEEE, MMMM d, yyyy"
         f.locale = Locale.current
-        return "Today is \(f.string(from: Date()))."
-    }
+        return f
+    }()
 
     /// Instructions injected at the start of every conversation.
     ///

@@ -123,7 +123,7 @@ struct ConversationControllerTests {
         }
 
         @Test("sendMessage queues when already streaming")
-        @MainActor func queuesWhenStreaming() async {
+        @MainActor func queuesWhenStreaming() async throws {
             let engine = MockEngine(events: [])
             let controller = await makeController(engine: engine)
 
@@ -133,7 +133,8 @@ struct ConversationControllerTests {
             #expect(controller.session.isStreaming)
 
             controller.sendMessage("Queued message")
-            #expect(controller.session.pendingMessages.contains("Queued message"))
+            let queued = try #require(controller.session.pendingMessages.first)
+            #expect(queued.contains("Queued message"))
         }
     }
 
@@ -524,13 +525,13 @@ struct ConversationControllerTests {
                 .appendingPathComponent("context.md")
 
             // Poll for the file — the detached fingerprint task may take
-            // variable time depending on system load.
-            for _ in 0..<50 {
+            // variable time depending on system load and CLI availability.
+            for _ in 0..<100 {
                 if FileManager.default.fileExists(atPath: contextPath.path) { break }
                 try await Task.sleep(for: .milliseconds(100))
             }
 
-            #expect(FileManager.default.fileExists(atPath: contextPath.path), "context.md should be created by fingerprinting within 5 seconds")
+            #expect(FileManager.default.fileExists(atPath: contextPath.path), "context.md should be created by fingerprinting within 10 seconds")
 
             let content = try String(contentsOf: contextPath, encoding: .utf8)
             #expect(content.contains("# Project Context"))

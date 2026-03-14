@@ -123,7 +123,9 @@ public final class CLIEngine: ConversationEngine, Sendable {
                             if let result = try? decoder.decode(CLIResult.self, from: data) {
                                 let usage = TokenUsage(
                                     inputTokens: result.usage?.inputTokens ?? 0,
-                                    outputTokens: result.usage?.outputTokens ?? 0
+                                    outputTokens: result.usage?.outputTokens ?? 0,
+                                    cacheReadTokens: result.usage?.cacheReadInputTokens ?? 0,
+                                    cacheCreationTokens: result.usage?.cacheCreationInputTokens ?? 0
                                 )
                                 if result.isError == true {
                                     let message = result.result

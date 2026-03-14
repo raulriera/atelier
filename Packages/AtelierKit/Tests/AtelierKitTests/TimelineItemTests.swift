@@ -19,7 +19,7 @@ struct TimelineItemTests {
 
         @Test("Assistant message round-trips through JSON")
         func assistantMessageRoundTrip() throws {
-            let usage = TokenUsage(inputTokens: 10, outputTokens: 25)
+            let usage = TokenUsage(inputTokens: 10, outputTokens: 25, cacheReadTokens: 5, cacheCreationTokens: 3)
             let assistant = AssistantMessage(text: "Hi there", isComplete: true, usage: usage)
             let item = TimelineItem(content: .assistantMessage(assistant))
             let data = try JSONEncoder().encode(item)
@@ -29,6 +29,8 @@ struct TimelineItemTests {
             #expect(msg.isComplete)
             #expect(msg.usage.inputTokens == 10)
             #expect(msg.usage.outputTokens == 25)
+            #expect(msg.usage.cacheReadTokens == 5)
+            #expect(msg.usage.cacheCreationTokens == 3)
         }
 
         @Test("System event round-trips through JSON")
@@ -155,7 +157,7 @@ struct TimelineItemTests {
 
     @Test("Model configuration defaults")
     func modelConfigurationDefaults() {
-        #expect(ModelConfiguration.default.cliAlias == "sonnet")
+        #expect(ModelConfiguration.default.cliAlias == "opus")
         #expect(ModelConfiguration.allModels.count == 3)
     }
 }

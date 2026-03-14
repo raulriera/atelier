@@ -55,6 +55,10 @@ public final class ConversationController {
     private var approvalObserverTask: Task<Void, Never>?
     private var askUserObserverTask: Task<Void, Never>?
 
+    /// Cached system prompt for the current session. Built once on the first
+    /// message and held stable to maximize prompt cache hits across turns.
+    private var sessionSystemPrompt: String?
+
     // MARK: - Init
 
     public init(
@@ -96,7 +100,7 @@ public final class ConversationController {
         try? await server.start()
 
         approvalObserverTask = Task {
-            for await request in await server.requests {
+            for await request in server.requests {
                 if sessionApprovedTools.contains(request.toolName) {
                     await server.respond(requestId: request.id, decision: .allow)
                     continue
@@ -116,7 +120,7 @@ public final class ConversationController {
         }
 
         askUserObserverTask = Task {
-            for await request in await server.askUserRequests {
+            for await request in server.askUserRequests {
                 let options = request.options.map {
                     AskUserEvent.Option(label: $0.label, description: $0.description)
                 }
@@ -199,8 +203,10 @@ public final class ConversationController {
             }
         }
 
-        // Build the CLI message: user text + file paths for Claude to read
-        let cliMessage = Self.buildCLIMessage(text: trimmed, attachments: attachments)
+        // Build the CLI message: user text + file paths for Claude to read.
+        // Prepend the current date so Claude can answer date-relative questions
+        // without putting volatile content in the system prompt (which busts cache).
+        let cliMessage = "[\(SystemPrompt.currentDate)]\n\n" + Self.buildCLIMessage(text: trimmed, attachments: attachments)
 
         // Register attachment paths for auto-approval before the queueing check
         // so queued messages also get their files approved when eventually sent.
@@ -223,27 +229,13 @@ public final class ConversationController {
         }
         session.beginAssistantMessage()
 
-        var promptParts: [String] = [
-            SystemPrompt.coreInstructions,
-            SystemPrompt.untrustedContentPolicy,
-            SystemPrompt.currentDate
-        ]
-        if let cwd = workingDirectory {
-            let discovered = ContextFileLoader.discover(from: cwd)
-            activeContextFiles = discovered
-            if let content = ContextFileLoader.contentForInjection(from: discovered) {
-                promptParts.append(content)
-            }
-            if !ContextFileLoader.hasProjectContext(discovered) {
-                promptParts.append(SystemPrompt.onboardingInstructions)
-            }
+        // Build the system prompt once per session to maximize prompt cache hits.
+        // Subsequent messages reuse the same string — no volatile content allowed.
+        if sessionSystemPrompt == nil {
+            sessionSystemPrompt = buildSessionSystemPrompt()
         }
-        if let capFragment = capabilityStore.systemPromptFragment() {
-            promptParts.append(capFragment)
-        }
-        let injectedPrompt = promptParts.isEmpty ? nil : promptParts.joined(separator: "\n\n")
 
-        startStreaming(message: cliMessage, appendSystemPrompt: injectedPrompt)
+        startStreaming(message: cliMessage, appendSystemPrompt: sessionSystemPrompt)
     }
 
     /// Builds the message string sent to the CLI, appending file paths if attachments are present.
@@ -396,6 +388,7 @@ public final class ConversationController {
         sessionApprovedTools.removeAll()
         approvedToolFilePairs.removeAll()
         allowedAttachmentPaths.removeAll()
+        sessionSystemPrompt = nil
         session.reset()
         capabilityHealthMonitor.reset()
         toolPayloads = [:]
@@ -430,10 +423,38 @@ public final class ConversationController {
         }
     }
 
+    /// Builds the system prompt once per session. Only called on the first
+    /// message — the result is cached in `sessionSystemPrompt` and reused
+    /// for all subsequent messages to keep the string stable for prompt caching.
+    private func buildSessionSystemPrompt() -> String? {
+        var parts: [String] = [
+            SystemPrompt.coreInstructions,
+            SystemPrompt.untrustedContentPolicy
+        ]
+        // Reuse context files already discovered by checkAvailability(),
+        // falling back to a fresh scan if they haven't been loaded yet.
+        if let cwd = workingDirectory {
+            if activeContextFiles.isEmpty {
+                activeContextFiles = ContextFileLoader.discover(from: cwd)
+            }
+            if let content = ContextFileLoader.contentForInjection(from: activeContextFiles) {
+                parts.append(content)
+            }
+            if !ContextFileLoader.hasProjectContext(activeContextFiles) {
+                parts.append(SystemPrompt.onboardingInstructions)
+            }
+        }
+        if let capFragment = capabilityStore.systemPromptFragment() {
+            parts.append(capFragment)
+        }
+        let joined = parts.joined(separator: "\n\n")
+        return joined.isEmpty ? nil : joined
+    }
+
     private func startStreaming(message: String, appendSystemPrompt: String? = nil) {
         streamingTask?.cancel()
         streamingTask = Task {
-            let socketPath = await approvalServer?.socketPath
+            let socketPath = approvalServer?.socketPath
             let capConfigs = capabilityStore.enabledCapabilityConfigs()
             let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath, enabledCapabilities: capConfigs, allowedReadPaths: Array(allowedAttachmentPaths))
             do {
