@@ -46,7 +46,7 @@ ARCHIVE_PATH="$BUILD_DIR/$SCHEME.xcarchive"
 APP_PATH="$BUILD_DIR/$SCHEME.app"
 DMG_PATH="$BUILD_DIR/$SCHEME.dmg"
 APPCAST_DIR="$PROJECT_DIR/docs"
-RELEASE_NOTES_URL="https://raulriera.github.io/atelier/release-notes/$VERSION.html"
+RELEASE_NOTES_URL="https://raulriera.github.io/atelier/release-notes/$VERSION.md"
 
 # ── Step 1: Abort if working tree is dirty ──
 if [ -n "$(git -C "$PROJECT_DIR" status --porcelain)" ]; then
@@ -163,7 +163,7 @@ if $DRY_RUN; then
     echo "==> Dry run complete! Build artifacts in $BUILD_DIR"
     echo "    DMG: $DMG_PATH"
     echo "    Appcast: $APPCAST_DIR/appcast.xml"
-    echo "    Release notes: $APPCAST_DIR/release-notes/$VERSION.html"
+    echo "    Release notes: $APPCAST_DIR/release-notes/$VERSION.md"
     echo ""
     echo "    Run without --dry-run to commit, tag, push, and create the GitHub release."
 else
@@ -180,7 +180,7 @@ else
     gh release create "v$VERSION" \
         "$DMG_PATH" \
         --title "Atelier v$VERSION" \
-        --notes-file "$APPCAST_DIR/release-notes/$VERSION.html"
+        --notes-file "$APPCAST_DIR/release-notes/$VERSION.md"
 
     echo ""
     echo "==> Done! Atelier v$VERSION released."

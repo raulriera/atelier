@@ -6,7 +6,7 @@
 # Example: ./scripts/generate-release-notes.sh 1.2.0
 #          ./scripts/generate-release-notes.sh 1.2.0 --from v1.1.0
 #
-# Output: writes docs/release-notes/<version>.html
+# Output: docs/release-notes/<version>.md (used by both Sparkle and GitHub releases)
 #
 # Prerequisites:
 #   - claude CLI installed and authenticated
@@ -36,7 +36,7 @@ fi
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUTPUT_DIR="$PROJECT_DIR/docs/release-notes"
-OUTPUT_FILE="$OUTPUT_DIR/$VERSION.html"
+OUTPUT_FILE="$OUTPUT_DIR/$VERSION.md"
 
 echo "==> Generating release notes for v$VERSION (changes since $FROM_TAG)..."
 
@@ -56,12 +56,11 @@ PROMPT="You are writing release notes for Atelier, a native macOS app for conver
 Given these git commits since the last release, write concise, user-facing release notes.
 
 Rules:
-- Group changes under: New, Improved, Fixed (omit empty sections)
+- Group changes under: ## New, ## Improved, ## Fixed (omit empty sections)
 - Write for end users, not developers — no jargon, no file names, no technical internals
-- Each item should be one short sentence
-- Output ONLY an HTML fragment (no <html>, <head>, or <body> tags)
-- Use simple semantic HTML: <h2> for section headers, <ul>/<li> for items
-- Do not include any CSS or styling
+- Each item should be one short sentence as a markdown list item
+- If none of the commits contain user-facing changes (e.g. only chore, docs, ci, build, refactor, test commits), output exactly: Bug fixes and performance improvements.
+- Output ONLY markdown, no code fences, no preamble, no explanation
 
 Commits:
 $COMMITS"
