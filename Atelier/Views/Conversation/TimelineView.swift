@@ -22,7 +22,7 @@ struct TimelineView: View {
             LazyVStack(alignment: .leading, spacing: 0) {
                 if session.hasOlderItems {
                     Button { session.loadOlderItems() } label: {
-                        Label("Load earlier messages", systemImage: "arrow.up")
+                        Label("Load earlier messages", systemImage: "arrow.trianglehead.2.counterclockwise.rotate.90")
                             .systemContainer()
                     }
                     .buttonStyle(.plain)

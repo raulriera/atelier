@@ -28,7 +28,7 @@ struct TaskListOverlay: View {
             )
             .frame(maxWidth: Layout.readingWidth)
             .padding(.horizontal, Spacing.md)
-            .transition(Motion.approvalAppear)
+            .transition(Motion.cardReveal)
             .onChange(of: entries.count) { old, new in
                 if new > old {
                     withAnimation(Motion.appear) {

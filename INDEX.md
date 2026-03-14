@@ -72,6 +72,7 @@ All done: Project Workspace, Context Files, Session Persistence, Conversational 
 | Cloud Connectors | [→](opportunities/hub/06-cloud-connectors.md) |
 | Prompt Injection Defense | [→](opportunities/security/03-prompt-injection-defense.md) |
 | MCP Helper Kit | [→](opportunities/architecture/08-mcp-helper-kit.md) |
+| Timeline Motion & Polish | [→](opportunities/experience/06-timeline-motion.md) |
 
 ---
 
