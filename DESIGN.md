@@ -168,6 +168,7 @@ Motion is where "one thing breathing" becomes real. Every timeline element has a
 - **Exit with opacity** — quiet, doesn't compete for attention
 - **Morph, don't swap** — labels, icons, states transition smoothly (principle 4)
 - **Scale delight to rarity** — see principle 3 table above
+- **All animations must be interruptible** — use `.interactiveSpring` or similar interruptible curves so rapid user input reverses smoothly from the current position, never flickers
 - **Respect `accessibilityReduceMotion`** — SwiftUI handles this automatically
 
 **Anti-patterns:**

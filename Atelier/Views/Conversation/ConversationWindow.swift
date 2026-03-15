@@ -102,7 +102,6 @@ struct ConversationWindow: View {
                     .disabled(!controller.cliAvailable)
                     .frame(maxWidth: Layout.readingWidth)
                     .padding(Spacing.md)
-                    .padding(.trailing, showInspector ? Layout.inspectorWidth : 0)
                     .background {
                         Rectangle()
                             .fill(.bar)
@@ -140,9 +139,8 @@ struct ConversationWindow: View {
                     .transition(Motion.inspectorSlide)
                 }
             }
-            .animation(Motion.appear, value: showInspector)
+            .animation(.interactiveSpring, value: showInspector)
         }
-        .environment(\.inspectorInset, showInspector ? Layout.inspectorWidth : 0)
         .onDrop(of: [.fileURL, .image], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers)
         }

@@ -8,7 +8,6 @@ struct TimelineView: View {
     let isLoaded: Bool
     @Binding var draft: String
     var selectedToolID: String?
-    @Environment(\.inspectorInset) private var inspectorInset
     var onSelectTool: ((ToolUseEvent) -> Void)?
     var onSelectTaskCompletion: ((TaskCompletionEvent) -> Void)?
     var onApprovalDecision: ((String, String, ApprovalDecision) -> Void)?
@@ -45,7 +44,6 @@ struct TimelineView: View {
             .padding(.horizontal, Spacing.md)
             .frame(maxWidth: .infinity)
             .padding(.bottom, Spacing.md)
-            .offset(x: -inspectorInset)
         }
     }
 
