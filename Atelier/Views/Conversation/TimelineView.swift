@@ -8,12 +8,6 @@ struct TimelineView: View {
     let isLoaded: Bool
     @Binding var draft: String
     var selectedToolID: String?
-    var onSelectTool: ((ToolUseEvent) -> Void)?
-    var onSelectTaskCompletion: ((TaskCompletionEvent) -> Void)?
-    var onApprovalDecision: ((String, String, ApprovalDecision) -> Void)?
-    var onAskUserResponse: ((String, Int, String?) -> Void)?
-    var onPlanApprove: (() -> Void)?
-    var onEnableCapability: ((String) -> Void)?
 
     var body: some View {
         let items = session.visibleTimelineItems
@@ -29,13 +23,7 @@ struct TimelineView: View {
                         item: item,
                         session: session,
                         capabilityStore: capabilityStore,
-                        selectedToolID: selectedToolID,
-                        onSelectTool: onSelectTool,
-                        onSelectTaskCompletion: onSelectTaskCompletion,
-                        onApprovalDecision: onApprovalDecision,
-                        onAskUserResponse: onAskUserResponse,
-                        onPlanApprove: onPlanApprove,
-                        onEnableCapability: onEnableCapability
+                        selectedToolID: selectedToolID
                     )
                     .padding(.bottom, Spacing.sm)
                 }
@@ -58,12 +46,8 @@ private struct TimelineItemView: View {
     let session: Session
     let capabilityStore: CapabilityStore
     let selectedToolID: String?
-    let onSelectTool: ((ToolUseEvent) -> Void)?
-    let onSelectTaskCompletion: ((TaskCompletionEvent) -> Void)?
-    var onApprovalDecision: ((String, String, ApprovalDecision) -> Void)?
-    var onAskUserResponse: ((String, Int, String?) -> Void)?
-    var onPlanApprove: (() -> Void)?
-    var onEnableCapability: ((String) -> Void)?
+
+    @Environment(\.timelineActions) private var actions
 
     var body: some View {
         switch item.content {
@@ -76,7 +60,7 @@ private struct TimelineItemView: View {
 
                     let suggested = capabilityStore.disabledCapabilities(mentionedIn: msg.text)
                     if !suggested.isEmpty {
-                        CapabilitySuggestionBar(capabilities: suggested, onEnable: onEnableCapability)
+                        CapabilitySuggestionBar(capabilities: suggested)
                             .transition(Motion.approvalAppear)
                     }
                 }
@@ -90,7 +74,7 @@ private struct TimelineItemView: View {
         case .system(let event):
             SystemEventCell(event: event)
         case .taskCompletion(let event):
-            Button { onSelectTaskCompletion?(event) } label: {
+            Button { actions.onSelectTaskCompletion?(event) } label: {
                 TaskCompletionCell(event: event)
             }
             .buttonStyle(.plain)
@@ -99,18 +83,17 @@ private struct TimelineItemView: View {
                 PlanReviewCard(
                     event: event,
                     planFilePath: session.planFilePath(for: event.id),
-                    resolution: session.planResolution(for: event.id),
-                    onApprove: onPlanApprove
+                    resolution: session.planResolution(for: event.id)
                 )
             } else if event.isFileOperation {
-                FileCard(event: event, isSelected: event.id == selectedToolID, onSelect: onSelectTool)
+                FileCard(event: event, isSelected: event.id == selectedToolID)
             } else {
-                ToolUseCell(event: event, isSelected: event.id == selectedToolID, onSelect: onSelectTool)
+                ToolUseCell(event: event, isSelected: event.id == selectedToolID)
             }
         case .approval(let event):
-            ApprovalCard(event: event, onDecision: onApprovalDecision)
+            ApprovalCard(event: event)
         case .askUser(let event):
-            AskUserCard(event: event, onResponse: onAskUserResponse)
+            AskUserCard(event: event)
         }
     }
 }

@@ -14,6 +14,9 @@ struct ConversationWindow: View {
     @State private var showSessionMenu = false
     @State private var didInjectCompletions = false
     @State private var showAttachmentPicker = false
+    /// Stable identity cache — closures are set once in `onAppear` and never reassigned.
+    /// Plain class (not `@Observable`) because child views only call closures, never read state.
+    @State private var actions = TimelineActions()
 
     let projectName: String
     let projectId: UUID
@@ -39,30 +42,7 @@ struct ConversationWindow: View {
 
     var body: some View {
         NavigationStack {
-            TimelineView(session: controller.session, capabilityStore: controller.capabilityStore, isLoaded: controller.isLoaded, draft: $draft, selectedToolID: controller.selectedToolEvent?.id, onSelectTool: { event in
-                    if controller.selectedToolEvent?.id == event.id {
-                        controller.selectedToolEvent = nil
-                        showInspector = false
-                    } else {
-                        controller.selectedToolEvent = event
-                        controller.selectedTaskCompletion = nil
-                        inspectorTab = .detail
-                        showInspector = true
-                    }
-                }, onSelectTaskCompletion: { event in
-                    controller.selectedToolEvent = nil
-                    controller.selectedTaskCompletion = event
-                    inspectorTab = .detail
-                    showInspector = true
-                }, onApprovalDecision: { id, toolName, decision in
-                    controller.handleApprovalDecision(id: id, toolName: toolName, decision: decision)
-                }, onAskUserResponse: { id, selectedIndex, customText in
-                    controller.handleAskUserResponse(id: id, selectedIndex: selectedIndex, customText: customText)
-                }, onPlanApprove: {
-                    controller.handlePlanApprove()
-                }, onEnableCapability: { id in
-                    controller.enableCapability(id)
-                })
+            TimelineView(session: controller.session, capabilityStore: controller.capabilityStore, isLoaded: controller.isLoaded, draft: $draft, selectedToolID: controller.selectedToolEvent?.id)
                 .overlay(alignment: .top) {
                     Rectangle()
                         .fill(.bar)
@@ -141,6 +121,7 @@ struct ConversationWindow: View {
             }
             .animation(.interactiveSpring, value: showInspector)
         }
+        .environment(\.timelineActions, actions)
         .onDrop(of: [.fileURL, .image], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers)
         }
@@ -221,6 +202,7 @@ struct ConversationWindow: View {
         .focusedSceneValue(\.inspectorVisibility, $showInspector)
         .onAppear {
             controller.checkAvailability()
+            configureTimelineActions()
         }
         .onDisappear {
             controller.shutdown()
@@ -271,5 +253,37 @@ struct ConversationWindow: View {
         draft = ""
         pendingAttachments = []
         controller.sendMessage(text, attachments: attachments)
+    }
+
+    private func configureTimelineActions() {
+        actions.onSelectTool = { event in
+            if controller.selectedToolEvent?.id == event.id {
+                controller.selectedToolEvent = nil
+                showInspector = false
+            } else {
+                controller.selectedToolEvent = event
+                controller.selectedTaskCompletion = nil
+                inspectorTab = .detail
+                showInspector = true
+            }
+        }
+        actions.onSelectTaskCompletion = { event in
+            controller.selectedToolEvent = nil
+            controller.selectedTaskCompletion = event
+            inspectorTab = .detail
+            showInspector = true
+        }
+        actions.onApprovalDecision = { id, toolName, decision in
+            controller.handleApprovalDecision(id: id, toolName: toolName, decision: decision)
+        }
+        actions.onAskUserResponse = { id, selectedIndex, customText in
+            controller.handleAskUserResponse(id: id, selectedIndex: selectedIndex, customText: customText)
+        }
+        actions.onPlanApprove = {
+            controller.handlePlanApprove()
+        }
+        actions.onEnableCapability = { id in
+            controller.enableCapability(id)
+        }
     }
 }

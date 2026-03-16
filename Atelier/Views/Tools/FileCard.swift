@@ -13,8 +13,8 @@ struct FileCard: View {
     let event: ToolUseEvent
     /// Whether this card is currently selected in the inspector.
     var isSelected: Bool = false
-    /// Called when the user taps a completed card to inspect its output.
-    var onSelect: ((ToolUseEvent) -> Void)?
+
+    @Environment(\.timelineActions) private var actions
 
     /// Write cards reveal in Finder; Read/Edit cards open the inspector.
     private var isWriteOnly: Bool {
@@ -44,15 +44,7 @@ struct FileCard: View {
     }
 
     var body: some View {
-        Button {
-            if isWriteOnly, let path = event.filePath {
-                NSWorkspace.shared.activateFileViewerSelecting(
-                    [URL(fileURLWithPath: path)]
-                )
-            } else {
-                onSelect?(event)
-            }
-        } label: {
+        Button(action: handleTap) {
             HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                 Image(systemName: event.iconName)
                     .foregroundStyle(.contentTertiary)
@@ -110,6 +102,14 @@ struct FileCard: View {
         }
         .animation(Motion.morph, value: isSelected)
         .transition(Motion.cardReveal)
+    }
+
+    private func handleTap() {
+        if isWriteOnly, let path = event.filePath {
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+        } else {
+            actions.onSelectTool?(event)
+        }
     }
 }
 

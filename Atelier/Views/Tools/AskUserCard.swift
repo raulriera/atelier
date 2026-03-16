@@ -10,9 +10,8 @@ import AtelierKit
 struct AskUserCard: View {
     /// The ask-user event to display.
     let event: AskUserEvent
-    /// Called when the user selects an option: `(eventID, selectedIndex, customText?)`.
-    var onResponse: ((String, Int, String?) -> Void)?
 
+    @Environment(\.timelineActions) private var actions
     @State private var selection: Int?
 
     var body: some View {
@@ -32,7 +31,7 @@ struct AskUserCard: View {
                 .font(.cardTitle)
 
             Picker(selection: $selection) {
-                ForEach(Array(event.options.enumerated()), id: \.offset) { index, option in
+                ForEach(event.options.enumerated(), id: \.offset) { index, option in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(option.label)
                         if let description = option.description, !description.isEmpty {
@@ -51,7 +50,7 @@ struct AskUserCard: View {
             .labelsHidden()
             .onChange(of: selection) { _, newValue in
                 guard let index = newValue else { return }
-                onResponse?(event.id, index, nil)
+                actions.onAskUserResponse?(event.id, index, nil)
             }
 
             Text("Or type a message to answer in your own words.")
@@ -64,36 +63,30 @@ struct AskUserCard: View {
 
     // MARK: - Answered (compact one-liner)
 
+    private var isDismissed: Bool { event.customText == "Dismissed" }
+
+    @ViewBuilder
     private var resolvedLabel: some View {
-        Label(resolvedText, systemImage: resolvedIcon)
+        let label = Label(resolvedText, systemImage: isDismissed ? "bubble" : "checkmark.bubble")
             .systemContainer()
-            .foregroundStyle(resolvedStyle)
             .frame(maxWidth: .infinity, alignment: .center)
             .transition(Motion.approvalAppear)
+
+        if isDismissed {
+            label.foregroundStyle(.contentSecondary)
+        } else {
+            label.foregroundStyle(.statusSuccess)
+        }
     }
 
     private var resolvedText: String {
-        if event.customText == "Dismissed" {
+        if isDismissed {
             return "No answer, dismissed"
         }
         if event.selectedIndex == AskUserEvent.customTextIndex {
             return "Answered with a message"
         }
         return "Selected: \(event.selectedLabel ?? "Unknown")"
-    }
-
-    private var resolvedIcon: String {
-        if event.customText == "Dismissed" {
-            return "bubble"
-        }
-        return "checkmark.bubble"
-    }
-
-    private var resolvedStyle: some ShapeStyle {
-        if event.customText == "Dismissed" {
-            return AnyShapeStyle(.contentSecondary)
-        }
-        return AnyShapeStyle(.statusSuccess)
     }
 }
 

@@ -14,9 +14,8 @@ struct PlanReviewCard: View {
     var planFilePath: String?
     /// The resolution status — `.pending` until the user decides.
     var resolution: ApprovalEvent.Status
-    /// Called when the user approves the plan — resolves the ExitPlanMode approval.
-    var onApprove: (() -> Void)?
 
+    @Environment(\.timelineActions) private var actions
     @State private var planContent: String?
     @State private var showingPlan = false
 
@@ -60,7 +59,7 @@ struct PlanReviewCard: View {
         .sheet(isPresented: $showingPlan) {
             PlanReviewSheet(
                 planContent: planContent ?? "",
-                onApprove: onApprove
+                onApprove: actions.onPlanApprove
             )
         }
     }

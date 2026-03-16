@@ -6,13 +6,14 @@ import AtelierKit
 /// a disabled capability, offering one-tap enable buttons.
 struct CapabilitySuggestionBar: View {
     let capabilities: [Capability]
-    var onEnable: ((String) -> Void)?
+
+    @Environment(\.timelineActions) private var actions
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
             ForEach(capabilities) { cap in
                 Button {
-                    onEnable?(cap.id)
+                    actions.onEnableCapability?(cap.id)
                 } label: {
                     Label("Enable \(cap.name)", systemImage: cap.iconSystemName)
                 }

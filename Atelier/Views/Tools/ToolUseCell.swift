@@ -12,8 +12,8 @@ struct ToolUseCell: View {
     let event: ToolUseEvent
     /// Whether this card is currently selected in the inspector.
     var isSelected: Bool = false
-    /// Called when the user taps a completed card to inspect its output.
-    var onSelect: ((ToolUseEvent) -> Void)?
+
+    @Environment(\.timelineActions) private var actions
 
     private var isTappable: Bool {
         event.status == .completed && event.hasResultOutput
@@ -21,7 +21,7 @@ struct ToolUseCell: View {
 
     var body: some View {
         Button {
-            onSelect?(event)
+            actions.onSelectTool?(event)
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                 Image(systemName: event.iconName)

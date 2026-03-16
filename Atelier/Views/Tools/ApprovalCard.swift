@@ -10,8 +10,8 @@ import AtelierKit
 struct ApprovalCard: View {
     /// The approval event to display.
     let event: ApprovalEvent
-    /// Called when the user approves or denies the request.
-    var onDecision: ((String, String, ApprovalDecision) -> Void)?
+
+    @Environment(\.timelineActions) private var actions
 
     var body: some View {
         switch event.status {
@@ -59,18 +59,18 @@ struct ApprovalCard: View {
             HStack(spacing: Spacing.xs) {
                 Menu {
                     Button("Remember approval for the conversation") {
-                        onDecision?(event.id, event.toolName, .allowForSession)
+                        actions.onApprovalDecision?(event.id, event.toolName, .allowForSession)
                     }
                 } label: {
                     Text("Approve")
                 } primaryAction: {
-                    onDecision?(event.id, event.toolName, .allow)
+                    actions.onApprovalDecision?(event.id, event.toolName, .allow)
                 }
                 .menuStyle(.glassProminent)
                 .menuIndicator(.visible)
 
                 Button("Deny") {
-                    onDecision?(event.id, event.toolName, .deny(reason: "User denied"))
+                    actions.onApprovalDecision?(event.id, event.toolName, .deny(reason: "User denied"))
                 }
                 .buttonStyle(.glass(.clear))
             }
