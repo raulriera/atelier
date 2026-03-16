@@ -371,6 +371,32 @@ func writeMCPConfig(capabilities: [ResolvedCapability], workingDirectory: String
     return configPath
 }
 
+// MARK: - Task Locking (mirrors AtelierKit/Schedule/TaskLockFile.swift)
+
+let lockDirectory = FileManager.default.homeDirectoryForCurrentUser
+    .appendingPathComponent("Library/Logs/Atelier/tasks")
+
+/// Acquires an exclusive BSD advisory lock for the given task.
+/// Returns the file descriptor, or nil if the lock could not be acquired.
+func acquireTaskLock(_ taskID: UUID) -> Int32? {
+    try? FileManager.default.createDirectory(at: lockDirectory, withIntermediateDirectories: true)
+    let path = lockDirectory.appendingPathComponent("\(taskID.uuidString).lock").path
+    let fd = Darwin.open(path, O_CREAT | O_RDWR | O_EXLOCK, 0o644)
+    guard fd >= 0 else { return nil }
+
+    let pid = "\(ProcessInfo.processInfo.processIdentifier)\n"
+    pid.withCString { buf in
+        _ = ftruncate(fd, 0)
+        _ = Darwin.write(fd, buf, strlen(buf))
+    }
+    return fd
+}
+
+/// Releases a previously acquired task lock.
+func releaseTaskLock(fd: Int32) {
+    Darwin.close(fd)
+}
+
 // MARK: - Task Execution
 
 let automationSystemPrompt = """
@@ -469,12 +495,38 @@ func parseTaskLog(logURL: URL) -> TaskRunResult? {
 /// Shared `claudePath`, `denyRules`, `env`, and `capabilities` are computed
 /// once at startup and passed in to avoid redundant filesystem probes per task.
 func executeTask(_ task: ScheduledTask, claudePath: String, denyRules: [String], env: [String: String], capabilities: [ResolvedCapability]) -> Bool {
+    let lockFD = acquireTaskLock(task.id)
+    if lockFD != nil {
+        log("Acquired lock for task '\(task.name)'")
+    } else {
+        log("Failed to acquire lock for task '\(task.name)'")
+    }
+    defer {
+        if let fd = lockFD {
+            releaseTaskLock(fd: fd)
+            log("Released lock for task '\(task.name)'")
+        }
+    }
+
     let logURL = task.logURL
     let logDirectory = logURL.deletingLastPathComponent()
     try? FileManager.default.createDirectory(at: logDirectory, withIntermediateDirectories: true)
 
     FileManager.default.createFile(atPath: logURL.path, contents: nil)
     let logHandle = try? FileHandle(forWritingTo: logURL)
+
+    func writeLog(_ message: String) {
+        let line = "[\(logFormatter.string(from: Date()))] \(message)\n"
+        if let data = line.data(using: .utf8) {
+            logHandle?.write(data)
+        }
+    }
+
+    writeLog("Task \"\(task.name)\" started (PID \(ProcessInfo.processInfo.processIdentifier))")
+    writeLog("Project: \(task.projectPath)")
+    writeLog("CLI: \(claudePath)")
+    writeLog("---")
+    let startTime = Date()
 
     // Write MCP config for pre-resolved capabilities
     let mcpConfigPath = writeMCPConfig(capabilities: capabilities, workingDirectory: task.projectPath)
@@ -531,16 +583,26 @@ func executeTask(_ task: ScheduledTask, claudePath: String, denyRules: [String],
         let pid = process.processIdentifier
         let watchdog = DispatchWorkItem {
             log("Task '\(task.name)' exceeded \(Int(taskTimeout))s timeout, terminating")
+            writeLog("---")
+            writeLog("TIMEOUT: killed after \(Int(taskTimeout))s")
             kill(pid, SIGTERM)
         }
         DispatchQueue.global().asyncAfter(deadline: .now() + taskTimeout, execute: watchdog)
 
         process.waitUntilExit()
         watchdog.cancel()
+
+        let elapsed = String(format: "%.1f", Date().timeIntervalSince(startTime))
+        let exitCode = process.terminationStatus
+        writeLog("---")
+        writeLog("Task \"\(task.name)\" finished (exit code \(exitCode), \(elapsed)s)")
+
         try? logHandle?.close()
-        return process.terminationStatus == 0
+        return exitCode == 0
     } catch {
         log("Failed to launch claude for task '\(task.name)': \(error.localizedDescription)")
+        writeLog("---")
+        writeLog("FAILED TO LAUNCH: \(error.localizedDescription)")
         try? logHandle?.close()
         return false
     }

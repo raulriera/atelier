@@ -39,6 +39,8 @@ struct AutomationsInspector: View {
         .onChange(of: showingForm) { _, isPresented in
             if !isPresented { editingTask = nil }
         }
+        .onAppear { scheduleStore.startMonitoringRunningState() }
+        .onDisappear { scheduleStore.stopMonitoringRunningState() }
     }
 
     // MARK: - Empty
@@ -67,6 +69,7 @@ struct AutomationsInspector: View {
                 ForEach(projectTasks) { task in
                     AutomationCard(
                         task: task,
+                        isRunning: scheduleStore.runningTaskIDs.contains(task.id),
                         onEdit: {
                             editingTask = task
                             showingForm = true
@@ -126,6 +129,7 @@ struct AutomationsInspector: View {
 /// A Shortcuts-style colored card for a scheduled task.
 private struct AutomationCard: View {
     let task: ScheduledTask
+    let isRunning: Bool
     let onEdit: () -> Void
     let onTogglePause: () -> Void
     let onRunNow: () -> Void
@@ -157,14 +161,24 @@ private struct AutomationCard: View {
         Button(action: onEdit) {
             VStack(alignment: .leading) {
                 HStack(alignment: .top) {
-                    Image(systemName: scheduleIcon)
-                        .font(.title2)
-                        .foregroundStyle(.white.opacity(0.9))
+                    if isRunning {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                            .transition(.opacity)
+                            .accessibilityLabel("Running")
+                    } else {
+                        Image(systemName: scheduleIcon)
+                            .font(.title2)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .transition(.opacity)
+                    }
 
                     Spacer()
 
                     cardMenu
                 }
+                .animation(.easeInOut(duration: 0.2), value: isRunning)
 
                 Spacer()
 
@@ -209,6 +223,7 @@ private struct AutomationCard: View {
         Menu {
             Button(task.isPaused ? "Resume" : "Pause", action: onTogglePause)
             Button("Run Now", action: onRunNow)
+                .disabled(isRunning)
 
             if optionKeyHeld {
                 Divider()

@@ -13,8 +13,12 @@ public final class ScheduleStore {
     /// The current list of scheduled tasks.
     public private(set) var tasks: [ScheduledTask] = []
 
+    /// IDs of tasks currently executing (either in-app or via launchd).
+    public private(set) var runningTaskIDs: Set<UUID> = []
+
     private let persistenceURL: URL?
     private let agentManager: any LaunchAgentManaging
+    private var monitoringTimer: Timer?
 
     nonisolated private static let logger = Logger(
         subsystem: "com.atelier.kit",
@@ -34,6 +38,12 @@ public final class ScheduleStore {
     public init(persistenceURL: URL? = nil, agentManager: some LaunchAgentManaging = LaunchAgentManager()) {
         self.persistenceURL = persistenceURL
         self.agentManager = agentManager
+    }
+
+    deinit {
+        MainActor.assumeIsolated {
+            monitoringTimer?.invalidate()
+        }
     }
 
     /// Loads persisted tasks from disk.
@@ -114,6 +124,9 @@ public final class ScheduleStore {
 
         Self.logger.info("Running task '\(task.name)' now")
 
+        runningTaskIDs.insert(task.id)
+        defer { runningTaskIDs.remove(task.id) }
+
         let processSucceeded = await Self.executeProcess(for: task, enabledCapabilities: enabledCapabilities)
 
         let logURL = task.logURL
@@ -159,6 +172,11 @@ public final class ScheduleStore {
     nonisolated private static func executeProcess(for task: ScheduledTask, enabledCapabilities: [EnabledCapability]) async -> Bool {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
+                let lockFD = TaskLockFile.acquire(for: task.id)
+                defer {
+                    if let fd = lockFD { TaskLockFile.release(fd: fd) }
+                }
+
                 let logURL = task.logURL
                 let logDirectory = logURL.deletingLastPathComponent()
                 try? FileManager.default.createDirectory(at: logDirectory, withIntermediateDirectories: true)
@@ -166,6 +184,20 @@ public final class ScheduleStore {
                 // Truncate existing log for this run
                 FileManager.default.createFile(atPath: logURL.path, contents: nil)
                 let logHandle = try? FileHandle(forWritingTo: logURL)
+
+                let logDateFormatter = ISO8601DateFormatter()
+                func writeLog(_ message: String) {
+                    let line = "[\(logDateFormatter.string(from: Date()))] \(message)\n"
+                    if let data = line.data(using: .utf8) {
+                        logHandle?.write(data)
+                    }
+                }
+
+                writeLog("Task \"\(task.name)\" started (PID \(ProcessInfo.processInfo.processIdentifier))")
+                writeLog("Project: \(task.projectPath)")
+                writeLog("CLI: \(CLIDiscovery.findCLI())")
+                writeLog("---")
+                let startTime = Date()
 
                 // Write MCP config for capabilities if any are enabled
                 var mcpConfigPath: String?
@@ -247,16 +279,26 @@ public final class ScheduleStore {
                     let pid = process.processIdentifier
                     let watchdog = DispatchWorkItem {
                         logger.warning("Task '\(task.name)' exceeded \(Int(taskTimeout))s timeout, terminating")
+                        writeLog("---")
+                        writeLog("TIMEOUT: killed after \(Int(taskTimeout))s")
                         kill(pid, SIGTERM)
                     }
                     DispatchQueue.global().asyncAfter(deadline: .now() + taskTimeout, execute: watchdog)
 
                     process.waitUntilExit()
                     watchdog.cancel()
+
+                    let elapsed = String(format: "%.1f", Date().timeIntervalSince(startTime))
+                    let exitCode = process.terminationStatus
+                    writeLog("---")
+                    writeLog("Task \"\(task.name)\" finished (exit code \(exitCode), \(elapsed)s)")
+
                     try? logHandle?.close()
-                    continuation.resume(returning: process.terminationStatus == 0)
+                    continuation.resume(returning: exitCode == 0)
                 } catch {
                     logger.error("Failed to launch claude for task '\(task.name)': \(error.localizedDescription)")
+                    writeLog("---")
+                    writeLog("FAILED TO LAUNCH: \(error.localizedDescription)")
                     try? logHandle?.close()
                     continuation.resume(returning: false)
                 }
@@ -314,6 +356,47 @@ public final class ScheduleStore {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !output.isEmpty else { return nil }
         return "\(output)/usr/bin"
+    }
+
+    // MARK: - Running State Monitoring
+
+    /// Starts polling for externally-running tasks (e.g. launched by launchd).
+    ///
+    /// Scans lock files every 3 seconds on a background thread and updates
+    /// ``runningTaskIDs`` on the main actor. Call ``stopMonitoringRunningState()``
+    /// when the UI is no longer visible.
+    public func startMonitoringRunningState() {
+        guard monitoringTimer == nil else { return }
+        refreshRunningState()
+        monitoringTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.refreshRunningState()
+            }
+        }
+    }
+
+    /// Stops the running-state polling timer.
+    public func stopMonitoringRunningState() {
+        monitoringTimer?.invalidate()
+        monitoringTimer = nil
+    }
+
+    /// Scans lock files for non-paused tasks and updates ``runningTaskIDs``.
+    public func refreshRunningState() {
+        let taskIDs = tasks.filter { !$0.isPaused }.map(\.id)
+        Task { @concurrent in
+            var locked: Set<UUID> = []
+            for id in taskIDs {
+                if TaskLockFile.isLocked(taskID: id) {
+                    locked.insert(id)
+                }
+            }
+            await MainActor.run { [locked] in
+                guard self.runningTaskIDs != locked else { return }
+                Self.logger.info("Running tasks changed: \(locked.map(\.uuidString).joined(separator: ", "))")
+                self.runningTaskIDs = locked
+            }
+        }
     }
 
     // MARK: - Preview
