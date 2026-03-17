@@ -3,11 +3,20 @@
     <channel>
         <title>Atelier</title>
         <item>
+            <title>0.2.1</title>
+            <pubDate>Tue, 17 Mar 2026 13:49:03 -0400</pubDate>
+            <sparkle:version>20260317</sparkle:version>
+            <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
+                <sparkle:releaseNotesLink>https://raulriera.github.io/atelier/release-notes/0.2.1.md</sparkle:releaseNotesLink>
+            <sparkle:minimumSystemVersion>26.2</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/raulriera/atelier/releases/download/v0.2.1/Atelier.dmg" length="6180496" type="application/octet-stream"/>
+        </item>
+        <item>
             <title>0.2.0</title>
             <pubDate>Sat, 14 Mar 2026 18:53:47 -0400</pubDate>
             <sparkle:version>20260314</sparkle:version>
             <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
-                <sparkle:releaseNotesLink>https://raulriera.github.io/atelier/release-notes/0.2.0.html</sparkle:releaseNotesLink>
+            <sparkle:releaseNotesLink>https://raulriera.github.io/atelier/release-notes/0.2.0.html</sparkle:releaseNotesLink>
             <sparkle:minimumSystemVersion>26.2</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/raulriera/atelier/releases/download/v0.2.0/Atelier.dmg" length="6149132" type="application/octet-stream"/>
         </item>
