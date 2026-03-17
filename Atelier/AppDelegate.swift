@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let projectStore, let openWindow else { return }
         let metadata = try? projectStore.createProject(rootURL: nil)
         if let id = metadata?.id {
+            projectStore.registerOpenWindow(id: id)
             openWindow(value: id)
         }
     }

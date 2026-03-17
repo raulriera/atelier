@@ -57,10 +57,17 @@ struct AtelierApp: App {
                 appDelegate.openWindow = openWindow
             }
         } defaultValue: {
-            // macOS restores window count and geometry, but SwiftUI may not
-            // persist the UUID binding (e.g. after Xcode rebuilds). Fall back
-            // to existing projects so restored windows aren't empty.
-            (try? projectStore.nextUnclaimedProject())?.id ?? UUID()
+            // SwiftUI does not reliably persist the UUID binding across launches.
+            // Dequeue from our own persisted open-window list first, then fall
+            // back to the most-recently-opened project heuristic.
+            let id: UUID
+            if let restored = projectStore.dequeueRestorationWindow() {
+                id = restored
+            } else {
+                id = (try? projectStore.nextUnclaimedProject())?.id ?? UUID()
+            }
+            projectStore.registerOpenWindow(id: id)
+            return id
         }
         .defaultSize(
             width: Layout.defaultWindowWidth,
@@ -102,6 +109,7 @@ struct AtelierApp: App {
                 Button("New Window") {
                     let metadata = try? projectStore.createProject(rootURL: nil)
                     if let id = metadata?.id {
+                        projectStore.registerOpenWindow(id: id)
                         openWindow(value: id)
                     }
                 }
@@ -116,9 +124,11 @@ struct AtelierApp: App {
 
                         if let existing = projectStore.findProject(rootURL: url) {
                             try? projectStore.touch(existing.id)
+                            projectStore.registerOpenWindow(id: existing.id)
                             dismissWindow(value: existing.id)
                             openWindow(value: existing.id)
                         } else if let metadata = try? projectStore.createProject(rootURL: url) {
+                            projectStore.registerOpenWindow(id: metadata.id)
                             openWindow(value: metadata.id)
                         }
                     }
@@ -132,6 +142,7 @@ struct AtelierApp: App {
                 Menu("Open Recent") {
                     ForEach(Array(recentProjects)) { project in
                         Button(project.displayName) {
+                            projectStore.registerOpenWindow(id: project.id)
                             openWindow(value: project.id)
                         }
                     }

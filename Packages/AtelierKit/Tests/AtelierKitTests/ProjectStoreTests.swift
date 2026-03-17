@@ -237,6 +237,129 @@ struct ProjectStoreTests {
         #expect(store.allProjects().count == 1)
     }
 
+    // MARK: - Open Window Tracking
+
+    @Test @MainActor func registerOpenWindowPersistsToDisk() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+        let project = try store.createProject(rootURL: nil)
+
+        store.registerOpenWindow(id: project.id)
+
+        let url = base.appendingPathComponent("open-windows.json")
+        try #require(FileManager.default.fileExists(atPath: url.path))
+
+        let data = try Data(contentsOf: url)
+        let ids = try JSONDecoder().decode([UUID].self, from: data)
+        #expect(ids == [project.id])
+    }
+
+    @Test @MainActor func registerOpenWindowIsIdempotent() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+        let project = try store.createProject(rootURL: nil)
+
+        store.registerOpenWindow(id: project.id)
+        store.registerOpenWindow(id: project.id)
+        store.registerOpenWindow(id: project.id)
+
+        let url = base.appendingPathComponent("open-windows.json")
+        let data = try Data(contentsOf: url)
+        let ids = try JSONDecoder().decode([UUID].self, from: data)
+        #expect(ids == [project.id])
+    }
+
+    @Test @MainActor func dequeueRestorationWindowReturnsPersistedIDs() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        // First session: register two open windows
+        let store1 = makeStore(baseDirectory: base)
+        try store1.load()
+        let projectA = try store1.createProject(rootURL: nil)
+        let projectB = try store1.createProject(rootURL: nil)
+        store1.registerOpenWindow(id: projectA.id)
+        store1.registerOpenWindow(id: projectB.id)
+
+        // Second session: load and dequeue
+        let store2 = makeStore(baseDirectory: base)
+        try store2.load()
+
+        let first = try #require(store2.dequeueRestorationWindow())
+        let second = try #require(store2.dequeueRestorationWindow())
+        let third = store2.dequeueRestorationWindow()
+
+        #expect(first == projectA.id)
+        #expect(second == projectB.id)
+        #expect(third == nil)
+    }
+
+    @Test @MainActor func dequeueRestorationWindowSkipsDeletedProjects() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store1 = makeStore(baseDirectory: base)
+        try store1.load()
+        let projectA = try store1.createProject(rootURL: nil)
+        let projectB = try store1.createProject(rootURL: nil)
+        store1.registerOpenWindow(id: projectA.id)
+        store1.registerOpenWindow(id: projectB.id)
+
+        // Delete projectA before next launch
+        try store1.deleteProject(projectA.id)
+
+        let store2 = makeStore(baseDirectory: base)
+        try store2.load()
+
+        let first = store2.dequeueRestorationWindow()
+        let second = store2.dequeueRestorationWindow()
+
+        #expect(first == projectB.id)
+        #expect(second == nil)
+    }
+
+    @Test @MainActor func dequeueRestorationWindowClaimsIDsForNextUnclaimedFallback() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store1 = makeStore(baseDirectory: base)
+        try store1.load()
+        let projectA = try store1.createProject(rootURL: nil)
+        let projectB = try store1.createProject(rootURL: nil)
+        store1.registerOpenWindow(id: projectA.id)
+
+        // Second session: dequeue A, then fallback should skip A
+        let store2 = makeStore(baseDirectory: base)
+        try store2.load()
+
+        let dequeued = store2.dequeueRestorationWindow()
+        #expect(dequeued == projectA.id)
+
+        // nextUnclaimedProject should not return projectA again
+        let fallback = try store2.nextUnclaimedProject()
+        #expect(fallback.id == projectB.id)
+    }
+
+    @Test @MainActor func deleteProjectRemovesFromOpenWindows() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+        let project = try store.createProject(rootURL: nil)
+        store.registerOpenWindow(id: project.id)
+
+        try store.deleteProject(project.id)
+
+        let url = base.appendingPathComponent("open-windows.json")
+        let data = try Data(contentsOf: url)
+        let ids = try JSONDecoder().decode([UUID].self, from: data)
+        #expect(ids.isEmpty)
+    }
+
     // MARK: - updateProjectRoot
 
     @Test @MainActor func updateProjectRootUpdatesMetadataAndPersists() throws {

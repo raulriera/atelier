@@ -27,6 +27,13 @@ public final class ProjectStore {
     /// Ensures each restored window gets a unique existing project.
     private var claimedIDs: Set<UUID> = []
 
+    /// IDs of projects with open windows, persisted for restoration across launches.
+    private var openWindowIDs: [UUID] = []
+
+    /// Queue of IDs to hand out during restoration. Populated from the persisted
+    /// file on ``load()`` and drained by ``dequeueRestorationWindow()``.
+    private var restorationQueue: [UUID] = []
+
     public init(baseDirectory: URL, bookmarkCreator: BookmarkCreator = SystemBookmarkCreator()) {
         self.baseDirectory = baseDirectory
         self.bookmarkCreator = bookmarkCreator
@@ -40,7 +47,7 @@ public final class ProjectStore {
 
     // MARK: - Registry
 
-    /// Loads the project registry from disk.
+    /// Loads the project registry and open-window state from disk.
     public func load() throws {
         let fileURL = registryFileURL
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
@@ -52,6 +59,8 @@ public final class ProjectStore {
         decoder.dateDecodingStrategy = .iso8601
         let projects = try decoder.decode([ProjectMetadata].self, from: data)
         registry = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })
+
+        loadOpenWindows()
     }
 
     /// Saves the project registry to disk.
@@ -98,6 +107,30 @@ public final class ProjectStore {
         let created = try createProject(rootURL: nil)
         claimedIDs.insert(created.id)
         return created
+    }
+
+    // MARK: - Open Window Tracking
+
+    /// Records a project as having an open window and persists the list.
+    ///
+    /// Called from `ProjectWindow.init` each time a window is created.
+    /// Idempotent — duplicate calls for the same ID are ignored.
+    public func registerOpenWindow(id: UUID) {
+        guard !openWindowIDs.contains(id) else { return }
+        openWindowIDs.append(id)
+        persistOpenWindows()
+    }
+
+    /// Returns the next project ID from the persisted open-window list.
+    ///
+    /// Used by the `WindowGroup` `defaultValue` closure during restoration.
+    /// Each call removes one ID from the queue so subsequent windows get
+    /// different projects. Returns `nil` when the queue is exhausted.
+    public func dequeueRestorationWindow() -> UUID? {
+        guard !restorationQueue.isEmpty else { return nil }
+        let id = restorationQueue.removeFirst()
+        claimedIDs.insert(id)
+        return id
     }
 
     // MARK: - Lifecycle
@@ -151,6 +184,8 @@ public final class ProjectStore {
     /// Removes a project from the registry and deletes its data directory.
     public func deleteProject(_ id: UUID) throws {
         registry[id] = nil
+        openWindowIDs.removeAll { $0 == id }
+        persistOpenWindows()
 
         let projectDir = projectDirectory(for: id)
         if FileManager.default.fileExists(atPath: projectDir.path) {
@@ -214,6 +249,25 @@ public final class ProjectStore {
 
     private var registryFileURL: URL {
         baseDirectory.appendingPathComponent("projects.json")
+    }
+
+    private var openWindowsFileURL: URL {
+        baseDirectory.appendingPathComponent("open-windows.json")
+    }
+
+    private func persistOpenWindows() {
+        guard let data = try? JSONEncoder().encode(openWindowIDs) else { return }
+        try? data.write(to: openWindowsFileURL, options: .atomic)
+    }
+
+    private func loadOpenWindows() {
+        do {
+            let data = try Data(contentsOf: openWindowsFileURL)
+            let ids = try JSONDecoder().decode([UUID].self, from: data)
+            restorationQueue = ids.filter { registry[$0] != nil }
+        } catch {
+            restorationQueue = []
+        }
     }
 
     private func ensureProjectDirectory(for id: UUID) throws {
