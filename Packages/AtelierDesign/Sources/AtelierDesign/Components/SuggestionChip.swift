@@ -26,8 +26,6 @@ public struct SuggestionChip: View {
     /// Action invoked when the chip is tapped.
     let action: () -> Void
 
-    @State private var isHovered = false
-
     public init(
         iconSystemName: String,
         title: String,
@@ -42,59 +40,55 @@ public struct SuggestionChip: View {
 
     public var body: some View {
         Button(action: action) {
-            HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
-                Image(systemName: iconSystemName)
-                    .font(.body)
-                    .foregroundStyle(.contentPrimary)
-                    .frame(width: 20)
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text(title)
-                        .font(.cardBody)
-                        .foregroundStyle(.contentPrimary)
-                        .lineLimit(1)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.contentTertiary)
-                        .lineLimit(1)
-                }
+            VStack(spacing: Spacing.xs) {
+                Label(title, systemImage: iconSystemName)
+                    .font(.cardBody)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .cardContainer()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(Spacing.md)
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .scaleEffect(isHovered ? 1.02 : 1.0)
-        .animation(Motion.morph, value: isHovered)
-        .onHover { hovering in
-            isHovered = hovering
-        }
     }
 }
 
 #Preview {
-    LazyVGrid(
-        columns: [GridItem(.flexible()), GridItem(.flexible())],
-        spacing: Spacing.sm
-    ) {
-        SuggestionChip(
-            iconSystemName: "doc.text",
-            title: "Draft a document",
-            subtitle: "Start a proposal, brief, or report"
-        ) {}
-        SuggestionChip(
-            iconSystemName: "calendar",
-            title: "Plan my week",
-            subtitle: "Organize tasks and priorities"
-        ) {}
-        SuggestionChip(
-            iconSystemName: "lightbulb",
-            title: "Brainstorm ideas",
-            subtitle: "Generate creative options"
-        ) {}
-        SuggestionChip(
-            iconSystemName: "envelope",
-            title: "Draft an email",
-            subtitle: "Compose a professional message"
-        ) {}
+    GlassEffectContainer(spacing: 0) {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                SuggestionChip(
+                    iconSystemName: "doc.text",
+                    title: "Draft a document",
+                    subtitle: "Start a proposal, brief, or report"
+                ) {}
+                Divider()
+                SuggestionChip(
+                    iconSystemName: "calendar",
+                    title: "Plan my week",
+                    subtitle: "Organize tasks and priorities"
+                ) {}
+            }
+            Divider()
+            HStack(spacing: 0) {
+                SuggestionChip(
+                    iconSystemName: "lightbulb",
+                    title: "Brainstorm ideas",
+                    subtitle: "Generate creative options"
+                ) {}
+                Divider()
+                SuggestionChip(
+                    iconSystemName: "envelope",
+                    title: "Draft an email",
+                    subtitle: "Compose a professional message"
+                ) {}
+            }
+        }
+        .glassEffect(.regular, in: .rect(cornerRadius: 10, style: .continuous))
     }
     .frame(maxWidth: 500)
     .padding()

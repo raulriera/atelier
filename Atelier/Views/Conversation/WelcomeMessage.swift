@@ -16,47 +16,48 @@ struct WelcomeView: View {
     @State private var suggestions: [SuggestionPrompt] = []
 
     var body: some View {
-        VStack(spacing: Spacing.lg) {
-            // Header
-            VStack(spacing: Spacing.xs) {
-                Image(systemName: "sparkles")
-                    .font(.title2)
-                    .foregroundStyle(.contentPrimary)
-
-                Text("Let's work on something great!")
-                    .font(.sectionTitle)
-                    .foregroundStyle(.contentPrimary)
+        VStack(spacing: Spacing.md) {
+            ContentUnavailableView {
+                Label("Let's work on something great!", systemImage: "sparkles")
             }
 
-            // Suggestion grid — non-lazy to avoid the reversed scroll view
-            // dropping off-screen rows when the compose field expands.
-            Grid(horizontalSpacing: Spacing.sm, verticalSpacing: Spacing.sm) {
-                ForEach(0..<(suggestions.count + 1) / 2, id: \.self) { row in
-                    GridRow {
-                        ForEach(0..<2, id: \.self) { col in
-                            let index = row * 2 + col
-                            if index < suggestions.count {
-                                let suggestion = suggestions[index]
-                                SuggestionChip(
-                                    iconSystemName: suggestion.iconSystemName,
-                                    title: suggestion.title,
-                                    subtitle: suggestion.subtitle
-                                ) {
-                                    draft = suggestion.prompt
+            // Suggestion grid inside a single glass sheet.
+            GlassEffectContainer(spacing: 0) {
+                VStack(spacing: 0) {
+                    ForEach(0..<(suggestions.count + 1) / 2, id: \.self) { row in
+                        if row > 0 {
+                            Divider()
+                        }
+                        HStack(spacing: 0) {
+                            ForEach(0..<2, id: \.self) { col in
+                                let index = row * 2 + col
+                                if col > 0 {
+                                    Divider()
                                 }
-                                .transition(Motion.cardReveal)
-                                .animation(
-                                    Motion.appear.delay(Double(index) * 0.05),
-                                    value: suggestions.count
-                                )
+                                if index < suggestions.count {
+                                    let suggestion = suggestions[index]
+                                    SuggestionChip(
+                                        iconSystemName: suggestion.iconSystemName,
+                                        title: suggestion.title,
+                                        subtitle: suggestion.subtitle
+                                    ) {
+                                        draft = suggestion.prompt
+                                    }
+                                    .transition(Motion.cardReveal)
+                                    .animation(
+                                        Motion.appear.delay(Double(index) * 0.05),
+                                        value: suggestions.count
+                                    )
+                                }
                             }
                         }
                     }
                 }
+                .glassEffect(.regular, in: .rect(cornerRadius: Radii.md, style: .continuous))
             }
             .frame(maxWidth: 500)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, Spacing.lg)
         .onAppear {
             guard suggestions.isEmpty else { return }
