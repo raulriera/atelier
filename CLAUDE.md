@@ -148,6 +148,19 @@ Examples:
 - **Don't iterate on symptoms.** When something breaks, stop and understand the root cause before writing more code. Adding band-aids on band-aids makes things worse.
 - **Simplify aggressively.** If a fix requires more than ~10 lines of new code, question whether you're solving the right problem.
 
+### Releases
+
+To cut a release, run the release script with the version number:
+
+```
+./scripts/release.sh <version>        # full release (build, sign, notarize, push, GitHub release)
+./scripts/release.sh --dry-run <version>  # build only, skip notarize/push/release
+```
+
+Example: `./scripts/release.sh 0.2.2`
+
+The script handles everything: archive, export, DMG, notarization, Sparkle appcast, release notes (via Claude CLI), git commit + tag + push, and GitHub release creation.
+
 ### Status tracking
 
 - 🔲 Not started
