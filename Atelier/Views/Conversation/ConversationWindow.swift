@@ -10,7 +10,6 @@ struct ConversationWindow: View {
     @State private var isDropTargeted = false
     @State private var showInspector = false
     @State private var inspectorTab: InspectorTab = .capabilities
-    @State private var showComposeField = false
     @State private var showSessionMenu = false
     @State private var didInjectCompletions = false
     @State private var showAttachmentPicker = false
@@ -66,19 +65,20 @@ struct ConversationWindow: View {
                         .padding(.bottom, Spacing.xs)
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    VStack(spacing: Spacing.xs) {
+                    ComposeField(
+                        text: $draft,
+                        isStreaming: controller.session.isStreaming,
+                        onSubmit: { sendMessage() },
+                        onStop: { controller.stopGeneration() }
+                    ) {
                         if !pendingAttachments.isEmpty {
                             ComposeAttachmentStrip(attachments: $pendingAttachments)
+                                .padding(.top, Spacing.sm)
+                                .padding(.horizontal, Spacing.sm)
                                 .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
-
-                        ComposeField(
-                            text: $draft,
-                            isStreaming: controller.session.isStreaming,
-                            onSubmit: { sendMessage() },
-                            onStop: { controller.stopGeneration() }
-                        )
                     }
+                    .animation(Motion.morph, value: pendingAttachments.isEmpty)
                     .disabled(!controller.cliAvailable)
                     .frame(maxWidth: Layout.readingWidth)
                     .padding(Spacing.md)
@@ -94,9 +94,6 @@ struct ConversationWindow: View {
                             }
                             .ignoresSafeArea(edges: .bottom)
                     }
-                    .animation(Motion.morph, value: pendingAttachments.isEmpty)
-                    .opacity(showComposeField ? 1 : 0)
-                    .animation(Motion.appear, value: showComposeField)
                 }
             .overlay(alignment: .trailing) {
                 if showInspector {
@@ -173,9 +170,6 @@ struct ConversationWindow: View {
                 }
             }
 
-            // Let the initial layout settle before fading in ComposeField.
-            try? await Task.sleep(for: .milliseconds(160))
-            showComposeField = true
         }
         .onChange(of: controller.selectedToolEvent?.id) { _, newID in
             controller.loadToolPayloadIfNeeded(for: newID)
@@ -227,7 +221,7 @@ struct ConversationWindow: View {
             } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
                 // In-flight screenshots and image data without a file URL.
                 handled = true
-                provider.loadDataRepresentation(forTypeIdentifier: UTType.png.identifier) { data, _ in
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
                     guard let data,
                           let attachment = try? FileAttachment.fromImageData(data) else { return }
                     Task { @MainActor in self.appendAttachments([attachment]) }

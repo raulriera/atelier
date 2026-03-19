@@ -239,9 +239,7 @@ VStack { diffView }.cardContainer()
 The message input. TextEditor with placeholder, submit button, and auto-grow behavior.
 
 ```swift
-ComposeField(text: $draft, placeholder: "Message Claude...") {
-    sendMessage()
-}
+ComposeField(text: $draft, placeholder: "Message Claude...", onSubmit: { sendMessage() })
 ```
 
 ### SectionDivider
