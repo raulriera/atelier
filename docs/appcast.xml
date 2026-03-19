@@ -3,11 +3,20 @@
     <channel>
         <title>Atelier</title>
         <item>
+            <title>0.2.2</title>
+            <pubDate>Thu, 19 Mar 2026 12:20:28 -0400</pubDate>
+            <sparkle:version>20260319</sparkle:version>
+            <sparkle:shortVersionString>0.2.2</sparkle:shortVersionString>
+                <sparkle:releaseNotesLink>https://raulriera.github.io/atelier/release-notes/0.2.2.md</sparkle:releaseNotesLink>
+            <sparkle:minimumSystemVersion>26.2</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/raulriera/atelier/releases/download/v0.2.2/Atelier.dmg" length="6178831" type="application/octet-stream"/>
+        </item>
+        <item>
             <title>0.2.1</title>
             <pubDate>Tue, 17 Mar 2026 13:49:03 -0400</pubDate>
             <sparkle:version>20260317</sparkle:version>
             <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
-                <sparkle:releaseNotesLink>https://raulriera.github.io/atelier/release-notes/0.2.1.md</sparkle:releaseNotesLink>
+            <sparkle:releaseNotesLink>https://raulriera.github.io/atelier/release-notes/0.2.1.md</sparkle:releaseNotesLink>
             <sparkle:minimumSystemVersion>26.2</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/raulriera/atelier/releases/download/v0.2.1/Atelier.dmg" length="6180496" type="application/octet-stream"/>
         </item>
@@ -19,14 +28,6 @@
             <sparkle:releaseNotesLink>https://raulriera.github.io/atelier/release-notes/0.2.0.html</sparkle:releaseNotesLink>
             <sparkle:minimumSystemVersion>26.2</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/raulriera/atelier/releases/download/v0.2.0/Atelier.dmg" length="6149132" type="application/octet-stream"/>
-        </item>
-        <item>
-            <title>0.1.0</title>
-            <pubDate>Tue, 10 Mar 2026 16:46:31 -0400</pubDate>
-            <sparkle:version>20260312</sparkle:version>
-            <sparkle:shortVersionString>0.1.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>26.2</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/raulriera/atelier/releases/download/v0.1.1/Atelier.dmg" length="6135585" type="application/octet-stream"/>
         </item>
     </channel>
 </rss>
