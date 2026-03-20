@@ -121,6 +121,16 @@ public final class ProjectStore {
         persistOpenWindows()
     }
 
+    /// Removes a project from the open-window list and persists the change.
+    ///
+    /// Called when a window closes or when CMD+O switches a window to a
+    /// different project. No-op if the ID is not in the list.
+    public func unregisterOpenWindow(id: UUID) {
+        guard openWindowIDs.contains(id) else { return }
+        openWindowIDs.removeAll { $0 == id }
+        persistOpenWindows()
+    }
+
     /// Returns the next project ID from the persisted open-window list.
     ///
     /// Used by the `WindowGroup` `defaultValue` closure during restoration.
@@ -184,8 +194,7 @@ public final class ProjectStore {
     /// Removes a project from the registry and deletes its data directory.
     public func deleteProject(_ id: UUID) throws {
         registry[id] = nil
-        openWindowIDs.removeAll { $0 == id }
-        persistOpenWindows()
+        unregisterOpenWindow(id: id)
 
         let projectDir = projectDirectory(for: id)
         if FileManager.default.fileExists(atPath: projectDir.path) {

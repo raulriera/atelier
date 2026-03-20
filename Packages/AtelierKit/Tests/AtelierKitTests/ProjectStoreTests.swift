@@ -360,6 +360,62 @@ struct ProjectStoreTests {
         #expect(ids.isEmpty)
     }
 
+    @Test @MainActor func unregisterOpenWindowRemovesFromList() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+        let projectA = try store.createProject(rootURL: nil)
+        let projectB = try store.createProject(rootURL: nil)
+        store.registerOpenWindow(id: projectA.id)
+        store.registerOpenWindow(id: projectB.id)
+
+        store.unregisterOpenWindow(id: projectA.id)
+
+        let url = base.appendingPathComponent("open-windows.json")
+        let data = try Data(contentsOf: url)
+        let ids = try JSONDecoder().decode([UUID].self, from: data)
+        #expect(ids == [projectB.id])
+    }
+
+    @Test @MainActor func unregisterOpenWindowIsNoOpForUnknownID() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+        let project = try store.createProject(rootURL: nil)
+        store.registerOpenWindow(id: project.id)
+
+        store.unregisterOpenWindow(id: UUID())
+
+        let url = base.appendingPathComponent("open-windows.json")
+        let data = try Data(contentsOf: url)
+        let ids = try JSONDecoder().decode([UUID].self, from: data)
+        #expect(ids == [project.id])
+    }
+
+    @Test @MainActor func switchProjectSwapsOpenWindowIDs() throws {
+        let base = try makeTempDirectory()
+        defer { cleanup(base) }
+
+        let store = makeStore(baseDirectory: base)
+        let oldProject = try store.createProject(rootURL: nil)
+        let newProject = try store.createProject(rootURL: nil)
+        store.registerOpenWindow(id: oldProject.id)
+
+        // Simulate CMD+O: unregister old, register new
+        store.unregisterOpenWindow(id: oldProject.id)
+        store.registerOpenWindow(id: newProject.id)
+
+        // Reload in a fresh store to verify persistence
+        let store2 = makeStore(baseDirectory: base)
+        try store2.load()
+
+        let restored = try #require(store2.dequeueRestorationWindow())
+        #expect(restored == newProject.id)
+        #expect(store2.dequeueRestorationWindow() == nil)
+    }
+
     // MARK: - updateProjectRoot
 
     @Test @MainActor func updateProjectRootUpdatesMetadataAndPersists() throws {

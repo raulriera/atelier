@@ -39,6 +39,7 @@ struct AtelierApp: App {
         return store
     }()
 
+    @FocusedValue(\.activeProjectID) private var activeProjectID
     @FocusedValue(\.inspectorVisibility) private var inspectorVisibility
     @FocusedValue(\.newConversation) private var newConversation
     @FocusedValue(\.showAttachmentPicker) private var showAttachmentPicker
@@ -116,11 +117,19 @@ struct AtelierApp: App {
                 .keyboardShortcut("n")
 
                 Button("Open Folder...") {
+                    // Capture before the async panel — focus may shift while
+                    // NSOpenPanel is presented.
+                    let capturedOldID = activeProjectID
+
                     Task { @MainActor in
                         guard let url = await FolderPicker.chooseFolder(
                             message: "Choose a folder to open as a project",
                             prompt: "Open"
                         ) else { return }
+
+                        if let oldID = capturedOldID {
+                            projectStore.unregisterOpenWindow(id: oldID)
+                        }
 
                         if let existing = projectStore.findProject(rootURL: url) {
                             try? projectStore.touch(existing.id)
@@ -142,6 +151,9 @@ struct AtelierApp: App {
                 Menu("Open Recent") {
                     ForEach(Array(recentProjects)) { project in
                         Button(project.displayName) {
+                            if let oldID = activeProjectID {
+                                projectStore.unregisterOpenWindow(id: oldID)
+                            }
                             projectStore.registerOpenWindow(id: project.id)
                             openWindow(value: project.id)
                         }

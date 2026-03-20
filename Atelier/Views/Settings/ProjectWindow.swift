@@ -51,9 +51,15 @@ struct ProjectWindow: View {
             }
         }
         .navigationTitle(project?.rootURL != nil ? "" : (project?.displayName ?? ""))
+        .focusedSceneValue(\.activeProjectID, project?.id)
         .onAppear {
             if let project {
                 try? projectStore.touch(project.id)
+            }
+        }
+        .onDisappear {
+            if let project {
+                projectStore.unregisterOpenWindow(id: project.id)
             }
         }
         .task(id: project?.rootURL) {
