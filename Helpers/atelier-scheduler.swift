@@ -177,7 +177,7 @@ func sensitivePathDenyRules() -> [String] {
     for relativePath in sensitiveRelativePaths {
         let absolutePath = "\(home)/\(relativePath)"
         for tool in fileTools {
-            args += ["--disallowedTools", "\(tool)(\(absolutePath))"]
+            args += ["--disallowedTools", "\(tool)(/\(absolutePath))"]
         }
     }
     for pattern in sensitiveGlobalPatterns {
@@ -546,6 +546,7 @@ func executeTask(_ task: ScheduledTask, claudePath: String, denyRules: [String],
     var arguments = [
         "-p", task.prompt,
         "--output-format", "json",
+        "--verbose",
         "--max-turns", "20",
         "--no-session-persistence",
         "--append-system-prompt", automationSystemPrompt,
@@ -554,11 +555,15 @@ func executeTask(_ task: ScheduledTask, claudePath: String, denyRules: [String],
         arguments += ["--model", model]
     }
 
+    // Pre-approve file tools scoped to the project directory.
+    // Uses // prefix for absolute paths (gitignore-style) and ** for recursive matching.
+    // Bash is NOT approved — scheduled tasks use file tools for persistence.
+    // WebFetch is NOT approved — prevents prompt injection via fetched content.
     let projectRoot = URL(fileURLWithPath: task.projectPath).standardizedFileURL.path
     for tool in ["Read", "Glob", "Grep", "Write", "Edit"] {
-        arguments += ["--allowedTools", "\(tool)(\(projectRoot)/*)"]
+        arguments += ["--allowedTools", "\(tool)(/\(projectRoot)/**)"]
     }
-    arguments += ["--allowedTools", "Bash"]
+    arguments += ["--allowedTools", "WebSearch"]
     arguments += denyRules
 
     // MCP config and auto-approved capability tools

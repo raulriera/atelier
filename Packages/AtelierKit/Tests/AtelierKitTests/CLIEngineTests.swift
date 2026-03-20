@@ -152,9 +152,9 @@ struct CLIEngineTests {
                 workingDirectoryPath: "/Users/test/project"
             )
             let allowedValues = values(after: "--allowedTools", in: args)
-            #expect(allowedValues.contains("Read(/Users/test/project/*)"))
-            #expect(allowedValues.contains("Glob(/Users/test/project/*)"))
-            #expect(allowedValues.contains("Grep(/Users/test/project/*)"))
+            #expect(allowedValues.contains("Read(//Users/test/project/**)"))
+            #expect(allowedValues.contains("Glob(//Users/test/project/**)"))
+            #expect(allowedValues.contains("Grep(//Users/test/project/**)"))
         }
 
         @Test("scopedRoot normalizes path")
@@ -168,17 +168,17 @@ struct CLIEngineTests {
             #expect(CLIEngine.scopedRoot(workingDirectoryPath: nil) == nil)
         }
 
-        @Test("Sensitive deny rules use absolute paths")
+        @Test("Sensitive deny rules use // prefix for absolute paths")
         func sensitiveDenyRulesUseAbsolutePaths() {
             let rules = CLIEngine.sensitivePathDenyRules()
-            // All deny rules should contain absolute paths, not ~
+            // All deny rules should contain absolute paths with // prefix
             for rule in rules {
                 #expect(!rule.contains("~"), "Deny rule should not contain ~: \(rule)")
             }
-            // Should contain the real home directory path
             let home = CLIDiscovery.realHomeDirectory
-            let hasAbsolutePath = rules.contains { $0.contains(home) }
-            #expect(hasAbsolutePath, "Deny rules should contain absolute home path")
+            // Deny rules should use /home format which becomes //... for absolute paths
+            let hasAbsolutePath = rules.contains { $0.contains("(/\(home)") }
+            #expect(hasAbsolutePath, "Deny rules should contain absolute home path with // prefix")
         }
     }
 
@@ -221,7 +221,7 @@ struct CLIEngineTests {
             )
             let allowedValues = values(after: "--allowedTools", in: args)
             // Both project-scoped and attachment-specific rules present
-            #expect(allowedValues.contains("Read(/Users/test/project/*)"))
+            #expect(allowedValues.contains("Read(//Users/test/project/**)"))
             #expect(allowedValues.contains("Read(//Users/someone/Documents/outside.pdf)"))
         }
     }
@@ -335,6 +335,44 @@ struct PipeReadingTests {
 
         process.waitUntilExit()
         #expect(lines.isEmpty)
+    }
+}
+
+@Suite("Tool path scoping")
+struct ToolPathScopingTests {
+    @Test("projectScopedAllowRules uses // prefix and ** glob")
+    func scopedRulesFormat() {
+        let rules = CLIEngine.projectScopedAllowRules(for: ["/Users/test/project"])
+        #expect(rules.contains("Read(//Users/test/project/**)"))
+        #expect(rules.contains("Glob(//Users/test/project/**)"))
+        #expect(rules.contains("Grep(//Users/test/project/**)"))
+    }
+
+    @Test("projectScopedAllowRules handles paths with spaces literally")
+    func scopedRulesWithSpaces() {
+        let rules = CLIEngine.projectScopedAllowRules(for: ["/Users/test/My Project"])
+        #expect(rules.contains("Read(//Users/test/My Project/**)"))
+        #expect(rules.contains("Glob(//Users/test/My Project/**)"))
+        #expect(rules.contains("Grep(//Users/test/My Project/**)"))
+    }
+
+    @Test("scheduledTaskAllowRules includes all file tools")
+    func scheduledTaskRulesIncludeAllTools() {
+        let rules = CLIEngine.scheduledTaskAllowRules(for: "/Users/test/project")
+        for tool in CLIEngine.allFileTools {
+            #expect(rules.contains("\(tool)(//Users/test/project/**)"))
+        }
+    }
+
+    @Test("Attachment read paths use literal spaces")
+    func attachmentPathsLiteralSpaces() {
+        let args = CLIEngine.buildArguments(
+            message: "check this", modelAlias: "opus", sessionId: nil,
+            mcpConfigPath: "/tmp/test-config.json",
+            allowedReadPaths: ["/Users/someone/My Documents/report.pdf"]
+        )
+        let allowedValues = values(after: "--allowedTools", in: args)
+        #expect(allowedValues.contains("Read(//Users/someone/My Documents/report.pdf)"))
     }
 }
 

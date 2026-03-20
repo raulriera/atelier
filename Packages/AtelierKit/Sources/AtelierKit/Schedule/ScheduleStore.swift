@@ -195,7 +195,8 @@ public final class ScheduleStore {
 
                 writeLog("Task \"\(task.name)\" started (PID \(ProcessInfo.processInfo.processIdentifier))")
                 writeLog("Project: \(task.projectPath)")
-                writeLog("CLI: \(CLIDiscovery.findCLI())")
+                let claudePath = CLIDiscovery.findCLI()
+                writeLog("CLI: \(claudePath)")
                 writeLog("---")
                 let startTime = Date()
 
@@ -212,14 +213,13 @@ public final class ScheduleStore {
                         try? FileManager.default.removeItem(atPath: configPath)
                     }
                 }
-
-                let claudePath = CLIDiscovery.findCLI()
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: claudePath)
 
                 var arguments = [
                     "-p", task.prompt,
                     "--output-format", "json",
+                    "--verbose",
                     "--max-turns", "20",
                     "--no-session-persistence",
                     "--append-system-prompt", automationSystemPrompt,
@@ -228,13 +228,12 @@ public final class ScheduleStore {
                     arguments += ["--model", model]
                 }
 
-                // Pre-approve file tools scoped to the project directory
-                // and Bash (unscoped — CLI doesn't support path-scoping Bash).
+                // Pre-approve file tools scoped to the project directory.
+                // Bash is NOT approved — prevents prompt injection from executing arbitrary commands.
+                // WebFetch is NOT approved — prevents content injection from fetched pages.
                 let projectRoot = URL(fileURLWithPath: task.projectPath).standardizedFileURL.path
-                for tool in ["Read", "Glob", "Grep", "Write", "Edit"] {
-                    arguments += ["--allowedTools", "\(tool)(\(projectRoot)/*)"]
-                }
-                arguments += ["--allowedTools", "Bash"]
+                arguments += CLIEngine.scheduledTaskAllowRules(for: projectRoot)
+                arguments += ["--allowedTools", "WebSearch"]
                 arguments += CLIEngine.sensitivePathDenyRules()
 
                 // MCP config and auto-approved capability tools

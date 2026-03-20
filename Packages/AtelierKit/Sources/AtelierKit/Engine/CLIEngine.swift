@@ -312,18 +312,34 @@ public final class CLIEngine: ConversationEngine, Sendable {
     }
 
     /// Generates `--allowedTools` rules that scope file-reading tools to specific directories.
+    ///
+    /// Uses `//` prefix for absolute paths (gitignore-style rules treat a single `/`
+    /// as relative to the project root) and `**` for recursive matching.
     static func projectScopedAllowRules(for roots: [String]) -> [String] {
         var args: [String] = []
         for root in roots {
             for tool in readOnlyFileTools {
-                args += ["--allowedTools", "\(tool)(\(root)/*)"]
+                args += ["--allowedTools", "\(tool)(/\(root)/**)"]
             }
         }
         return args
     }
 
-    /// All file tools that can access paths — used for sensitive path deny rules.
-    private static let allFileTools = ["Read", "Glob", "Grep", "Write", "Edit"]
+    /// All file tools that can access paths — used for sensitive path deny rules
+    /// and scheduled task allow rules.
+    static let allFileTools = ["Read", "Glob", "Grep", "Write", "Edit"]
+
+    /// Generates `--allowedTools` rules for scheduled task execution.
+    ///
+    /// Unlike `projectScopedAllowRules` (read-only for interactive mode), this includes
+    /// Write and Edit since scheduled tasks auto-approve all file operations within the project.
+    static func scheduledTaskAllowRules(for root: String) -> [String] {
+        var args: [String] = []
+        for tool in allFileTools {
+            args += ["--allowedTools", "\(tool)(/\(root)/**)"]
+        }
+        return args
+    }
 
     /// Generates `--disallowedTools` rules that block file tools from accessing sensitive paths.
     ///
@@ -336,7 +352,7 @@ public final class CLIEngine: ConversationEngine, Sendable {
         for relativePath in sensitiveRelativePaths {
             let absolutePath = "\(home)/\(relativePath)"
             for tool in allFileTools {
-                args += ["--disallowedTools", "\(tool)(\(absolutePath))"]
+                args += ["--disallowedTools", "\(tool)(/\(absolutePath))"]
             }
         }
         for pattern in sensitiveGlobalPatterns {
