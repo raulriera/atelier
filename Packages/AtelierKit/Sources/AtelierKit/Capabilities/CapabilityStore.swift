@@ -202,7 +202,7 @@ public final class CapabilityStore {
                 toolGroups: [
                     ToolGroup(id: "read", name: "Read", description: "Search and read email messages", tools: ["mail_search"]),
                     ToolGroup(id: "manage", name: "Manage", description: "Move, flag, and mark messages as read", tools: ["mail_move"]),
-                    ToolGroup(id: "send", name: "Send", description: "Create email drafts", tools: ["mail_send"]),
+                    ToolGroup(id: "send", name: "Send", description: "Create drafts and send emails", tools: ["mail_send"]),
                 ]
             ),
             Capability(

@@ -151,12 +151,12 @@ public enum CapabilityRegistry {
                 ToolGroup(
                     id: "send",
                     name: "Send",
-                    description: "Create email drafts",
+                    description: "Create drafts and send emails",
                     tools: [
                         "mail_create_draft",
+                        "mail_send_message",
                     ]
                 ),
-                // mail_send_message is still available but requires user approval
             ]
         )
     }
