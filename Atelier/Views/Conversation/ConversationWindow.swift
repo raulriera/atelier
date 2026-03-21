@@ -65,35 +65,15 @@ struct ConversationWindow: View {
                         .padding(.bottom, Spacing.xs)
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    ComposeField(
-                        text: $draft,
+                    ComposeBar(
+                        draft: $draft,
+                        pendingAttachments: $pendingAttachments,
+                        showAttachmentPicker: $showAttachmentPicker,
                         isStreaming: controller.session.isStreaming,
+                        cliAvailable: controller.cliAvailable,
                         onSubmit: { sendMessage() },
                         onStop: { controller.stopGeneration() }
-                    ) {
-                        if !pendingAttachments.isEmpty {
-                            ComposeAttachmentStrip(attachments: $pendingAttachments)
-                                .padding(.top, Spacing.sm)
-                                .padding(.horizontal, Spacing.sm)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-                    }
-                    .animation(Motion.morph, value: pendingAttachments.isEmpty)
-                    .disabled(!controller.cliAvailable)
-                    .frame(maxWidth: Layout.readingWidth)
-                    .padding(Spacing.md)
-                    .background {
-                        Rectangle()
-                            .fill(.bar)
-                            .mask {
-                                LinearGradient(
-                                    colors: [.clear, .black],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            }
-                            .ignoresSafeArea(edges: .bottom)
-                    }
+                    )
                 }
             .overlay(alignment: .trailing) {
                 if showInspector {
