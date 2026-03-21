@@ -69,6 +69,7 @@ struct ConversationWindow: View {
                         draft: $draft,
                         pendingAttachments: $pendingAttachments,
                         showAttachmentPicker: $showAttachmentPicker,
+                        selectedModel: $controller.selectedModel,
                         isStreaming: controller.session.isStreaming,
                         cliAvailable: controller.cliAvailable,
                         onSubmit: { sendMessage() },

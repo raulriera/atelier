@@ -7,19 +7,16 @@ struct ModelPickerView: View {
 
     var body: some View {
         Menu {
-            ForEach(ModelConfiguration.allModels) { model in
-                Button {
-                    selection = model
-                } label: {
-                    if model.modelId == selection.modelId {
-                        Label(model.displayName, systemImage: "checkmark")
-                    } else {
-                        Text(model.displayName)
-                    }
+            Picker(selection: $selection) {
+                ForEach(ModelConfiguration.allModels) { model in
+                    Text(model.friendlyName).tag(model)
                 }
+            } label: {
+                Text(selection.friendlyName)
             }
+            .pickerStyle(.inline)
         } label: {
-            Text(selection.displayName)
+            Text(selection.friendlyName)
                 .font(.metadata)
                 .foregroundStyle(.contentSecondary)
         }

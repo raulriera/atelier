@@ -61,7 +61,7 @@ struct SessionMenu: View {
             if sessions.isEmpty {
                 Text("No conversations")
                     .foregroundStyle(.secondary)
-                    .padding(Spacing.sm)
+                    .padding(Spacing.md)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -73,7 +73,7 @@ struct SessionMenu: View {
                             )
                         }
                     }
-                    .padding(Spacing.xxs)
+                    .padding(Spacing.sm)
                 }
                 .frame(maxHeight: 280)
             }
@@ -90,7 +90,7 @@ struct SessionMenu: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.xs)
+            .padding(.vertical, Spacing.sm)
         }
         .frame(width: 260)
     }
