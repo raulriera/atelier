@@ -33,7 +33,6 @@ private struct MockEngine: ConversationEngine {
 @MainActor
 private final class SpyEngine: ConversationEngine, @unchecked Sendable {
     var sentMessages: [String] = []
-    var sentModels: [ModelConfiguration] = []
     var sentAllowedReadPaths: [[String]] = []
     var events: [StreamEvent] = []
 
@@ -50,7 +49,6 @@ private final class SpyEngine: ConversationEngine, @unchecked Sendable {
         // Capture events before entering nonisolated context
         let captured = MainActor.assumeIsolated {
             sentMessages.append(message)
-            sentModels.append(model)
             sentAllowedReadPaths.append(allowedReadPaths)
             return events
         }
@@ -408,24 +406,6 @@ struct ConversationControllerTests {
             let controller = await makeController()
             controller.loadToolPayloadIfNeeded(for: "nonexistent")
             // Should not crash or change state
-        }
-    }
-
-    @Suite("Model selection")
-    struct ModelSelection {
-
-        @Test("Selected model is passed to the engine", .timeLimit(.minutes(1)))
-        @MainActor func passesModelToEngine() async throws {
-            let spy = SpyEngine()
-            spy.events = [.messageComplete(TokenUsage())]
-            let controller = await makeController(engine: spy)
-            controller.selectedModel = .opus
-
-            controller.sendMessage("Test")
-            try await pollUntil { !spy.sentModels.isEmpty }
-
-            let sentModel = try #require(spy.sentModels.first)
-            #expect(sentModel.modelId == ModelConfiguration.opus.modelId)
         }
     }
 

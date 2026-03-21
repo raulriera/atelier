@@ -22,7 +22,6 @@ public final class ConversationController {
     public internal(set) var toolPayloads: [String: ToolPayload] = [:]
     public var selectedToolEvent: ToolUseEvent?
     public var selectedTaskCompletion: TaskCompletionEvent?
-    public var selectedModel: ModelConfiguration = .default
     public private(set) var sessionList: [SessionSnapshotMetadata] = []
 
     /// Tools the user approved for the lifetime of this conversation.
@@ -456,7 +455,7 @@ public final class ConversationController {
         streamingTask = Task {
             let socketPath = approvalServer?.socketPath
             let capConfigs = capabilityStore.enabledCapabilityConfigs()
-            let stream = engine.send(message: message, model: selectedModel, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath, enabledCapabilities: capConfigs, allowedReadPaths: Array(allowedAttachmentPaths))
+            let stream = engine.send(message: message, model: .default, sessionId: session.sessionId, workingDirectory: workingDirectory, appendSystemPrompt: appendSystemPrompt, approvalSocketPath: socketPath, enabledCapabilities: capConfigs, allowedReadPaths: Array(allowedAttachmentPaths))
             do {
                 for try await event in stream {
                     handleStreamEvent(event)

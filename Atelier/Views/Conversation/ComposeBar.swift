@@ -11,7 +11,6 @@ struct ComposeBar: View {
     @Binding var draft: String
     @Binding var pendingAttachments: [FileAttachment]
     @Binding var showAttachmentPicker: Bool
-    @Binding var selectedModel: ModelConfiguration
     let isStreaming: Bool
     let cliAvailable: Bool
     let onSubmit: () -> Void
@@ -21,8 +20,7 @@ struct ComposeBar: View {
         HStack(alignment: .bottom, spacing: Spacing.xs) {
             ComposeAddMenu(
                 pendingAttachments: $pendingAttachments,
-                showAttachmentPicker: $showAttachmentPicker,
-                selectedModel: $selectedModel
+                showAttachmentPicker: $showAttachmentPicker
             )
 
             ComposeField(
@@ -69,20 +67,9 @@ struct ComposeBar: View {
 private struct ComposeAddMenu: View {
     @Binding var pendingAttachments: [FileAttachment]
     @Binding var showAttachmentPicker: Bool
-    @Binding var selectedModel: ModelConfiguration
 
     var body: some View {
         Menu {
-            Picker(selection: $selectedModel) {
-                ForEach(ModelConfiguration.allModels) { model in
-                    Text(model.friendlyName).tag(model)
-                }
-            } label: {
-                Label("Mode", systemImage: "bubble.left")
-            }
-
-            Divider()
-
             Button {
                 SketchWindowController.open { imageData in
                     if let attachment = try? FileAttachment.fromImageData(imageData) {
@@ -157,7 +144,6 @@ private struct ComposeSubmitButton: View {
     @Previewable @State var draft = ""
     @Previewable @State var attachments: [FileAttachment] = []
     @Previewable @State var showPicker = false
-    @Previewable @State var selectedModel: ModelConfiguration = .default
 
     VStack {
         Spacer()
@@ -165,7 +151,6 @@ private struct ComposeSubmitButton: View {
             draft: $draft,
             pendingAttachments: $attachments,
             showAttachmentPicker: $showPicker,
-            selectedModel: $selectedModel,
             isStreaming: false,
             cliAvailable: true,
             onSubmit: {},
