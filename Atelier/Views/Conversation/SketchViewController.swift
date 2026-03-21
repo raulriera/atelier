@@ -1,57 +1,15 @@
 import AppKit
 import PaperKit
 
-/// Pure AppKit sketch window.
-///
-/// Opens a standalone `NSWindow` with PaperKit's markup canvas and toolbar.
-/// On Done, renders the markup to PNG and calls the completion closure.
-final class SketchWindowController: NSWindowController {
-
-    private var completion: ((Data) -> Void)?
-
-    /// Retains the active controller until the window closes.
-    private static var activeController: SketchWindowController?
-
-    /// Opens a sketch window. The completion closure receives PNG data on Done.
-    @MainActor
-    static func open(completion: ((Data) -> Void)? = nil) {
-        let sketchVC = SketchViewController()
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Sketch"
-        window.contentViewController = sketchVC
-        window.center()
-
-        let controller = SketchWindowController(window: window)
-        controller.completion = completion
-        sketchVC.onDone = { [weak controller] data in
-            controller?.completion?(data)
-            controller?.close()
-        }
-        sketchVC.onCancel = { [weak controller] in
-            controller?.close()
-        }
-
-        activeController = controller
-        controller.showWindow(nil)
-    }
-
-    override func close() {
-        super.close()
-        Self.activeController = nil
-    }
-}
-
 /// Hosts `PaperMarkupViewController` and `MarkupToolbarViewController`
 /// following Apple's PaperKit AppKit guide.
 final class SketchViewController: NSViewController {
     @ViewLoading private var paperViewController: PaperMarkupViewController
     @ViewLoading private var markupToolbarViewController: MarkupToolbarViewController
     @ViewLoading private var paperMarkup: PaperMarkup
+
+    /// Optional background image displayed behind all markup and drawing.
+    var backgroundImage: NSImage?
 
     var onDone: ((Data) -> Void)?
     var onCancel: (() -> Void)?
@@ -80,6 +38,10 @@ final class SketchViewController: NSViewController {
         setupLayoutConstraints()
         setupToolbarViewController()
         setupDoneCancel()
+
+        if backgroundImage != nil {
+            loadBackgroundImage()
+        }
     }
 
     private func setupLayoutConstraints() {
@@ -145,6 +107,17 @@ final class SketchViewController: NSViewController {
         onCancel?()
     }
 
+    // MARK: - Background Image
+
+    /// Sets the background image as the markup controller's content view,
+    /// rendering it behind all markup and drawing.
+    private func loadBackgroundImage() {
+        guard let backgroundImage else { return }
+        let imageView = NSImageView(image: backgroundImage)
+        imageView.imageScaling = .scaleProportionallyUpOrDown
+        paperViewController.contentView = imageView
+    }
+
     // MARK: - Rendering
 
     private func renderToPNG() async -> Data? {
@@ -165,6 +138,27 @@ final class SketchViewController: NSViewController {
                   space: colorSpace,
                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
               ) else { return nil }
+
+        // PaperKit's markup.draw() renders strokes only — it does not include
+        // the contentView. Draw the background image explicitly before the
+        // coordinate flip. CGContext.draw handles orientation in bottom-left coords.
+        if let backgroundImage,
+           let bgCGImage = backgroundImage.cgImage(
+               forProposedRect: nil, context: nil, hints: nil
+           ) {
+            // Aspect-fit to match the live NSImageView (.scaleProportionallyUpOrDown).
+            let imageAspect = CGFloat(bgCGImage.width) / CGFloat(bgCGImage.height)
+            let canvasAspect = CGFloat(pixelWidth) / CGFloat(pixelHeight)
+            let bgRect: CGRect
+            if imageAspect > canvasAspect {
+                let h = CGFloat(pixelWidth) / imageAspect
+                bgRect = CGRect(x: 0, y: (CGFloat(pixelHeight) - h) / 2, width: CGFloat(pixelWidth), height: h)
+            } else {
+                let w = CGFloat(pixelHeight) * imageAspect
+                bgRect = CGRect(x: (CGFloat(pixelWidth) - w) / 2, y: 0, width: w, height: CGFloat(pixelHeight))
+            }
+            cgContext.draw(bgCGImage, in: bgRect)
+        }
 
         // Flip to top-left origin for consistent coordinate system.
         cgContext.translateBy(x: 0, y: CGFloat(pixelHeight))
