@@ -223,7 +223,7 @@ public final class ScheduleStore {
                     "-p", task.prompt,
                     "--output-format", "json",
                     "--verbose",
-                    "--max-turns", "20",
+                    "--max-turns", "50",
                     "--no-session-persistence",
                     "--append-system-prompt", automationSystemPrompt,
                 ]
