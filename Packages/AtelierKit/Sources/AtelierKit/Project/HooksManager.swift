@@ -198,8 +198,6 @@ public struct HooksManager: Sendable {
     /// Builds the reinject command string.
     ///
     /// - Parameter trigger: The SessionStart matcher (`compact`, `startup`, or `resume`).
-    ///   Passed as a CLI argument so the helper can include compaction snapshots
-    ///   only when resuming after compaction.
     ///
     /// Prefers the bundled helper binary; falls back to inline shell that reads
     /// all `.md` files from the memory directory.

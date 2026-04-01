@@ -30,7 +30,7 @@ A single `atelier-hooks` binary handles all hook events via subcommands (`distil
 |-------|---------|---------|
 | `SessionStart` | `compact/startup/resume` | Re-inject learnings, stale context, corrections, proactive suggestions |
 | `Stop` | — | Async distillation after each response |
-| `PreCompact` | `auto` | Sync distillation + compaction snapshot before context compresses |
+| `PreCompact` | `auto` | Sync distillation before context compresses |
 | `PreToolUse` | `Read\|Glob\|Grep\|Write\|Edit\|MultiEdit\|NotebookEdit` | Path guard — validates file access against project boundary |
 
 ### The `transcript_path` advantage

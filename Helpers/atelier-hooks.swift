@@ -402,62 +402,6 @@ func readAllMemoryFiles(memoryDir: String) -> String? {
     return parts.joined(separator: "\n\n")
 }
 
-/// Maximum number of compaction snapshots to keep. Older ones are pruned.
-let maxCompactionSnapshots = 2
-
-/// Saves the conversation summary as a compaction snapshot.
-///
-/// These snapshots capture *what was being worked on* (not learnings) so that
-/// after compaction, `SessionStart[compact]` can re-inject the work state and
-/// Claude picks up exactly where it left off.
-func saveCompactionSnapshot(summary: String, compactsDir: String) {
-    try? FileManager.default.createDirectory(
-        atPath: compactsDir,
-        withIntermediateDirectories: true
-    )
-
-    // Write the current snapshot
-    let timestamp = ISO8601DateFormatter().string(from: Date())
-        .replacingOccurrences(of: ":", with: "-") // filesystem-safe
-    let filename = "\(timestamp).md"
-    let filePath = "\(compactsDir)/\(filename)"
-
-    do {
-        try summary.write(toFile: filePath, atomically: true, encoding: .utf8)
-    } catch {
-        FileHandle.standardError.write(Data("Failed to write compaction snapshot: \(error)\n".utf8))
-        return
-    }
-
-    // Prune old snapshots — keep only the most recent N
-    pruneCompactionSnapshots(in: compactsDir)
-}
-
-/// Removes old compaction snapshots, keeping only the most recent `maxCompactionSnapshots`.
-func pruneCompactionSnapshots(in directory: String) {
-    guard let files = try? FileManager.default.contentsOfDirectory(atPath: directory) else { return }
-    let sorted = files.filter { $0.hasSuffix(".md") }.sorted()
-    guard sorted.count > maxCompactionSnapshots else { return }
-
-    let toRemove = sorted.prefix(sorted.count - maxCompactionSnapshots)
-    for file in toRemove {
-        try? FileManager.default.removeItem(atPath: "\(directory)/\(file)")
-    }
-}
-
-/// Reads the most recent compaction snapshot, or nil if none exists.
-func readLatestCompactionSnapshot(in directory: String) -> String? {
-    guard let files = try? FileManager.default.contentsOfDirectory(atPath: directory) else { return nil }
-    let sorted = files.filter { $0.hasSuffix(".md") }.sorted()
-    guard let latest = sorted.last else { return nil }
-
-    let path = "\(directory)/\(latest)"
-    guard let content = try? String(contentsOfFile: path, encoding: .utf8),
-          !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    else { return nil }
-    return content
-}
-
 func handleDistill(input: HookInput) {
     guard let transcriptPath = input.transcriptPath else {
         FileHandle.standardError.write(Data("No transcript_path in hook input\n".utf8))
@@ -489,14 +433,6 @@ func handleDistill(input: HookInput) {
     guard let summary = summarizeTranscript(at: transcriptPath) else {
         exit(0)
     }
-
-    // Save compaction snapshot — captures what was being worked on
-    // so SessionStart[compact] can re-inject the work state.
-    // This is a cheap file write, no LLM call.
-    saveCompactionSnapshot(
-        summary: summary,
-        compactsDir: "\(memoryDir)/compacts"
-    )
 
     // Distill learnings via Haiku
     guard let result = distill(summary: summary, existingLearnings: existing, cliPath: cliPath, cwd: cwd) else {
@@ -792,11 +728,6 @@ func capContent(_ content: String, filename: String) -> String {
     return kept + "\n(...truncated — read .atelier/memory/\(filename) for full content)"
 }
 
-/// Hard cap for the compaction snapshot injected into the context.
-/// Recent conversation excerpt doesn't need to be huge — just enough
-/// for Claude to pick up the thread of work.
-let maxSnapshotLines = 80
-
 func handleReinject(input: HookInput, trigger: String) {
     guard let cwd = input.cwd else { exit(0) }
 
@@ -824,16 +755,8 @@ func handleReinject(input: HookInput, trigger: String) {
         }
     }
 
-    // Read compaction snapshot — only after compaction, not on fresh startup/resume
-    let compactionSnapshot: String? = if trigger == "compact" {
-        readLatestCompactionSnapshot(in: "\(memoryDir)/compacts")
-    } else {
-        nil
-    }
-
     // Need at least one source to output anything
     guard !alwaysInjectContents.isEmpty || !manifestEntries.isEmpty
-            || compactionSnapshot != nil
     else { exit(0) }
 
     print("<project-memory>")
@@ -972,24 +895,6 @@ func handleReinject(input: HookInput, trigger: String) {
         }
     }
 
-    // Compaction snapshot goes AFTER project-memory, at the end of the prompt,
-    // in the recency-favored attention position. This is the most important
-    // context for continuing the session — what was being worked on right now.
-    if let snapshot = compactionSnapshot {
-        let lines = snapshot.components(separatedBy: .newlines)
-        let capped = lines.count > maxSnapshotLines
-            ? lines.prefix(maxSnapshotLines).joined(separator: "\n")
-            : snapshot
-
-        print("")
-        print("<session-state>")
-        print("The context window was just compacted. Below is the recent conversation")
-        print("before compaction. Continue the session seamlessly — pick up exactly where")
-        print("you left off without asking the user to repeat themselves.")
-        print("")
-        print(capped)
-        print("</session-state>")
-    }
 }
 
 // MARK: - Path Guard
